@@ -1518,6 +1518,25 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '44',
 			remove_zero     => 1,           # Removes leading zeros from output
 		},
+	"78" => # MU;P0=313;P1=1212;P2=-309;P4=-2024;P5=-16091;P6=2014;D=01204040562620404626204040404040462046204040562620404626204040404040462046204040562620404626204040404040462046204040562620404626204040404040462046204040;CP=0;R=236;)
+			# https://forum.fhem.de/index.php/topic,39153.0.html		
+		{
+			name			=> 'geiger',
+			comment			=> 'geiger blind motors',
+			id				=> '78',
+			developId		=> 'y', 
+			zero			=> [1,-6.6], 		
+			one				=> [6.6,-1],   		 
+			start  			=> [-53],		
+			clockabs     	=> 300,					 
+			format 			=> 'twostate',	     
+			preamble		=> 'u78#',			# prepend to converted message	
+			clientmodule    => 'SIGNALduino_un',   	
+			#modulematch	=> '^TX......', 
+			length_min      => '14',
+			#length_max      => '18',
+			paddingbits     => '2'				 # pad 1 bit, default is 4
+		},
 );
 
 
