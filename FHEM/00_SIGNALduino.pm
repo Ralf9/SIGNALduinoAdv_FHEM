@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-01-30 23:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-02-01 20:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -247,14 +247,14 @@ my %ProtocolListSIGNALduino  = (
 
 			},
     "3.1"    => 	# MS;P0=-11440;P1=-1121;P2=-416;P5=309;P6=1017;D=150516251515162516251625162516251515151516251625151;CP=5;SP=0;R=66;
-			# MS;P1=309;P2=-1130;P3=1011;P4=-429;P5=-11466;D=15123412121234123412141214121412141212123412341234;CP=1;SP=5;R=38;  Gruppentaste, siehe Kommentar in sub SIGNALduino_bit2itv1
+			# MS;P1=309;P2=-1130;P3=1011;P4=-429;P5=-11466;D=15123412121234123412141214121412141212123412341234;CP=1;SP=5;R=38;  Gruppentaste
         {
             name			=> 'itv1_sync40',	
-			comment		=> 'IT remote Control PAR 1000',
+			comment		=> 'IT remote Control PAR 1000, ITS-150',
 			id          	=> '3',
 			one			=> [3,-1],
 			zero			=> [1,-3],
-			float			=> [1,-1],	# siehe Kommentar in sub SIGNALduino_bit2itv1
+			float			=> [1,-1],	# fuer Gruppentaste (nur bei ITS-150,ITR-3500 und ITR-300), siehe Kommentar in sub SIGNALduino_bit2itv1
 			sync			=> [1,-40],
 			clockabs     	=> -1,	# -1=auto	
 			format 			=> 'twostate',	# not used now
@@ -2010,7 +2010,11 @@ SIGNALduino_Set($@)
 			if (substr($data,0,2) eq "is") {
 				$data = substr($data,2);   # is am Anfang entfernen
 			}
-			$data = SIGNALduino_ITV1_tristateToBit($data);
+			if ($protocol == 3) {
+				$data = SIGNALduino_ITV1_tristateToBit($data);
+			} else {
+				$data = SIGNALduino_ITV1_31_tristateToBit($data);	# $protocolId 3.1
+			}
 			Log3 $name, 5, "$name: sendmsg IT V1 convertet tristate to bits=$data";
 		}
 		if (!defined($clock)) {
@@ -4255,8 +4259,8 @@ sub SIGNALduino_bit2itv1
 	my ($name, @bit_msg) = @_;
 	my $msg = join("",@bit_msg);	
 
-	$msg =~ s/0F/01/g;		# Convert 0F -> 01 (F) to be compatible with CUL
-#	$msg =~ s/0F/11/g;		# Convert 0F -> 11 (1) float
+#	$msg =~ s/0F/01/g;		# Convert 0F -> 01 (F) to be compatible with CUL
+	$msg =~ s/0F/11/g;		# Convert 0F -> 11 (1) float
 	if (index($msg,'F') == -1) {
 		return (1,split("",$msg));
 	} else {
@@ -4273,6 +4277,17 @@ sub SIGNALduino_ITV1_tristateToBit($)
 	$msg =~ s/1/11/g;
 	$msg =~ s/F/01/g;
 	$msg =~ s/D/10/g;
+		
+	return (1,$msg);
+}
+
+sub SIGNALduino_ITV1_31_tristateToBit($)	# ID 3.1
+{
+	my ($msg) = @_;
+	# Convert 0 -> 00   1 -> 0D F => 01 to be compatible with IT Module
+	$msg =~ s/0/00/g;
+	$msg =~ s/1/0D/g;
+	$msg =~ s/F/01/g;
 		
 	return (1,$msg);
 }
