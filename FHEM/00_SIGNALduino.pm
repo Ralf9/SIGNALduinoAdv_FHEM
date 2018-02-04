@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-02-01 20:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-02-04 14:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -24,7 +24,7 @@ no warnings 'portable';
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.2",
+	SDUINO_VERSION            => "v3.3.2ralf",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -292,7 +292,7 @@ my %ProtocolListSIGNALduino  = (
 			zero			=> [1,-3],
 			clockabs     	=> 500,			# -1 = auto
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
-			preamble		=> 'p5#',			# Append to converted message	
+			preamble		=> 'i',			# Append to converted message	
 			clientmodule    => 'IT',   		# not used now
 			modulematch     => '^i......',  # not used now
 			length_min      => '24',
@@ -440,13 +440,14 @@ my %ProtocolListSIGNALduino  = (
 		}, 		
 	# MU;P0=-1384;P1=815;P2=-2725;P3=-20001;P4=8159;P5=-891;D=01010121212121010101210101345101210101210101212101010101012121212101010121010134510121010121010121210101010101212121210101012101013451012101012101012121010101010121212121010101210101345101210101210101212101010101012121212101010121010134510121010121010121;CP=1;O;
 	# MU;P0=-17201;P1=112;P2=-1419;P3=-28056;P4=8092;P5=-942;P6=777;P7=-2755;D=12134567676762626762626762626767676762626762626267626260456767676262676262676262676767676262676262626762626045676767626267626267626267676767626267626262676262604567676762626762626762626767676762626762626267626260456767676262676262676262676767676262676262;CP=6;O;
+	# MU;P0=-4284;P1=865;P2=-1403;P3=-2706;P4=-20914;P5=8132;P6=-932;D=01213121312121212121213121212121312121312131312131456121312131212121212121312121212131212131213131213141;CP=1;R=252;
 	"13.1"    => 			## FLAMINGO FA20 
 		{
             name			=> 'FLAMINGO FA21 b',	
 			id          	=> '13',
 			one				=> [1,-1.8],
 			zero			=> [1,-3.5],
-			start			=> [-22,10,-1],
+			start			=> [-23.5,10,-1],
 			clockabs		=> 800,
 			format 			=> 'twostate',	  		
 			preamble		=> 'P13#',				# prepend to converted message	
