@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-02-04 14:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-02-07 17:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -3308,11 +3308,13 @@ SIGNALduino_Parse_MS($$$$%)
 			$patternLookupHash{$pstr}="0" if ($valid); ## Append Sync to our lookuptable
 			Debug "zero pattern not found" if ($debug && !$valid);
 			
-			my $floatValid = ($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{float}},\%patternList,\$rawData)) >=0;
-			Debug "Found matched float with indexes: ($pstr)" if ($debug && $floatValid);
-			$patternLookupHash{$pstr}="F" if ($floatValid); ## Append Sync to our lookuptable
-			Debug "float pattern not found" if ($debug && !$floatValid);
-
+			if (defined($ProtocolListSIGNALduino{$id}{float}))
+			{
+				my $floatValid = ($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{float}},\%patternList,\$rawData)) >=0;
+				Debug "Found matched float with indexes: ($pstr)" if ($debug && $floatValid);
+				$patternLookupHash{$pstr}="F" if ($floatValid); ## Append Sync to our lookuptable
+				Debug "float pattern not found" if ($debug && !$floatValid);
+			}
 			#Debug "added $pstr " if ($debug && $valid);
 
 			next if (!$valid) ;
