@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-02-07 17:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-02-17 20:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -3178,7 +3178,7 @@ sub SIGNALduno_Dispatch($$$$$)
 		$hash->{TIME} = time();
 		$hash->{DMSG} = $dmsg;
 		#my $event = 0;
-		if (substr(ucfirst($dmsg),0,1) eq 'U') {
+		if (substr($dmsg,0,1) eq 'U') {
 			#$event = 1;
 			DoTrigger($name, "DMSG " . $dmsg);
 			return;				# Fuer $dmsg die mit U anfangen ist kein Dispatch notwendig, da es dafuer kein Modul gibt
