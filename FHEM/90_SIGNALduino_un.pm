@@ -1,10 +1,10 @@
 ##############################################
-# $Id: 90_SIGNALduino_un.pm 15479 2016-01-28 20:00:00 dev-r32 $
+# $Id: 90_SIGNALduino_un.pm 15479 2018-02-17 20:00:00 dev-r33 $
 # The file is part of the SIGNALduino project
 # see http://www.fhemwiki.de/wiki/SIGNALduino
 # to support debugging of unknown signal data
 # The purpos is to use it as addition to the SIGNALduino
-# S. Butzek, 2015
+# S. Butzek, 2018
 #
 
 package main;
@@ -305,8 +305,23 @@ SIGNALduino_un_Parse($$)
 		$bitData2 = $bitData2 . ' ' . substr($bitData,23,2) . ' ' . substr($bitData,25,7) . ' ' . substr($bitData,32,8);
 		Log3 $hash, 4, "$name converted to bits: " . $bitData2;
 		Log3 $hash, 4, "$name decoded protocolid: $protocol ($SensorTyp) sensor id=$id, channel=$channel, rawTemp=$rawTemp, temp=$temp, hum=$hum";
-
-	
+	} elsif ($protocol == "78" && length($bitData)>=14)  ## geiger rohrmotor
+	{
+		my %bintotristate=(
+ 		 	"00" => "0",
+		 	"10" => "F",
+ 		 	"11" => "1"
+		);
+	  
+		my $tscode;
+		for (my $n=0; $n<length($bitData); $n=$n+2) {
+	      $tscode = $tscode . $bintotristate{substr($bitData,$n,2)};
+	    }
+			
+		
+		Log3 $hash, 4, "geiger message converted to tristate code: " . $tscode;
+		DoTrigger($hash->{NAME}, "$msg#$bitData#$tscode");
+		return "";
 	} else {
 		Log3 $hash, 4, $dummyreturnvalue;
 		
