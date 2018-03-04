@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-02-17 20:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-03-04 15:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -252,10 +252,10 @@ my %ProtocolListSIGNALduino  = (
             name			=> 'itv1_sync40',	
 			comment		=> 'IT remote Control PAR 1000, ITS-150',
 			id          	=> '3',
-			one			=> [3,-1],
-			zero			=> [1,-3],
+			one			=> [3.5,-1],
+			zero			=> [1,-3.8],
 			float			=> [1,-1],	# fuer Gruppentaste (nur bei ITS-150,ITR-3500 und ITR-300), siehe Kommentar in sub SIGNALduino_bit2itv1
-			sync			=> [1,-40],
+			sync			=> [1,-44],
 			clockabs     	=> -1,	# -1=auto	
 			format 			=> 'twostate',	# not used now
 			preamble		=> 'i',			
