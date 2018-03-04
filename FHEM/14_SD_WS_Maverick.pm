@@ -1,9 +1,9 @@
 ##############################################
-# $Id: 14_SD_WS_Maverick.pm 9346 2016-07-14 18:00:00 v3.3-dev $
+# $Id: 14_SD_WS_Maverick.pm 9346 2018-03-04 12:00:00Z v3.3-dev $
 # 
 # The purpose of this module is to support Maverick sensors
 # Sidey79 & Cruizer 2016
-#
+# Ralf9 2018
 
 package main;
 
@@ -19,7 +19,7 @@ SD_WS_Maverick_Initialize($)
 {
   my ($hash) = @_;
 
-  $hash->{Match}     = "^P47#AA9995[A-Fa-f0-9]+";    
+  $hash->{Match}     = "^P47#[A-Fa-f0-9]+";
   $hash->{DefFn}     = "SD_WS_Maverick_Define";
   $hash->{UndefFn}   = "SD_WS_Maverick_Undef";
   $hash->{ParseFn}   = "SD_WS_Maverick_Parse";
@@ -80,25 +80,33 @@ SD_WS_Maverick_Parse($$)
   #my $blen = $hlen * 4;
   #my $bitData = unpack("B$blen", pack("H$hlen", $rawData)); 
 
-  Log3 $name, 3, "SD_WS_Maverick_Parse  $model ($msg) length: $hlen";
+  Log3 $name, 4, "SD_WS_Maverick_Parse  $model ($msg) length: $hlen";
   
+  # https://hackaday.io/project/4690-reverse-engineering-the-maverick-et-732/
+  # https://forums.adafruit.com/viewtopic.php?f=8&t=25414&sid=e1775df908194d56692c6ad9650fdfb2&start=15#p322178
+  #
   #1      8     13    18       26 
   #AA999559 55555 95999 A9A9A669  Sensor 1 =21 2Grad
   #AA999559 95996 55555 95A65565  Sensor 2 =22 2Grad
-  #
-  #Header    Sen1  Sens2   
-  #my $hashumidity = FALSE;
-  
+  #  
   ## Todo: Change decoding per model into a foreach  
-   #foreach $key (keys %models) {
+  #foreach $key (keys %models) {
   #   ....
   #}
+  
+  # ohne header:
+  # MC;LL=-507;LH=490;SL=-258;SH=239;D=AA9995599599A959996699A969;C=248;L=104;
+  # P47#599599A959996699A969
+  #
+  # 0  2   6 7     12
+  # ss 11111 22222 uuuuuuuu
+  # 59 9599A 95999 6699A969
+  # 
 
-    #
-	my $startup = substr($rawData,6,2);
-	my $temp_str1 = substr($rawData,8,5);
-	my $temp_str2 = substr($rawData,13,5);
-	my $unknown = substr($rawData,18);
+	my $startup = substr($rawData,0,2);   # 0x6A upon startup, 0x59 otherwise
+	my $temp_str1 = substr($rawData,2,5);
+	my $temp_str2 = substr($rawData,7,5);
+	my $unknown = substr($rawData,12);
   
     Log3 $iohash, 4, "$model decoded protocolid: 47 sensor startup=$startup, temp1=$temp_str1, temp2=$temp_str2, unknown=$unknown";
     
@@ -156,7 +164,7 @@ SD_WS_Maverick_Parse($$)
 	$hash->{lastMSG} = $rawData;
 	#$hash->{bitMSG} = $bitData2; 
 
-    my $state = "T: $temp1"." T2: $temp2" ;
+    my $state = "T1: $temp1 T2: $temp2 S: $startup";
     
     readingsBeginUpdate($hash);
     readingsBulkUpdate($hash, "state", $state);
