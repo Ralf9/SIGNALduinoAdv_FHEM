@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-03-04 16:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-03-06 19:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -1008,7 +1008,7 @@ my %ProtocolListSIGNALduino  = (
 			format 			=> 'manchester',	
 			preamble		=> 'P47#',						# prepend to converted message	
 			clientmodule    => 'SD_WS_Maverick',   						# not used now
-			modulematch     => '^P47#.*',  					# not used now
+			modulematch     => '^P47#[569A]{12}.*',  					# not used now
 			length_min      => '100',
 			length_max      => '108',
 			method          => \&SIGNALduino_Maverick		# Call to process this message
