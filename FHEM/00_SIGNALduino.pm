@@ -3199,6 +3199,7 @@ sub SIGNALduno_Dispatch($$$$$)
 		else {
 			$rssi = "";
 		}
+		$dmsg = lc($dmsg) if ($id eq '74');
 		Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, $rssi dispatch";
 		Dispatch($hash, $dmsg, \%addvals);  ## Dispatch to other Modules 
 		
