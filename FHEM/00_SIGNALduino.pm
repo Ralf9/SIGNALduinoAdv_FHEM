@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-03-06 19:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-04-01 23:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -24,7 +24,7 @@ no warnings 'portable';
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.2ralf_18.03.",
+	SDUINO_VERSION            => "v3.3.2ralf_01.04.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -798,19 +798,22 @@ my %ProtocolListSIGNALduino  = (
  #   	},
      "35" =>
      	 {   
-       		name			=> 'socket35',		
-       		id          	=> '35',
-			one				=> [1,-4],
-			zero			=> [4,-1],
-			sync			=> [1,-19],
+		# MS;P0=907;P1=-376;P2=266;P3=-1001;P6=-4860;D=2601010123230123012323230101012301230101010101230123012301;CP=2;SP=6;
+			name		=> 'HE800',
+			comment		=> 'Homeeasy',	
+			id          	=> '35',
+			one			=> [1,-4],
+			zero			=> [3.4,-1],
+			sync			=> [1,-18],
 			clockabs   		=> '280',		
 			format     		=> 'twostate',  		# not used now
-			preamble		=> 'u35#',				# prepend to converted message	
+			preamble		=> 'ih',				# prepend to converted message	
 			postamble		=> '',					# Append to converted message	 	
-			#clientmodule    => '',      			# not used now
+			clientmodule    => 'IT',      			# not used now
 			#modulematch     => '',     			# not used now
 			length_min      => '28',
-			length_max      => '32',
+			length_max      => '40',
+			postDemodulation => \&SIGNALduino_HE800,
     	},
      "36" =>
      	 {   
@@ -1259,17 +1262,19 @@ my %ProtocolListSIGNALduino  = (
 		},
 	"65" => ## Homeeasy
 		{
-			name         => 'Homeeasy',
+		# MS;P1=231;P2=-1336;P4=-312;P5=-8920;D=15121214141412121212141414121212121414121214121214141212141212141212121414121414141212121214141214121212141412141212;CP=1;SP=5;
+			name         => 'HE_EU',
+			comment      => 'Homeeasy',
 			id           => '65',
-			one          => [1,-5],
-			zero         => [1,-1],
-			start        => [1,-40],
-			clockabs     => 250,
+			one          => [1,-5.5],
+			zero         => [1,-1.2],
+			sync         => [1,-38],
+			clockabs     => 230,
 			format       => 'twostate',  # not used now
-			preamble     => 'U65#',
-			length_min   => '50',
-			#msgOutro     => 'SR;P0=275;P1=-7150;D=01;',
-			postDemodulation => \&SIGNALduino_HE,
+			preamble     => 'ih',
+			clientmodule => 'IT',
+			length_min   => '57',
+			postDemodulation => \&SIGNALduino_HE_EU,
 		},
 	"66" => ## TX2 Protocol (Remote Temp Transmitter & Remote Thermo Model 7035)
 	# MU;P0=13312;P1=-2785;P2=4985;P3=1124;P4=-6442;P5=3181;P6=-31980;D=0121345434545454545434545454543454545434343454543434545434545454545454343434545434343434545621213454345454545454345454545434545454343434545434345454345454545454543434345454343434345456212134543454545454543454545454345454543434345454343454543454545454545;CP=3;R=73;O;
@@ -4335,14 +4340,30 @@ sub SIGNALduino_ITV1_31_tristateToBit($)	# ID 3.1
 	return (1,$msg);
 }
 
-sub SIGNALduino_HE($@) {
+sub SIGNALduino_HE800($@)
+{
 	my ($name, @bit_msg) = @_;
-	my $msg = join("",@bit_msg);
+	my $protolength = scalar @bit_msg;
 	
-	#Log3 $name, 4, "$name HE: $msg";
-	Log3 $name, 4, "$name HE: " . substr($msg,0,11) ." ". substr($msg,11,32) ." ". substr($msg,43,4) ." ". substr($msg,47,2) ." ". substr($msg,49,2) ." ". substr($msg,51);
+	if ($protolength < 40) {
+		for (my $i=0; $i<(40-$protolength); $i++) {
+			push(@bit_msg, 0);
+		}
+	}
+	return (1,@bit_msg);
+}
+
+sub SIGNALduino_HE_EU($@)
+{
+	my ($name, @bit_msg) = @_;
+	my $protolength = scalar @bit_msg;
 	
-	return (1,split("",$msg));
+	if ($protolength < 72) {
+		for (my $i=0; $i<(72-$protolength); $i++) {
+			push(@bit_msg, 0);
+		}
+	}
+	return (1,@bit_msg);
 }
 
 sub SIGNALduino_postDemo_Hoermann($@) {
@@ -4376,7 +4397,7 @@ sub SIGNALduino_postDemo_FS20($@) {
    splice(@bit_msg, 0, $datastart + 1);                             	# delete preamble + 1 bit
    $protolength = scalar @bit_msg;
    Log3 $name, 5, "$name: FS20 - pos=$datastart length=$protolength";
-   if ($protolength == 46 || $protolength == 55) {
+   if ($protolength == 46 || $protolength == 55) {			# If it 1 bit too long, then it will be removed (EOT-Bit)
       pop(@bit_msg);
       $protolength--;
    }
@@ -4385,6 +4406,10 @@ sub SIGNALduino_postDemo_FS20($@) {
          $sum += oct( "0b".(join "", @bit_msg[$b .. $b + 7]));
       }
       my $checksum = oct( "0b".(join "", @bit_msg[$protolength - 9 .. $protolength - 2]));   # Checksum Byte 5 or 6
+      if ((($sum + 6) & 0xFF) == $checksum) {			# Message from FHT80 roothermostat
+         Log3 $name, 5, "$name: FS20 - Detection aborted, checksum matches FHT code";
+         return 0, undef;
+      }
       if (($sum & 0xFF) == $checksum) {				            ## FH20 remote control
 			for(my $b = 0; $b < $protolength; $b += 9) {	            # check parity over 5 or 6 bytes
 				my $parity = 0;					                                 # Parity even
@@ -4414,7 +4439,7 @@ sub SIGNALduino_postDemo_FS20($@) {
       }
    }
    else {
-      Log3 $name, 4, "$name: FS20 ERROR - wrong length=$protolength (must be 45 or 54)";
+      Log3 $name, 5, "$name: FS20 ERROR - wrong length=$protolength (must be 45 or 54)";
    }
    return 0, undef;
 }
@@ -4436,7 +4461,7 @@ sub SIGNALduino_postDemo_FHT80($@) {
    splice(@bit_msg, 0, $datastart + 1);                             	# delete preamble + 1 bit
    $protolength = scalar @bit_msg;
    Log3 $name, 5, "$name: FHT80 - pos=$datastart length=$protolength";
-   if ($protolength == 55) {
+   if ($protolength == 55) {						# If it 1 bit too long, then it will be removed (EOT-Bit)
       pop(@bit_msg);
       $protolength--;
    }
@@ -4445,6 +4470,10 @@ sub SIGNALduino_postDemo_FHT80($@) {
          $sum += oct( "0b".(join "", @bit_msg[$b .. $b + 7]));
       }
       my $checksum = oct( "0b".(join "", @bit_msg[45 .. 52]));          # Checksum Byte 6
+      if ((($sum - 6) & 0xFF) == $checksum) {		## Message from FS20 remote control
+         Log3 $name, 5, "$name: FHT80 - Detection aborted, checksum matches FS20 code";
+         return 0, undef;
+      }
       if (($sum & 0xFF) == $checksum) {								## FHT80 Raumthermostat
          for($b = 0; $b < 54; $b += 9) {	                              # check parity over 6 byte
             my $parity = 0;					                              # Parity even
@@ -4474,7 +4503,7 @@ sub SIGNALduino_postDemo_FHT80($@) {
       }
    }
    else {
-      Log3 $name, 4, "$name: FHT80 ERROR - wrong length=$protolength (must be 54)";
+      Log3 $name, 5, "$name: FHT80 ERROR - wrong length=$protolength (must be 54)";
    }
    return 0, undef;
 }
