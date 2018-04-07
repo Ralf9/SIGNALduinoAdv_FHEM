@@ -2567,7 +2567,7 @@ SIGNALduino_Write($$$)
   }
   elsif($fn eq "04" && substr($msg,0,6) eq "020183") {   # FHT
     $fn="sendMsg";
-    $msg = substr($msg,6,4) . substr($msg,10);     # was ist der Unterschied zu "$msg = substr($msg,6);" ?
+    $msg = substr($msg,6,6) . "00" . substr($msg,12); # insert Byte 3 always 0x00
     $msg = SIGNALduino_PreparingSend_FS20_FHT(73, 12, $msg);
   }
   Log3 $name, 5, "$name/write: sending via Set $fn $msg";
@@ -4276,8 +4276,9 @@ sub SIGNALduino_PreparingSend_FS20_FHT($$$) {
 		$newmsg .= dec2binppari($temp);
 	}
 	
-	$newmsg .= dec2binppari($sum & 0xFF);   # Checksum		
-	$newmsg .= "0P#R3";            		# EOT, Pause, 3 Repeats    
+	$newmsg .= dec2binppari($sum & 0xFF);   # Checksum
+	my $repeats = $id - 71;			# FS20(74)=3, FHT(73)=2
+	$newmsg .= "0P#R" . $repeats;		# EOT, Pause, 3 Repeats    
 	
 	return $newmsg;
 }
