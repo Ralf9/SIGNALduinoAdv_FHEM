@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-04-01 23:00:00Z v3.3.2 $
+# $Id: 00_SIGNALduino.pm 10488 2018-04-07 20:00:00Z v3.3.2 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -24,7 +24,7 @@ no warnings 'portable';
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.2ralf_01.04.",
+	SDUINO_VERSION            => "v3.3.2ralf_07.04.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -3364,16 +3364,8 @@ SIGNALduino_Parse_MS($$$$%)
 					last;
 				}
 			}
-	
 			
 			Debug "$name: decoded message raw (@bit_msg), ".@bit_msg." bits\n" if ($debug);;
-			
-			my ($rcode,@retvalue) = SIGNALduino_callsub('postDemodulation',$ProtocolListSIGNALduino{$id}{postDemodulation},$name,@bit_msg);
-			next if ($rcode < 1 );
-			#Log3 $name, 5, "$name: postdemodulation value @retvalue";
-			
-			@bit_msg = @retvalue;
-			undef(@retvalue); undef($rcode);
 
 			my $padwith = defined($ProtocolListSIGNALduino{$id}{paddingbits}) ? $ProtocolListSIGNALduino{$id}{paddingbits} : 4;
 			
@@ -3391,6 +3383,13 @@ SIGNALduino_Parse_MS($$$$%)
 			$valid = $valid && $ProtocolListSIGNALduino{$id}{length_min} <= scalar @bit_msg  if (defined($ProtocolListSIGNALduino{$id}{length_min})); 
 			$valid = $valid && $ProtocolListSIGNALduino{$id}{length_max} >= scalar @bit_msg  if (defined($ProtocolListSIGNALduino{$id}{length_max}));
 			next if (!$valid);  
+			
+			my ($rcode,@retvalue) = SIGNALduino_callsub('postDemodulation',$ProtocolListSIGNALduino{$id}{postDemodulation},$name,@bit_msg);
+			next if ($rcode < 1 );
+			#Log3 $name, 5, "$name: postdemodulation value @retvalue";
+			
+			@bit_msg = @retvalue;
+			undef(@retvalue); undef($rcode);
 			
 			#my $dmsg = sprintf "%02x", oct "0b" . join "", @bit_msg;			## Array -> String -> bin -> hex
 			my $dmsg = SIGNALduino_b2h(join "", @bit_msg);
@@ -4236,7 +4235,11 @@ sub SIGNALduino_callsub
 		
 		my ($rcode, @returnvalues) = $method->($name, @args) ;	
 			
-	    Log3 $name, 5, "$name: rcode=$rcode, modified value after $funcname: @returnvalues";
+		if (@returnvalues && defined($returnvalues[0])) {
+			Log3 $name, 5, "$name: rcode=$rcode, modified value after $funcname: @returnvalues";
+		} else {
+	   		Log3 $name, 5, "$name: rcode=$rcode, after calling $funcname";
+	    } 
 	    return ($rcode, @returnvalues);
 	} elsif (defined $method ) {					
 		Log3 $name, 5, "$name: Error: Unknown method $funcname Please check definition";
@@ -4522,7 +4525,7 @@ sub SIGNALduino_postDemo_FHT80TF($@) {
       last if $bit_msg[$datastart] eq "1";
    }
    if ($datastart == $protolength) {                                 # all bits are 0
-		Log3 $name, 4, "$name: FHTTF - ERROR message all bit are zeros";
+		Log3 $name, 4, "$name: FHT80TF - ERROR message all bit are zeros";
 		return 0, undef;
    }
    splice(@bit_msg, 0, $datastart + 1);                             	# delete preamble + 1 bit
@@ -4552,7 +4555,7 @@ sub SIGNALduino_postDemo_FHT80TF($@) {
          }
 			splice(@bit_msg, 32, 8);                                       # delete checksum
 				my $dmsg = SIGNALduino_b2h(join "", @bit_msg);
-				Log3 $name, 4, "$name: FHT80 - roomthermostat post demodulation $dmsg";
+				Log3 $name, 4, "$name: FHT80TF - door/window switch post demodulation $dmsg";
 			return (1, @bit_msg);											## FHT80TF ok
       } 
    } 
@@ -4650,7 +4653,7 @@ sub SIGNALduino_postDemo_WS2000($@) {
 				}
 			}
 			$index += 5;
-		} until ($index >= $datalength);
+		} until ($index >= $datalength -1 );
 	}
 	if ($error != 0) {
 		Log3 $name, 4, "$name: WS2000 Sensortyp $typ Adr $adr - ERROR examination bit";
