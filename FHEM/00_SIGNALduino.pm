@@ -424,6 +424,8 @@ my %ProtocolListSIGNALduino  = (
 			
 		}, 	
 	"13"    => 			## FLAMINGO  FA 21
+			# https://github.com/RFD-FHEM/RFFHEM/issues/21
+			# https://github.com/RFD-FHEM/RFFHEM/issues/233
 		{
             name			=> 'FLAMINGO FA21',	
 			id          	=> '13',
@@ -443,7 +445,8 @@ my %ProtocolListSIGNALduino  = (
 	# MU;P0=-4284;P1=865;P2=-1403;P3=-2706;P4=-20914;P5=8132;P6=-932;D=01213121312121212121213121212121312121312131312131456121312131212121212121312121212131212131213131213141;CP=1;R=252;
 	"13.1"    => 			## FLAMINGO FA20 
 		{
-            name			=> 'FLAMINGO FA21 b',	
+            name			=> 'FLAMINGO FA21 / LM-101LD',	
+			comment		=> 'FLAMINGO oder Unitec Rauchmelder',
 			id          	=> '13',
 			one				=> [1,-1.8],
 			zero			=> [1,-3.5],
@@ -455,8 +458,23 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => 'P13#.*',  				# not used now
 			length_min      => '24',
 			length_max      => '24',
-		}, 		
-	
+		},
+	"13.2" => ##  MS;P1=-2708;P2=796;P3=-1387;P4=-8477;P5=8136;P6=-904;D=2456212321212323232321212121212121212123212321212121;CP=2;SP=4;
+		{
+			name		=> 'LM-101LD Rauchm',
+			comment		=> 'Unitec Rauchmelder',
+			id		=> '13',
+			zero		=> [1,-1.8], 	#
+			one		=> [1,-3.5],   	# 
+			sync		=> [1,-11,10,-1.2],	#
+			clockabs     	=> 790,
+			format 		=> 'twostate',	    # 
+			preamble	=> 'P13#',	# prepend to converted message	
+			clientmodule    => 'FLAMINGO',
+			#modulematch     => '', # not used now
+			length_min      => '24',
+			length_max      => '24',
+		},
 	"14"    => 			## Heidemann HX
 		{
             name			=> 'Heidemann HX',	
@@ -765,8 +783,11 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '24',				
     	},
     "33" => #Thermo-/Hygrosensor S014
+	# MS;P0=-7871;P2=-1960;P3=578;P4=-3954;D=030323232323434343434323232323234343434323234343234343234343232323432323232323232343234;CP=3;SP=0;R=0;m=0;
+	# sensor id=62, channel=1, temp=21.0555555555556, hum=76, bat=ok
     	{   
-       		name			=> 'weather33',		#
+       		name			=> 'weather33',
+			comment         => 's014/TFA 30.3200/TCM/Conrad',
 			id          	=> '33',
 			one				=> [1,-8],
 			zero			=> [1,-4],
@@ -775,7 +796,7 @@ my %ProtocolListSIGNALduino  = (
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'W33#',				# prepend to converted message	
 			postamble		=> '',					# Append to converted message	 	
-			clientmodule    => 'SD_WS',      			# not used now
+			clientmodule    => 'SD_WS',      		# not used now
 			#modulematch     => '',     			# not used now
 			length_min      => '42',
 			length_max      => '44',
@@ -1063,6 +1084,7 @@ my %ProtocolListSIGNALduino  = (
 		},
 	 "51"    => 
         {  # MS;P0=-16046;P1=552;P2=-1039;P3=983;P5=-7907;P6=-1841;P7=-4129;D=15161716171616161717171716161616161617161717171717171617171617161716161616161616171032323232;CP=1;SP=5;O;
+		# https://github.com/RFD-FHEM/RFFHEM/issues/118
             name			=> 'weather51',		# Logilink, NC, WS, TCM97001 etc.
 			comment			=> 'IAN 275901 Wetterstation Lidl',
 			id          	=> '51',
