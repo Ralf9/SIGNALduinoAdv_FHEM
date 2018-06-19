@@ -4185,32 +4185,47 @@ sub SIGNALduino_IdList($@)
 	}
 	
 	my $id;
+	my $devid;
+	my $wIdFound;
 	foreach $id (keys %ProtocolListSIGNALduino)
 	{
 		next if ($id eq 'id');
-		if ($wflag == 1 && !defined($WhitelistIDs{$id}))
-		{
-			#Log3 $name, 3, "skip ID $id";
-			next;
-		}
-		if ($bflag == 1 && defined($BlacklistIDs{$id}))
-		{
-			Log3 $name, 3, "$name skip Blacklist ID $id";
-			next;
-		}
+		$wIdFound = 0;
 		
-		if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "p") {
-			my $devid = "p$id";
-			if ($develop !~ m/$devid/) {		# skip wenn die Id nicht im Attribut development steht
-				Log3 $name, 3, "$name: ID=$devid skiped (developId=p)";
+		if ($wflag == 1)				# whitelist
+		{
+			if (defined($WhitelistIDs{$id}))	# Id wurde in der whitelist gefunden
+			{
+				$wIdFound = 1;
+			}
+			else
+			{
+				#Log3 $name, 3, "skip ID $id";
 				next;
 			}
 		}
 		
-		if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "y") {
-			if ($develop !~ m/y/) {			# skip wenn y nicht im Attribut development steht
-				Log3 $name, 3, "$name: ID=$id skiped (developId=y)";
+		if ($wIdFound == 0)	# wenn die Id in der whitelist gefunden wurde, dann die folgenden Abfragen ueberspringen
+		{
+			if ($bflag == 1 && defined($BlacklistIDs{$id})) {
+				Log3 $name, 3, "$name skip Blacklist ID $id";
 				next;
+			}
+		
+			if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "p") {
+				$devid = "p$id";
+				if ($develop !~ m/$devid/) {						# skip wenn die Id nicht im Attribut development steht
+					Log3 $name, 3, "$name: ID=$devid skiped (developId=p)";
+					next;
+				}
+			}
+		
+			if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "y") {
+				$devid = "p$id";
+				if (($develop !~ m/y/) && ($develop !~ m/$devid/)) {			# skip wenn y nicht im Attribut development steht
+					Log3 $name, 3, "$name: ID=$id skiped (developId=y)";
+					next;
+				}
 			}
 		}
 		
