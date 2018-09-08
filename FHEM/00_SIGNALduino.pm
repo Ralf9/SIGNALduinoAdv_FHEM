@@ -1979,18 +1979,31 @@ SIGNALduino_Set($@)
 	SIGNALduino_WriteInit($hash);
   } elsif( $cmd eq "sendMsg" ) {
 	Log3 $name, 5, "$name: sendmsg msg=$arg";
-	my ($protocol,$data,$repeats,$clock,$frequency) = split("#",$arg);
-	$protocol=~ s/[Pp](\d+)/$1/; # extract protocol num
-	$repeats=~ s/[rR](\d+)/$1/; # extract repeat num
-	$repeats=1 if (!defined($repeats));
-	if (defined($clock) && substr($clock,0,1) eq "F") {   # wenn es kein clock gibt, pruefen ob im clock eine frequency ist
-		$clock=~ s/[F]([0-9a-fA-F]+$)/$1/;
-		$frequency = $clock;
-		$clock = undef;
-	} else {
-		$clock=~ s/[Cc](\d+)/$1/ if (defined($clock)); # extract ITClock num
-		$frequency=~ s/[Ff]([0-9a-fA-F]+$)/$1/ if (defined($frequency));
+	
+	# Split args in serval variables
+	my ($protocol,$data,$repeats,$clock,$frequency,$datalength,$dataishex);
+	my $n=0;
+	foreach my $s (split "#", $arg) {
+	    my $c = substr($s,0,1);
+	    if ($n == 0 ) {  #  protocol
+			$protocol = substr($s,1);
+	    } elsif ($n == 1) { # Data
+	        $data = $s;
+	        if   ( substr($s,0,2) eq "0x" ) { $dataishex=1; $data=substr($data,2); }
+	        else { $dataishex=0; }
+	        
+	    } else {
+	    	    if ($c eq 'R') { $repeats = substr($s,1);  }
+	    		elsif ($c eq 'C') { $clock = substr($s,1);   }
+	    		elsif ($c eq 'F') { $frequency = substr($s,1);  }
+	    		elsif ($c eq 'L') { $datalength = substr($s,1);   }
+	    }
+	    $n++;
 	}
+	return "$name: sendmsg, unknown protocol: $protocol" if (!exists($ProtocolListSIGNALduino{$protocol}));
+
+	$repeats=1 if (!defined($repeats));
+
 	if (exists($ProtocolListSIGNALduino{$protocol}{frequency}) && $hasCC1101 && !defined($frequency)) {
 		$frequency = $ProtocolListSIGNALduino{$protocol}{frequency};
 	}
@@ -1999,8 +2012,6 @@ SIGNALduino_Set($@)
 	} else {
 		$frequency="";
 	}
-	
-	return "$name: sendmsg, unknown protocol: $protocol" if (!exists($ProtocolListSIGNALduino{$protocol}));
 	
 	#print ("data = $data \n");
 	#print ("protocol = $protocol \n");
@@ -2051,6 +2062,14 @@ SIGNALduino_Set($@)
 		if (!defined($clock)) {
 			$hash->{ITClock} = 250 if (!defined($hash->{ITClock}));   # Todo: Klaeren wo ITClock verwendet wird und ob wir diesen Teil nicht auf Protokoll 3,4 und 17 minimieren
 			$clock=$ProtocolListSIGNALduino{$protocol}{clockabs} > 1 ?$ProtocolListSIGNALduino{$protocol}{clockabs}:$hash->{ITClock};
+		}
+		
+		if ($dataishex == 1)	
+		{
+			# convert hex to bits
+	        my $hlen = length($data);
+	        my $blen = $hlen * 4;
+	        $data = unpack("B$blen", pack("H$hlen", $data));
 		}
 
 		Log3 $name, 5, "$name: sendmsg Preparing rawsend command for protocol=$protocol, repeats=$repeats, clock=$clock bits=$data";
@@ -4325,17 +4344,17 @@ sub SIGNALduino_PreparingSend_FS20_FHT($$$) {
 	for (my $i=0; $i<length($msg); $i+=2) {
 		$temp = hex(substr($msg, $i, 2));
 		$sum += $temp;
-		$newmsg .= dec2binppari($temp);
+		$newmsg .= SIGNALduino_dec2binppari($temp);
 	}
 	
-	$newmsg .= dec2binppari($sum & 0xFF);   # Checksum
+	$newmsg .= SIGNALduino_dec2binppari($sum & 0xFF);   # Checksum
 	my $repeats = $id - 71;			# FS20(74)=3, FHT(73)=2
 	$newmsg .= "0P#R" . $repeats;		# EOT, Pause, 3 Repeats    
 	
 	return $newmsg;
 }
 
-sub dec2binppari {      # dec to bin . parity
+sub SIGNALduino_dec2binppari {      # dec to bin . parity
 	my $num = shift;
 	my $parity = 0;
 	my $nbin = sprintf("%08b",$num);
@@ -5412,22 +5431,28 @@ sub SIGNALduino_compPattern($$$%)
 
 
 	Wireless switches  <br>
-	ITv1 & ITv3/Elro and other brands using pt2263 or arctech protocol--> uses IT.pm<br><br>
-
-	In the ITv1 protocol is used to sent a default ITclock from 250 and it may be necessary in the IT-Modul to define the attribute ITclock<br>
-	<br><br>
-	Temperatur / humidity senso
 	<ul>
-	<li>PEARL NC7159, LogiLink WS0002,GT-WT-02,AURIOL,TCM97001, TCM27 and many more -> 14_CUL_TCM97001 </li>
-	<li>Oregon Scientific v2 and v3 Sensors  -> 41_OREGON.pm</li>
-	<li>Temperatur / humidity sensors suppored -> 14_SD_WS07</li>
+		<li>ITv1 & ITv3/Elro and other brands using pt2263 or arctech protocol--> uses IT.pm<br>
+				In the ITv1 protocol is used to sent a default ITclock from 250 and it may be necessary in the IT-Modul to define the attribute ITclock</li>
+    <li>ELV FS10 -> 10_FS10</li>
+    <li>ELV FS20 -> 10_FS20</li>
+	</ul>
+	<br>
+	
+	Temperatur / humidity sensors
+	<ul>
+		<li>PEARL NC7159, LogiLink WS0002,GT-WT-02,AURIOL,TCM97001, TCM27 and many more -> 14_CUL_TCM97001 </li>
+		<li>Oregon Scientific v2 and v3 Sensors  -> 41_OREGON.pm</li>
+		<li>Temperatur / humidity sensors suppored -> 14_SD_WS07</li>
     <li>technoline WS 6750 and TX70DTH -> 14_SD_WS07</li>
     <li>Eurochon EAS 800z -> 14_SD_WS07</li>
     <li>CTW600, WH1080	-> 14_SD_WS09 </li>
     <li>Hama TS33C, Bresser Thermo/Hygro Sensor -> 14_Hideki</li>
     <li>FreeTec Aussenmodul NC-7344 -> 14_SD_WS07</li>
+    <li>La Crosse WS-7035, WS-7053, WS-7054 -> 14_CUL_TX</li>
+    <li>ELV WS-2000, La Crosse WS-7000 -> 14_CUL_WS</li>
 	</ul>
-	<br><br>
+	<br>
 
 	It is possible to attach more than one device in order to get better
 	reception, fhem will filter out duplicate messages.<br><br>
@@ -5645,15 +5670,21 @@ With a # at the beginnging whitelistIDs can be deactivated.
 		<li>sendMsg<br>
 		This command will create the needed instructions for sending raw data via the signalduino. Insteaf of specifying the signaldata by your own you specify 
 		a protocol and the bits you want to send. The command will generate the needed command, that the signalduino will send this.
+		It is also supported to specify the data in hex. prepend 0x in front of the data part.
 		<br><br>
 		Please note, that this command will work only for MU or MS protocols. You can't transmit manchester data this way.
 		<br><br>
 		Input args are:
 		<p>
 		P<protocol id>#binarydata#R<num of repeats>#C<optional clock>   (#C is optional) 
+		O<protocol id>#0xhexdata#R<num of repeats>#C<optional clock>    (#C is optional) 
+		
 		<br>Example: P0#0101#R3#C500
 		<br>Will generate the raw send command for the message 0101 with protocol 0 and instruct the arduino to send this three times and the clock is 500.
 		<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;
+		<br>Example: P29#0xF7E#R4
+		<br>Generates the raw send command with the hex message F7E with protocl id 29 . The message will be send four times.
+		<br>SR;R=4;P0=-8360;P1=220;P2=-440;P3=-220;P4=440;D=01212121213421212121212134;
 		</p>
 
 		
@@ -5717,34 +5748,36 @@ With a # at the beginnging whitelistIDs can be deactivated.
 
 	<table>
 	<tr><td>
-	Der <a href="https://wiki.fhem.de/wiki/SIGNALduino">SIGNALduino</a> ist basierend auf eine Idee von "mdorenka" und ver&ouml;ffentlicht im <a
-	href="http://forum.fhem.de/index.php/topic,17196.0.html">FHEM Forum</a>.<br>
+	Der <a href="https://wiki.fhem.de/wiki/SIGNALduino">SIGNALduino</a> ist basierend auf einer Idee von "mdorenka" und ver&ouml;ffentlicht im <a href="http://forum.fhem.de/index.php/topic,17196.0.html">FHEM Forum</a>.<br>
 
-	Mit der OpenSource-Firmware (hier der <a
-	href="https://github.com/RFD-FHEM/SIGNALduino">Link</a>) ist dieser f&auml;hig
-	f&uuml;r den Empfang und zum Senden verschiedener Protokolle von diversen Medien. Derzeit sind 433Mhz / 868Mhz Protokolle implementiert.
+	Mit der OpenSource-Firmware (<a href="https://github.com/RFD-FHEM/SIGNALduino">GitHub</a>) ist dieser f&auml;hig zum Empfangen und Senden verschiedener Protokolle auf 433 und 868 Mhz.
 	<br><br>
 	
-	Folgende Ger&auml;teunterst&uuml;tzung sind ist derzeit verf&uuml;gbar:
+	Folgende Ger&auml;te werden zur Zeit unterst&uuml;tzt:
 	<br><br>
 	
 	Funk-Schalter<br>
-	ITv1 & ITv3/Elro und andere Marken mit dem pt2263-Chip oder welche das arctech Protokoll nutzen --> IT.pm<br><br>
-	
-	Das ITv1 Protokoll benutzt einen Standard ITclock von 250 und es kann vorkommen, in dem IT-Modul das Attribut "ITclock" zu setzen.<br>
-	<br><br>
-	Temperatur / Feuchtigkeits Sensoren:
 	<ul>
-	<li>PEARL NC7159, LogiLink WS0002,GT-WT-02,AURIOL,TCM97001, TCM27 und viele anderen -> 14_CUL_TCM97001.pm</li>
-	<li>Oregon Scientific v2 und v3 Sensoren  -> 41_OREGON.pm</li>
-	<li>Temperatur / Feuchtigkeits Sensoren unterst&uuml;tzt -> 14_SD_WS07.pm</li>
+		<li>ITv1 & ITv3/Elro und andere Marken mit dem pt2263-Chip oder welche das arctech Protokoll nutzen --> IT.pm<br>
+				Das ITv1 Protokoll benutzt einen Standard ITclock von 250 und es kann vorkommen, das in dem IT-Modul das Attribut "ITclock" zu setzen ist.</li>
+    <li>ELV FS10 -> 10_FS10</li>
+    <li>ELV FS20 -> 10_FS20</li>
+	</ul>
+	
+	Temperatur-, Luftfeuchtigkeits-, Luftdruck-, Helligkeits-, Regen- und Windsensoren:
+	<ul>
+		<li>PEARL NC7159, LogiLink WS0002,GT-WT-02,AURIOL,TCM97001, TCM27 und viele anderen -> 14_CUL_TCM97001.pm</li>
+		<li>Oregon Scientific v2 und v3 Sensoren  -> 41_OREGON.pm</li>
+		<li>Temperatur / Feuchtigkeits Sensoren unterst&uuml;tzt -> 14_SD_WS07.pm</li>
     <li>technoline WS 6750 und TX70DTH -> 14_SD_WS07.pm</li>
     <li>Eurochon EAS 800z -> 14_SD_WS07.pm</li>
     <li>CTW600, WH1080	-> 14_SD_WS09.pm</li>
     <li>Hama TS33C, Bresser Thermo/Hygro Sensoren -> 14_Hideki.pm</li>
     <li>FreeTec Aussenmodul NC-7344 -> 14_SD_WS07.pm</li>
+    <li>La Crosse WS-7035, WS-7053, WS-7054 -> 14_CUL_TX</li>
+    <li>ELV WS-2000, La Crosse WS-7000 -> 14_CUL_WS</li>
 	</ul>
-	<br><br>
+	<br>
 
 	Es ist m&ouml;glich, mehr als ein Ger&auml;t anzuschließen, um beispielsweise besseren Empfang zu erhalten. FHEM wird doppelte Nachrichten herausfiltern.<br><br>
 
@@ -5953,17 +5986,27 @@ With a # at the beginnging whitelistIDs can be deactivated.
 	&Ouml;ffnet die Verbindung zum Ger&auml;t neu und initialisiert es. <br><br>
 	<li>sendMsg<br></li>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
+	Alternativ ist es auch moeglich, die zu sendenden Daten in hexadezimaler Form zu uebergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
+	<br><br>
+	Bitte beachte, dieses Kommando funktioniert nur für MU oder MS Protokolle nach dieser Vorgehensweise:
+		<br><br>
+		Argumente sind:
+		<p>
+		P<protocol id>#binarydata#R<anzahl der wiederholungen>#C<optional taktrate>   (#C is optional) 
+		O<protocol id>#0xhexdata#R<anzahl der wiederholungen>#C<optional taktrate>    (#C is optional) 
+		
+		<br>Beispiel: P29#0101#R3#C500
+		<br>Wird eine sende Kommando für die Bitfolge 0101 anhand der protocol id 0 erzeugen. Als Takt wird 500 verwendet.
+		<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;
+		<br>Beispiel: P29#0xF7E#R4
+		<br>Wird eine sende Kommando für die Hexfolge F7E anhand der protocol id 29 erzeugen. Die Nachricht soll 4x gesenset werden.
+		<br>SR;R=4;P0=-8360;P1=220;P2=-440;P3=-220;P4=440;D=01212121213421212121212134;
+		</p>
+
+		
+	
 	</ul><br><br>
 	
-	<small><u><b>Arduino IDE - Firmware - Hinweis:</b></small></u><br>
-	<small>(Hinweis: Die falsche Benutzung kann zu Fehlfunktionen des SIGNALduino´s f&uuml;hren!)</small>
-	<ul>
-	<li>#define DEBUGMUREPEAT 1<br>
-	Es wird jetzt im pattern Array geschaut ob es ein Wiederholungstrenner gibt der MU Nachrichten. Mit der o.g. Zeile werden debug Ausgaben aktiviert.</li>
-	<li>#define ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101<br>
-	Compilierung für den radinoCC1101 bestimmen</li>
-	<li>#define CMP_CC1101<br>
-	Darf nur bei Verwendung eines CC1101 Receiver´s aktiviert werden. Bei einem Low-Budget Receiver muss dies auskommentiert bleiben!</li>
 	</ul>
 	
 =end html_DE
