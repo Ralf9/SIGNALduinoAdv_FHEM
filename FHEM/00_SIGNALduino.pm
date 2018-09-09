@@ -37,7 +37,7 @@ use constant {
 	SDUINO_DISPATCH_VERBOSE     => 5,      # default 5
 	SDUINO_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
 	SDUINO_MC_DISPATCH_LOG_ID   => '12.1', # die o.g. Ausgabe erfolgt nur wenn der Wert mit der ID uebereinstimmt
-	SDUINO_PARSE_MU_MAX_RESTART => 30
+	SDUINO_PARSE_MU_MAX_RESTART => 20      # was ist hier ein sinnvoller Wert?
 };
 
 
@@ -1632,6 +1632,7 @@ SIGNALduino_Initialize($)
 					  ." suppressDeviceRawmsg:1,0"
 					  ." development"
 					  ." noMsgVerbose:0,1,2,3,4,5"
+					  ." maxMuMsgRepeat"
 		              ." $readingFnAttributes";
 
   $hash->{ShutdownFn} = "SIGNALduino_Shutdown";
@@ -3756,8 +3757,8 @@ sub SIGNALduino_Parse_MU($$$$@)
 						}
 						
 						$repeat += 1;
-						$repeatStr = " repeat $repeat"; 
-						last if ($repeat > 20);		# zur Sicherheit, damit es auf gar keinen Fall zu einer Endlosschleife kommen kann
+						$repeatStr = " repeat $repeat";
+						last if ($repeat > AttrVal($name,"maxMuMsgRepeat", 4));
 						
 						my $modulematch;
 						if (defined($ProtocolListSIGNALduino{$id}{modulematch})) {
