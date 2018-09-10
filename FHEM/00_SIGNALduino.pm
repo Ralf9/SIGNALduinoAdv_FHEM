@@ -141,6 +141,8 @@ my $clientsSIGNALduino = ":IT:"
 			        	."Siro:"
 						."FHT:"
 						."FS20:"
+						."CUL_EM:"
+						."Fernotron:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -153,7 +155,7 @@ my %matchListSIGNALduino = (
      "6:SD_AS"       			=> "^P2#[A-Fa-f0-9]{7,8}", 		  # Arduino based Sensors, should not be default
      "4:OREGON"            		=> "^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*",		
      "7:Hideki"					=> "^P12#75[A-F0-9]+",
-     "9:CUL_FHTTK"			=> "^T[A-F0-9]{8}",
+     "9:CUL_FHTTK"				=> "^T[A-F0-9]{8}",
      "10:SD_WS07"				=> "^P7#[A-Fa-f0-9]{6}F[A-Fa-f0-9]{2}(#R[A-F0-9][A-F0-9]){0,1}\$",
      "11:SD_WS09"				=> "^P9#F[A-Fa-f0-9]+",
      "12:SD_WS"					=> '^W\d+x{0,1}#.*',
@@ -165,10 +167,12 @@ my %matchListSIGNALduino = (
      "18:FLAMINGO"            	=> '^P13#[A-Fa-f0-9]+',						## Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
-     "21:FS10"				=> '^P61#[A-F0-9]+',
+     "21:FS10"					=> '^P61#[A-F0-9]+',
      "22:Siro"					=> '^P72#[A-Fa-f0-9]+',
-     "23:FHT"       => "^81..(04|09|0d)..(0909a001|83098301|c409c401)..",
-     "24:FS20"      => "^81..(04|0c)..0101a001", 
+     "23:FHT"      				=> "^81..(04|09|0d)..(0909a001|83098301|c409c401)..",
+     "24:FS20"    				=> "^81..(04|0c)..0101a001", 
+     "25:CUL_EM"    				=> "^E0.................", 
+     "26:Fernotron"  			=> '^P82#.*',
      "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -544,7 +548,28 @@ my %ProtocolListSIGNALduino  = (
 			#length_max     => '76',		# Don't know maximal lenth of a valid message
 			postDemodulation => \&SIGNALduino_bit2Arctec,
 		},
-	
+     "17.1"	=> # intertechno --> MU
+ #			# MU;P0=344;P1=-1230;P2=-200;D=01020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201010200;CP=0;R=0;
+ #			# MU;P0=346;P1=-1227;P2=-190;P4=-10224;P5=-2580;D=0102010102020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010102020102010201020104050201020102010102020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010102020102010201020;CP=0;R=0;
+ #			# MU;P0=351;P1=-1220;P2=-185;D=01 0201 0102 020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201020100;CP=0;R=0;
+ #			# MU;P0=355;P1=-189;P2=-1222;P3=-10252;P4=-2604;D=01020201010201020201020101020102020102010201020102010201010201020102010201020201020101020102010201020102010201020 304 0102 01020102020101020201010201020201020101020102020102010201020102010201010201020102010201020201020101020102010201020102010201020 304 01020;CP=0;R=0;
+#			# https://www.sweetpi.de/blog/329/ein-ueberblick-ueber-433mhz-funksteckdosen-und-deren-protokolle
+{
+ 			name			=> 'intertechno',
+ 			comment 		=> 'PIR-1000 | ITT-1500',
+ 			id          => '17.2',
+ 			one			=> [1,-5,1,-1],
+ 			zero			=> [1,-1,1,-5],
+ 			clockabs    => 230,			# -1 = auto
+ 			format 		=> 'twostate',	# tristate can't be migrated from bin into hex!
+ 			preamble		=> 'i',			# Append to converted message	
+ 			postamble		=> '00',		# Append to converted message	 	
+ 			clientmodule    => 'IT',   		# not used now
+ 			modulematch     => '^i......',  # not used now
+ 			length_min      => '32',
+ 			length_max     	=> '34',		# Don't know maximal lenth of a valid message
+ 			postDemodulation => \&SIGNALduino_bit2Arctec,
+},	
 	"18"    => 			## Oregon Scientific v1
 		{
             name			=> 'OSV1',	
@@ -1268,7 +1293,7 @@ my %ProtocolListSIGNALduino  = (
 		{
     # MU;P0=-32001;P1=457;P2=-1064;P3=1438;D=0123232323212121232123232321212121212121212323212121232321;CP=1;R=63;
     # MU;P0=-32001;P1=473;P2=-1058;P3=1454;D=0123232323212121232123232121212121212121212121232321212321;CP=1;R=51;
-    #MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
+    # MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
 
 			name         => 'WH2',
 			id           => '64',
@@ -1587,6 +1612,42 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '12',
 			#length_max      => '44',
 		},
+	"80" => ## EM (Energy-Monitor) Funkprotokoll (868Mhz),  @HomeAutoUser | Derwelcherichbin
+		{
+			# MU;P1=-417;P2=385;P3=-815;P4=-12058;D=42121212121212121212121212121212121232321212121212121232321212121212121232323212323212321232121212321212123232121212321212121232323212121212121232121212121212121232323212121212123232321232121212121232123232323212321;CP=2;R=87;
+			#- MU;P0=32001;P1=-419;P2=376;P3=-824;P4=-12056;D=012121212121212121212121212121212123232121212121212123232121212121212123232321232321232123212121232121212323212121232121212123232321212121212123212121212121212123232321212121212323232123212121212123212323232321232124;CP=2;R=87;w=0
+			
+			name			=> 'EM (Energy-Monitor)',
+			comment		=> 'EM (Energy-Monitor) (868Mhz)',
+			id				=> '80',
+			developId	=> 'y',
+			one			=> [1,-2],	# 800
+			zero			=> [1,-1],	# 400
+			clockabs		=> 400,
+			format			=> 'twostate', # not used now
+			clientmodule	=> 'CUL_EM',
+			preamble			=> 'E',
+			length_min		=> '104',
+			length_max		=> '114',
+			postDemodulation => \&SIGNALduino_postDemo_EM,
+		},
+	"82" => ## Fernotron shutters and light switches   
+			# MU;P0=-32001;P1=435;P2=-379;P4=-3201;P5=831;P6=-778;D=01212121212121214525252525252521652161452525252525252161652141652521652521652521614165252165252165216521416521616165216525216141652161616521652165214165252161616521652161416525216161652161652141616525252165252521614161652525216525216521452165252525252525;CP=1;O;
+			# the messages received are usual missing 12 bits at the end for some reason. So the checksum byte is missing.
+			# Fernotron protocol is unidirectional. Here we can only receive messages from controllers send to receivers. 
+		{
+			name           => 'Fernotron',
+			id             => '82',       # protocol number
+			developId      => 'm',
+			one            => [1,-2],     # on=400us, off=800us
+			zero           => [2,-1],     # on=800us, off=400us
+			float          => [1,-8],     # on=400us, off=3200us. each 10bit word has one [1,-8] in front
+			clockabs       => 400,        # 400us
+			preamble       => 'P82#',     # prepend our protocol number to converted message
+			clientmodule   => 'Fernotron',
+			length_min     => '100',      # actual 120 bit (12 x 10bit words to decode 6 bytes data), but last 20 are for checksum
+			length_max     => '3360',     # 3360 bit (336 x 10bit words to decode 168 bytes data) for full timer message
+	    },
 );
 
 
@@ -4456,6 +4517,38 @@ sub SIGNALduino_postDemo_Hoermann($@) {
 	}
 }
 
+sub SIGNALduino_postDemo_EM($@) {
+	my ($name, @bit_msg) = @_;
+	my $msg = join("",@bit_msg);
+	my $msg_start = index($msg, "0000000001");				# find start
+	my $count;
+	$msg = substr($msg,$msg_start + 10);						# delete preamble + 1 bit
+	my $new_msg = "";
+	my $crcbyte;
+	my $msgcrc = 0;
+
+	if ($msg_start > 0 && length $msg == 89) {
+		for ($count = 0; $count < length ($msg) ; $count +=9) {
+			$crcbyte = substr($msg,$count,8);
+			if ($count < (length($msg) - 10)) {
+				$new_msg.= join "", reverse @bit_msg[$msg_start + 10 + $count.. $msg_start + 17 + $count];
+				$msgcrc = $msgcrc ^ oct( "0b$crcbyte" );
+			}
+		}
+	
+		if ($msgcrc == oct( "0b$crcbyte" )) {
+			SIGNALduino_Log3 $name, 4, "$name: EM Protocol - CRC OK";
+			return (1,split("",$new_msg));
+		} else {
+			SIGNALduino_Log3 $name, 3, "$name: EM Protocol - CRC ERROR";
+			return 0, undef;
+		}
+	}
+	
+	Log3 $name, 3, "$name: EM Protocol - Start not found or length msg (".length $msg.") not correct";
+	return 0, undef;
+}
+
 sub SIGNALduino_postDemo_FS20($@) {
 	my ($name, @bit_msg) = @_;
 	my $datastart = 0;
@@ -4773,29 +4866,36 @@ sub SIGNALduino_postDemo_WS2000($@) {
 sub SIGNALduino_postDemo_WS7053($@) {
 	my ($name, @bit_msg) = @_;
 	my $msg = join("",@bit_msg);
-	my $new_msg ="";
-	my $parity = 0;									# Parity even
-   if (length($msg) > 32) {                  # start not correct
-      $msg = substr($msg,1)
-   }
-	Log3 $name, 4, "$name: WS7053 MSG = $msg";
-	if (substr($msg,0,8) ne "10100000") {		# check ident
-		Log3 $name, 3, "$name: WS7053 ERROR - Ident not 1010 0000 - " . substr($msg,0,8);
+	my $parity = 0;	                       # Parity even
+	Log3 $name, 4, "$name: WS7053 - MSG = $msg";
+	my $msg_start = index($msg, "10100000");
+	if ($msg_start > 0) {                  # start not correct
+		$msg = substr($msg, $msg_start);
+		$msg .= "0";
+		Log3 $name, 5, "$name: WS7053 - cut $msg_start char(s) at begin";
+	}
+	if ($msg_start < 0) {                  # start not found
+		Log3 $name, 3, "$name: WS7053 ERROR - Ident 10100000 not found";
 		return 0, undef;
 	} else {
-		for(my $i = 15; $i < 28; $i++) {			# Parity over bit 15 and 12 bit temperature
-	      $parity += substr($msg, $i, 1);
-		}
-		if ($parity % 2 != 0) {
-			Log3 $name, 3, "$name: WS7053 ERROR - Parity not even";
-			return 0, undef;
+		if (length($msg) < 32) {             # msg too short
+			Log3 $name, 3, "$name: WS7053 ERROR - msg too short, length " . length($msg);
+		return 0, undef;
 		} else {
-			Log3 $name, 5, "$name: WS7053 before: " . substr($msg,0,4) ." ". substr($msg,4,4) ." ". substr($msg,8,4) ." ". substr($msg,12,4) ." ". substr($msg,16,4) ." ". substr($msg,20,4) ." ". substr($msg,24,4) ." ". substr($msg,28,4);
-         # Format from 7053:  Bit 0-7 Ident, Bit 8-15 Rolling Code/Parity, Bit 16-27 Temperature (12.3), Bit 28-31 Zero
-			$new_msg = substr($msg,0,28) . substr($msg,16,8) . substr($msg,28,4);
-         # Format for CUL_TX: Bit 0-7 Ident, Bit 8-15 Rolling Code/Parity, Bit 16-27 Temperature (12.3), Bit 28 - 35 Temperature (12), Bit 36-39 Zero
-			Log3 $name, 5, "$name: WS7053 after:  " . substr($new_msg,0,4) ." ". substr($new_msg,4,4) ." ". substr($new_msg,8,4) ." ". substr($new_msg,12,4) ." ". substr($new_msg,16,4) ." ". substr($new_msg,20,4) ." ". substr($new_msg,24,4) ." ". substr($new_msg,28,4) ." ". substr($new_msg,32,4) ." ". substr($new_msg,36,4);
-			return (1,split("",$new_msg));
+			for(my $i = 15; $i < 28; $i++) {   # Parity over bit 15 and 12 bit temperature
+				$parity += substr($msg, $i, 1);
+			}
+			if ($parity % 2 != 0) {
+				Log3 $name, 3, "$name: WS7053 ERROR - Parity not even";
+				return 0, undef;
+			} else {
+				Log3 $name, 5, "$name: WS7053 before: " . substr($msg,0,4) ." ". substr($msg,4,4) ." ". substr($msg,8,4) ." ". substr($msg,12,4) ." ". substr($msg,16,4) ." ". substr($msg,20,4) ." ". substr($msg,24,4) ." ". substr($msg,28,4);
+				# Format from 7053:  Bit 0-7 Ident, Bit 8-15 Rolling Code/Parity, Bit 16-27 Temperature (12.3), Bit 28-31 Zero
+				my $new_msg = substr($msg,0,28) . substr($msg,16,8) . substr($msg,28,4);
+				# Format for CUL_TX: Bit 0-7 Ident, Bit 8-15 Rolling Code/Parity, Bit 16-27 Temperature (12.3), Bit 28 - 35 Temperature (12), Bit 36-39 Zero
+				Log3 $name, 5, "$name: WS7053 after:  " . substr($new_msg,0,4) ." ". substr($new_msg,4,4) ." ". substr($new_msg,8,4) ." ". substr($new_msg,12,4) ." ". substr($new_msg,16,4) ." ". substr($new_msg,20,4) ." ". substr($new_msg,24,4) ." ". substr($new_msg,28,4) ." ". substr($new_msg,32,4) ." ". substr($new_msg,36,4);
+				return (1,split("",$new_msg));
+			}
 		}
 	}
 }
