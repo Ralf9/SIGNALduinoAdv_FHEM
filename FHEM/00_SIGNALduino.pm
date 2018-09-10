@@ -1895,8 +1895,18 @@ SIGNALduino_Set($@)
   
   if($cmd eq "raw") {
     Log3 $name, 4, "set $name $cmd $arg";
-    #SIGNALduino_SimpleWrite($hash, $arg);
-    SIGNALduino_AddSendQueue($hash,$arg);
+    if ($arg =~ m/^Wseq /) {
+       my @args = split(' ', $arg);
+       foreach my $argcmd (@args) {
+          if ($argcmd ne "Wseq") {
+             #Log3 $name, 4, "set $name raw Wseq: $argcmd";
+             SIGNALduino_AddSendQueue($hash,$argcmd);
+          }
+       }
+    } else {
+       #SIGNALduino_SimpleWrite($hash, $arg);
+       SIGNALduino_AddSendQueue($hash,$arg);
+    }
   } elsif( $cmd eq "flash" ) {
     my @args = split(' ', $arg);
     my $log = "";
