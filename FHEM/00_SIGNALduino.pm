@@ -4181,18 +4181,18 @@ sub SIGNALduino_IdList($@)
 	if (!defined($aVal)) {
 		$aVal = AttrVal($name,"whitelist_IDs","");
 	}
-	Log3 $name, 3, "$name sduinoIdList: whitelistIds=$aVal";
+	Log3 $name, 3, "$name IdList: whitelistIds=$aVal" if ($aVal);
 	
 	if (!defined($blacklist)) {
 		$blacklist = AttrVal($name,"blacklist_IDs","");
 	}
-	Log3 $name, 3, "$name sduinoIdList: blacklistIds=$blacklist";
+	Log3 $name, 3, "$name IdList: blacklistIds=$blacklist" if ($blacklist);
 	
 	if (!defined($develop)) {
 		$develop = AttrVal($name,"development","");
 	}
 	$develop = lc($develop);
-	Log3 $name, 3, "$name sduinoIdList: development=$develop";
+	Log3 $name, 3, "$name IdList: development=$develop" if ($develop);
 
 	my %WhitelistIDs;
 	my %BlacklistIDs;
@@ -4201,7 +4201,7 @@ sub SIGNALduino_IdList($@)
 	if (defined($aVal) && length($aVal)>0)
 	{
 		if (substr($aVal,0 ,1) eq '#') {
-			Log3 $name, 3, "$name Attr whitelist disabled: $aVal";
+			Log3 $name, 3, "$name IdList, Attr whitelist disabled: $aVal";
 		}
 		else {
 			%WhitelistIDs = map { $_ => 1 } split(",", $aVal);
@@ -4214,7 +4214,7 @@ sub SIGNALduino_IdList($@)
 		if (defined($blacklist) && length($blacklist)>0) {
 			%BlacklistIDs = map { $_ => 1 } split(",", $blacklist);
 			my $w = join ', ' => map "$_" => keys %BlacklistIDs;
-			Log3 $name, 3, "$name Attr blacklist $w";
+			Log3 $name, 3, "$name IdList, Attr blacklist $w";
 			$bflag = 1;
 		}
 	}
@@ -4243,14 +4243,14 @@ sub SIGNALduino_IdList($@)
 		if ($wIdFound == 0)	# wenn die Id in der whitelist gefunden wurde, dann die folgenden Abfragen ueberspringen
 		{
 			if ($bflag == 1 && defined($BlacklistIDs{$id})) {
-				Log3 $name, 3, "$name skip Blacklist ID $id";
+				Log3 $name, 3, "$name IdList, skip Blacklist ID $id";
 				next;
 			}
 		
 			if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "p") {
 				$devid = "p$id";
 				if ($develop !~ m/$devid/) {						# skip wenn die Id nicht im Attribut development steht
-					Log3 $name, 3, "$name: ID=$devid skiped (developId=p)";
+					Log3 $name, 3, "$name IdList: ID=$devid skiped (developId=p)";
 					next;
 				}
 			}
@@ -4258,7 +4258,7 @@ sub SIGNALduino_IdList($@)
 			if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "y") {
 				$devid = "p$id";
 				if (($develop !~ m/y/) && ($develop !~ m/$devid/)) {			# skip wenn y nicht im Attribut development steht
-					Log3 $name, 3, "$name: ID=$id skiped (developId=y)";
+					Log3 $name, 3, "$name: IdList ID=$id skiped (developId=y)";
 					next;
 				}
 			}
@@ -4278,9 +4278,9 @@ sub SIGNALduino_IdList($@)
 		}
 	}
 
-	@msIdList = sort @msIdList;
-	@muIdList = sort @muIdList;
-	@mcIdList = sort @mcIdList;
+	@msIdList = sort {$a <=> $b} @msIdList;
+	@muIdList = sort {$a <=> $b} @muIdList;
+	@mcIdList = sort {$a <=> $b} @mcIdList;
 
 	Log3 $name, 3, "$name: IDlist MS @msIdList";
 	Log3 $name, 3, "$name: IDlist MU @muIdList";
