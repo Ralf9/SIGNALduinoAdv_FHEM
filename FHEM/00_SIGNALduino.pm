@@ -3307,10 +3307,10 @@ sub SIGNALduno_Dispatch($$$$$)
 		$hash->{TIME} = time();
 		$hash->{DMSG} = $dmsg;
 		#my $event = 0;
-		if (substr($dmsg,0,1) eq 'U') {
+		if (substr(ucfirst($dmsg),0,1) eq 'U') { # u oder U
 			#$event = 1;
 			DoTrigger($name, "DMSG " . $dmsg);
-			return;				# Fuer $dmsg die mit U anfangen ist kein Dispatch notwendig, da es dafuer kein Modul gibt
+			return if (substr($dmsg,0,1) eq 'U' && !defined($ProtocolListSIGNALduino{$id}{dispatchU})); # Fuer $dmsg die mit U anfangen ist kein Dispatch notwendig, da es dafuer kein Modul gibt klein u wird dagegen dispatcht
 		}
 		#readingsSingleUpdate($hash, "state", $hash->{READINGS}{state}{VAL}, $event);
 		
@@ -3326,6 +3326,14 @@ sub SIGNALduno_Dispatch($$$$$)
 		}
 		else {
 			$rssi = "";
+		}
+		if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
+			my $devid = "m$id";
+			my $develop = lc(AttrVal($name,"development",""));
+			if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
+				Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
+				return;
+			}
 		}
 		$dmsg = lc($dmsg) if ($id eq '74');
 		Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, $rssi dispatch";
@@ -3535,14 +3543,14 @@ SIGNALduino_Parse_MS($$$$%)
 			}
 			if (!defined($modulematch) || $dmsg =~ m/$modulematch/) {
 				Debug "$name: dispatching now msg: $dmsg" if ($debug);
-				if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
-					my $devid = "m$id";
-					my $develop = lc(AttrVal($name,"development",""));
-					if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
-						Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
-						next;
-					}
-				}
+				#if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
+				#	my $devid = "m$id";
+				#	my $develop = lc(AttrVal($name,"development",""));
+				#	if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
+				#		Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
+				#		next;
+				#	}
+				#}
 				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
 				$message_dispatched=1;
 			}
@@ -3837,14 +3845,14 @@ sub SIGNALduino_Parse_MU($$$$@)
 						}
 						if (!defined($modulematch) || $dmsg =~ m/$modulematch/) {
 							Debug "$name: dispatching now msg: $dmsg" if ($debug);
-							if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
-								my $devid = "m$id";
-								my $develop = lc(AttrVal($name,"development",""));
-								if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
-									Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
-									last;
-								}
-							}
+							#if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
+							#	my $devid = "m$id";
+							#	my $develop = lc(AttrVal($name,"development",""));
+							#	if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
+							#		Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
+							#		last;
+							#	}
+							#}
 	
 							SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
 							$message_dispatched=1;
@@ -3976,14 +3984,14 @@ SIGNALduino_Parse_MC($$$$@)
 		                $modulematch = $ProtocolListSIGNALduino{$id}{modulematch};
 					}
 					if (!defined($modulematch) || $dmsg =~ m/$modulematch/) {
-						if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
-							my $devid = "m$id";
-							my $develop = lc(AttrVal($name,"development",""));
-							if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
-								Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
-								next;
-							}
-						}
+						#if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
+						#	my $devid = "m$id";
+						#	my $develop = lc(AttrVal($name,"development",""));
+						#	if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
+						#		Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
+						#		next;
+						#	}
+						#}
 						if (SDUINO_MC_DISPATCH_VERBOSE < 5 && (SDUINO_MC_DISPATCH_LOG_ID eq '' || SDUINO_MC_DISPATCH_LOG_ID eq $id))
 						{
 							if (defined($rssi)) {
