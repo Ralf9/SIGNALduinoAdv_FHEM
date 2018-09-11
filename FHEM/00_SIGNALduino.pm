@@ -53,6 +53,8 @@ sub SIGNALduino_SimpleWrite(@);
 
 #my $debug=0;
 
+my $MuPartmsg = "";
+
 my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "version"  => ["V", 'V\s.*SIGNAL(duino|ESP).*'],
   "freeram"  => ["R", '^[0-9]+'],
@@ -2224,7 +2226,7 @@ SIGNALduino_Get($@)
 
   if (IsDummy($name))
   {
-  	if ($arg =~ /^M[CcSU];.*/)
+  	if ($arg =~ /^M[CcSUO];.*/)
   	{
 		$arg="\002$arg\003";  	## Add start end end marker if not already there
 		Log3 $name, 5, "$name/msg adding start and endmarker to message";
@@ -2787,7 +2789,7 @@ SIGNALduino_Read($)
     ($rmsg,$SIGNALduinodata) = split("\n", $SIGNALduinodata, 2);
     $rmsg =~ s/\r//;
     
-    	if ($rmsg =~ m/^\002(M(s|u);.*;)\003/) {
+    	if ($rmsg =~ m/^\002(M(s|u|o);.*;)\003/) {
 		$rmsg =~ s/^\002//;                # \002 am Anfang entfernen
 		my @msg_parts = split(";",$rmsg);
 		my $m0;
@@ -2799,7 +2801,7 @@ SIGNALduino_Read($)
 		my $partD;
 		
 		foreach my $msgPart (@msg_parts) {
-			next if (length($msgPart) le 1 );
+			next if ($msgPart eq "");
 			$m0 = substr($msgPart,0,1);
 			$mnr0 = ord($m0);
 			$m1 = substr($msgPart,1);
@@ -2831,7 +2833,7 @@ SIGNALduino_Read($)
 					$partD .= "$mH$mL";
 				}
 				#Log3 $name, 3, "$name/msg READredu1$m0: $partD";
-				if ($m0 eq "d") {
+				if ($m0 eq "D") {
 					$partD =~ s/.$//;	   # letzte Ziffer entfernen wenn Anzahl der Ziffern ungerade
 				}
 				$partD =~ s/^8//;	           # 8 am Anfang entfernen
@@ -2840,6 +2842,9 @@ SIGNALduino_Read($)
 			}
 			elsif (($m0 eq "C" || $m0 eq "S") && length($m1) == 1) {
 				$part .= "$m0" . "P=$m1;";
+			}
+			elsif ($m0 eq "o" || $m0 eq "m") {
+				$part .= "$m0$m1;";
 			}
 			elsif ($m1 =~ m/^[0-9A-Z]{1,2}$/) {        # bei 1 oder 2 Hex Ziffern nach Dez wandeln 
 				$part .= "$m0=" . hex($m1) . ";";
@@ -4046,25 +4051,56 @@ SIGNALduino_Parse($$$$@)
 		DoTrigger($name, "RAWMSG " . $rmsg);
 	}
 	
-	my %signal_parts=SIGNALduino_Split_Message($rmsg,$name);   ## Split message and save anything in an hash %signal_parts
+	#my %signal_parts=SIGNALduino_Split_Message($rmsg,$name);   ## Split message and save anything in an hash %signal_parts
 	#Debug "raw data ". $signal_parts{rawData};
 	
 	
 	my $dispatched;
-	# Message Synced type   -> M#
+	my %signal_parts;
 
 	if (@{$hash->{msIdList}} && $rmsg=~ m/^MS;(P\d=-?\d+;){3,8}D=\d+;CP=\d;SP=\d;/) 
 	{
+		%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
 		$dispatched= SIGNALduino_Parse_MS($hash, $iohash, $name, $rmsg,%signal_parts);
 	}
 	# Message unsynced type   -> MU
-  	elsif (@{$hash->{muIdList}} && $rmsg=~ m/^MU;(P\d=-?\d+;){3,8}D=\d+;CP=\d;/)
+  	elsif (@{$hash->{muIdList}} && $rmsg=~ m/^MU;(P\d=-?\d+;){3,8}.*D=\d+;/)
 	{
-		$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
+		my $MuPart = index($rmsg, ';o');
+		if ($MuPart > 0)
+		{
+			$MuPartmsg = substr($rmsg,0,$MuPart);
+			Log3 $name, 4, "$name/Remember MUmsg: $MuPartmsg";
+		}
+		else {
+			$MuPartmsg = "";
+			%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
+			$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
+		}
+	}
+	elsif ($rmsg=~ m/^MO;D=\d+;/)
+	{
+		if (length($MuPartmsg) > 10)
+		{
+			my $MoPart = index($rmsg, ';o');
+			if ($MoPart > 0)
+			{
+				$MuPartmsg = $MuPartmsg . substr($rmsg,5,$MoPart-5);	# zu gemerkter MU-Nachricht zufuegen
+				Log3 $name, 4, "$name/add Overflowmsg to MuPartmsg: " . substr($rmsg,5,$MoPart-5);
+			}
+			else {
+				$rmsg = $MuPartmsg . substr($rmsg,5);
+				$MuPartmsg = "";
+				Log3 $name, 4, "$name/Overflowmsg Parse_MU: $rmsg";
+				%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
+				$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
+			}
+		}
 	}
 	# Manchester encoded Data   -> MC
   	elsif (@{$hash->{mcIdList}} && $rmsg=~ m/^M[cC];.*;/) 
 	{
+		%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
 		$dispatched=  SIGNALduino_Parse_MC($hash, $iohash, $name, $rmsg,%signal_parts);
 	}
 	else {
