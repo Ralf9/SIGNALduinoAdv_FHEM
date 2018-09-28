@@ -2878,7 +2878,7 @@ SIGNALduino_Read($)
 					$partD .= "$mH$mL";
 				}
 				#Log3 $name, 3, "$name/msg READredu1$m0: $partD";
-				if ($m0 eq "D") {
+				if ($m0 eq "d") {
 					$partD =~ s/.$//;	   # letzte Ziffer entfernen wenn Anzahl der Ziffern ungerade
 				}
 				$partD =~ s/^8//;	           # 8 am Anfang entfernen
