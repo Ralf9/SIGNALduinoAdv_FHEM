@@ -50,6 +50,7 @@ sub SIGNALduino_Read($);
 sub SIGNALduino_Ready($);
 sub SIGNALduino_Write($$$);
 sub SIGNALduino_SimpleWrite(@);
+sub SIGNALduino_Log3($$$);
 
 #my $debug=0;
 
@@ -562,13 +563,14 @@ my %ProtocolListSIGNALduino  = (
  			id          => '17.2',
  			one			=> [1,-5,1,-1],
  			zero			=> [1,-1,1,-5],
+ 			start			=> [1,-44,1,-11],
  			clockabs    => 230,			# -1 = auto
  			format 		=> 'twostate',	# tristate can't be migrated from bin into hex!
  			preamble		=> 'i',			# Append to converted message	
  			postamble		=> '00',		# Append to converted message	 	
  			clientmodule    => 'IT',   		# not used now
  			modulematch     => '^i......',  # not used now
- 			length_min      => '32',
+ 			length_min      => '28',
  			length_max     	=> '34',		# Don't know maximal lenth of a valid message
  			postDemodulation => \&SIGNALduino_bit2Arctec,
 },	
@@ -586,22 +588,24 @@ my %ProtocolListSIGNALduino  = (
 			polarity        => 'invert',		    # invert bits
 			method          => \&SIGNALduino_OSV1   # Call to process this message
 		},
-	#"19" => # nothing knowing about this 2015-09-28 01:25:40-MS;P0=-8916;P1=-19904;P2=390;P3=-535;P4=-1020;P5=12846;P6=1371;D=2120232323232324242423232323232323232320239;CP=2;SP=1;
-	#
-	#	{
-    #       name			=> 'unknown19',	
-	#		id          	=> '19',
-	#		one				=> [1,-2],
-	#		zero			=> [1,-1],
-	#		sync			=> [1,-50,1,-22],				
-	#		clockabs		=> 395,
-	#		format 			=> 'twostate',	  		
-	#		preamble		=> 'u19#',				# prepend to converted message	
-	#		#clientmodule    => '',   				# not used now
-	#		#modulematch     => '',  				# not used now
-	#		length_min      => '16',
-	#		length_max      => '32',
-	#	}, 	 	
+	"19" => # minify Funksteckdose
+            # https://github.com/RFD-FHEM/RFFHEM/issues/114
+			# MU;P0=293;P1=-887;P2=-312;P6=-1900;P7=872;D=6727272010101720172720101720172010172727272720;CP=0;
+			# MU;P0=9078;P1=-308;P2=180;P3=-835;P4=881;P5=309;P6=-1316;D=0123414141535353415341415353415341535341414141415603;CP=5;
+		{
+            name			=> 'minify',
+			comment 		=> 'RC202 remote ?',
+			id          	=> '19',
+			one				=> [3,-1],
+			zero			=> [1,-3],
+			clockabs		=> 300,
+			format 			=> 'twostate',	  		
+			preamble		=> 'u19#',				# prepend to converted message
+			#clientmodule    => '',   				# not used now
+			#modulematch     => '',  				# not used now
+			length_min      => '19',
+			length_max      => '23',				# not confirmed, length one more as MU Message
+		},	 	
 	"20" => #Livolo	
 		{
             name			=> 'livolo',	
@@ -1606,7 +1610,6 @@ my %ProtocolListSIGNALduino  = (
 			#comment	=> '',
 			id		=> '79',
 			#developId       => 'm',
-			#dispatchU       => 'y',
 			zero		=> [-2,1], 	#
 			one		=> [-1,2],   	# 
 			start  		=> [-15,1],	#
@@ -1667,6 +1670,7 @@ my %ProtocolListSIGNALduino  = (
 			one            => [1,-2],     # on=400us, off=800us
 			zero           => [2,-1],     # on=800us, off=400us
 			float          => [1,-8],     # on=400us, off=3200us. each 10bit word has one [1,-8] in front
+			pause          => [1,-1],     # preamble (5x)
 			clockabs       => 400,        # 400us
 			preamble       => 'P82#',     # prepend our protocol number to converted message
 			clientmodule   => 'Fernotron',
