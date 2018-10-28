@@ -182,6 +182,7 @@ my %matchListSIGNALduino = (
 
 my %ProtocolListSIGNALduino  = (
     "0"    => 
+				# MS;P1=-2009;P2=486;P3=-9058;P4=-4037;D=23212121242121212421242421242421212424242424212124212121212121212121212124;CP=2;SP=3;R=67;m=2;
         {
             name			=> 'weather1',		# Logilink, NC, WS, TCM97001 etc.
 			comment		=> 'Logilink, NC, WS, TCM97001 etc',
@@ -189,11 +190,11 @@ my %ProtocolListSIGNALduino  = (
 			one				=> [1,-8],
 			zero			=> [1,-4],
 			sync			=> [1,-18],		
-			clockabs   		=> '500',		# not used now
+			clockabs   		=> '500',
 			format     		=> 'twostate',  # not used now
 			preamble		=> 's',			# prepend to converted message	 	
 			postamble		=> '00',		# Append to converted message	 	
-			clientmodule    => 'CUL_TCM97001',   # not used now
+			clientmodule    => 'CUL_TCM97001',
 			#modulematch     => '^s[A-Fa-f0-9]+', # not used now
 			length_min      => '24',
 			length_max      => '42',
@@ -201,23 +202,20 @@ my %ProtocolListSIGNALduino  = (
         },
     "1"    => 
         {
-            name			=> 'ConradRSL',			# 
+            name			=> 'ConradRSL',
 			id          	=> '1',
 			one				=> [2,-1],
 			zero			=> [1,-2],
 			sync			=> [1,-11],		
-			clockabs   		=> '560',				# not used now
+			clockabs   		=> '560',
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'P1#',					# prepend to converted message	 	
 			postamble		=> '',					# Append to converted message	 	
-			clientmodule    => 'SD_RSL',   # not used now
-			modulematch     => '^P1#[A-Fa-f0-9]{8}', 	# not used now
+			clientmodule    => 'SD_RSL',
+			modulematch     => '^P1#[A-Fa-f0-9]{8}',
 			length_min 		=> '20',   # 23
 			length_max 		=> '40',   # 24
-
         },
-
-
     "2"    => 
         {
 			name			=> 'AS, Self build arduino sensor',
@@ -227,15 +225,14 @@ my %ProtocolListSIGNALduino  = (
 			one				=> [1,-2],
 			zero			=> [1,-1],
 			sync			=> [1,-20],
-			clockabs     	=> '500',		# not used now
+			clockabs     	=> '500',
 			format 			=> 'twostate',	
 			preamble		=> 'P2#',		# prepend to converted message		
-			clientmodule    => 'SD_AS',   # not used now
+			clientmodule    => 'SD_AS',
 			modulematch     => '^P2#.{7,8}',
 			length_min      => '32',
-			length_max      => '34',		# Don't know maximal lenth of a valid message
+			length_max      => '34',
 			paddingbits     => '8',		    # pad up to 8 bits, default is 4
-	
         },
     "3"    => 
         {
@@ -248,14 +245,14 @@ my %ProtocolListSIGNALduino  = (
 			clockabs     	=> -1,	# -1=auto	
 			format 			=> 'twostate',	# not used now
 			preamble		=> 'i',			
-			clientmodule    => 'IT',   # not used now
-			modulematch     => '^i......', # not used now
+			clientmodule    => 'IT',
+			modulematch     => '^i......',
 			length_min      => '24',
-			#length_max      => '800',		# Don't know maximal lenth of a valid message
-
+			length_max      => '24'
 			},
-    "3.1"    => 	# MS;P0=-11440;P1=-1121;P2=-416;P5=309;P6=1017;D=150516251515162516251625162516251515151516251625151;CP=5;SP=0;R=66;
-			# MS;P1=309;P2=-1130;P3=1011;P4=-429;P5=-11466;D=15123412121234123412141214121412141212123412341234;CP=1;SP=5;R=38;  Gruppentaste
+    "3.1"    => # MS;P0=-11440;P1=-1121;P2=-416;P5=309;P6=1017;D=150516251515162516251625162516251515151516251625151;CP=5;SP=0;R=66;
+			    # MS;P1=309;P2=-1130;P3=1011;P4=-429;P5=-11466;D=15123412121234123412141214121412141212123412341234;CP=1;SP=5;R=38;  Gruppentaste, siehe Kommentar in sub SIGNALduino_bit2itv1
+			    # need more Device Infos / User Message
         {
             name			=> 'itv1_sync40',	
 			comment		=> 'IT remote Control PAR 1000, ITS-150',
@@ -267,13 +264,13 @@ my %ProtocolListSIGNALduino  = (
 			clockabs     	=> -1,	# -1=auto	
 			format 			=> 'twostate',	# not used now
 			preamble		=> 'i',			
-			clientmodule    => 'IT',   # not used now
-			modulematch     => '^i......', # not used now
+			clientmodule    => 'IT',
+			modulematch     => '^i......',
 			length_min      => '24',
-			#length_max      => '800',		# Don't know maximal lenth of a valid message
+			length_max      => '24',
 			postDemodulation => \&SIGNALduino_bit2itv1,
 			},
-    "4"    => 
+    "4"    => # need more Device Infos / User Message
         {
             name			=> 'arctech2',	
 			id          	=> '4',
@@ -287,12 +284,14 @@ my %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
 			preamble		=> 'i',			# Append to converted message	
 			postamble		=> '00',		# Append to converted message	 	
-			clientmodule    => 'IT',   		# not used now
-			modulematch     => '^i......',  # not used now
+			clientmodule    => 'IT',
+			modulematch     => '^i......',
 			length_min      => '32',
 			#length_max      => '76',		# Don't know maximal lenth of a valid message
 		},
     "5"    => 			## Similar protocol as intertechno, but without sync
+				# ! same definition how ID 75, but other length !
+				# MU;P0=-404;P1=1319;P2=-1022;P3=546;P4=-7696;D=012121212321232123232321232323212121212121232323212321212121212121232323212321212323212140;CP=3;R=230;
         {
             name			=> 'unitec6899',	
 			id          	=> '5',
@@ -300,13 +299,12 @@ my %ProtocolListSIGNALduino  = (
 			zero			=> [1,-3],
 			clockabs     	=> 500,			# -1 = auto
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
-			preamble		=> 'i',			# Append to converted message	
-			clientmodule    => 'IT',   		# not used now
-			modulematch     => '^i......',  # not used now
+			preamble		=> 'u5#',			# Append to converted message	
+			#clientmodule    => 'IT',   		# not used now
+			#modulematch     => '^i......',  # not used now
 			length_min      => '24',
-
-		},    
-	
+			length_max      => '24', # Don't know maximal lenth of a valid message
+		},
 	"6"    => 			## Eurochron Protocol
         {
             name			=> 'weatherID6',	
@@ -320,12 +318,12 @@ my %ProtocolListSIGNALduino  = (
 			#clientmodule    => '',   	# not used now
 			#modulematch     => '^u......',  # not used now
 			length_min      => '24',
-
 		},
-	"7"    => 			## weather sensors like EAS800z
+	"7"    => ## weather sensors like EAS800z
+			  # MS;P1=-3882;P2=504;P3=-957;P4=-1949;D=21232424232323242423232323232323232424232323242423242424242323232324232424;CP=2;SP=1;R=249;m=2;
         {
             name			=> 'weatherID7',	
-			comment		=> 'EAS800z, FreeTec NC-7344',
+			comment         => 'EAS800z, FreeTec NC-7344, HAMA TS34A',
 			id          	=> '7',
 			one				=> [1,-4],
 			zero			=> [1,-2],
@@ -333,28 +331,27 @@ my %ProtocolListSIGNALduino  = (
 			clockabs     	=> 484,			
 			format 			=> 'twostate',	
 			preamble		=> 'P7#',		# prepend to converted message	
-			clientmodule    => 'SD_WS07',   	# not used now
-			modulematch     => '^P7#.{6}F.{2}$', # not used now
+			clientmodule    => 'SD_WS07',
+			modulematch     => '^P7#.{6}F.{2}$',
 			length_min      => '35',
 			length_max      => '40',
-
 		}, 
-	"8"    => 			## TX3 (ITTX) Protocol
+	"8"    =>   ## TX3 (ITTX) Protocol
+				# MU;P0=-1046;P1=1339;P2=524;P3=-28696;D=010201010101010202010101010202010202020102010101020101010202020102010101010202310101010201020101010101020201010101020201020202010201010102010101020202010201010101020;CP=2;R=4;
         {
             name			=> 'TX3 Protocol',	
 			id          	=> '8',
 			one				=> [1,-2],
 			zero			=> [2,-2],
-			#sync			=> [1,-8],		# 
-			clockabs     	=> 470,			# 
-			format 			=> 'pwm',	    # 
+			#sync			=> [1,-8],
+			clockabs     	=> 470,
+			format 			=> 'pwm',
 			preamble		=> 'TX',		# prepend to converted message	
-			clientmodule    => 'CUL_TX',   	# not used now
-			modulematch     => '^TX......', # not used now
+			clientmodule    => 'CUL_TX',
+			modulematch     => '^TX......',
 			length_min      => '43',
 			length_max      => '44',
 			remove_zero     => 1,           # Removes leading zeros from output
-
 		}, 	
 	"9"    => 			## Funk Wetterstation CTW600
 			{
@@ -368,12 +365,11 @@ my %ProtocolListSIGNALduino  = (
 			clockabs     	=> 480,			# -1 = auto undef=noclock
 			format 			=> 'pwm',	    # tristate can't be migrated from bin into hex!
 			preamble		=> 'P9#',		# prepend to converted message	
-			clientmodule    => 'SD_WS09',   	# not used now
+			clientmodule    => 'SD_WS09',
 			#modulematch     => '^u9#.....',  # not used now
 			length_min      => '60',
 			length_max      => '120',
-
-		},
+		}, 	
 	"10"    => 			## Oregon Scientific 2
 		{
             name			=> 'OSV2o3',	
@@ -394,7 +390,7 @@ my %ProtocolListSIGNALduino  = (
 			clockrange     	=> [380,425],			# min , max
 			format 			=> 'manchester',	    # tristate can't be migrated from bin into hex!
 			preamble		=> 'P2#',		# prepend to converted message	
-			clientmodule    => 'SD_AS',   	# not used now
+			clientmodule    => 'SD_AS',
 			modulematch     => '^P2#.{7,8}',
 			length_min      => '52',
 			length_max      => '56',
@@ -413,7 +409,6 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '128',
 			method          => \&SIGNALduino_Hideki,	# Call to process this message
 			polarity        => 'invert',			
-			
 		}, 	
 	"12.1"    => 			## hideki
 		{
@@ -429,11 +424,11 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '128',
 			method          => \&SIGNALduino_Hideki,	# Call to process this message
 			#polarity        => 'invert',			
-			
 		}, 	
 	"13"    => 			## FLAMINGO  FA 21
 			# https://github.com/RFD-FHEM/RFFHEM/issues/21
 			# https://github.com/RFD-FHEM/RFFHEM/issues/233
+			# MS;P0=-1413;P1=757;P2=-2779;P3=-16079;P4=8093;P5=-954;D=1345121210101212101210101012121012121210121210101010;CP=1;SP=3;R=33;O;
 		{
             name			=> 'FLAMINGO FA21',	
 			id          	=> '13',
@@ -448,12 +443,15 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '26',
 		}, 		
-	# MU;P0=-1384;P1=815;P2=-2725;P3=-20001;P4=8159;P5=-891;D=01010121212121010101210101345101210101210101212101010101012121212101010121010134510121010121010121210101010101212121210101012101013451012101012101012121010101010121212121010101210101345101210101210101212101010101012121212101010121010134510121010121010121;CP=1;O;
-	# MU;P0=-17201;P1=112;P2=-1419;P3=-28056;P4=8092;P5=-942;P6=777;P7=-2755;D=12134567676762626762626762626767676762626762626267626260456767676262676262676262676767676262676262626762626045676767626267626267626267676767626267626262676262604567676762626762626762626767676762626762626267626260456767676262676262676262676767676262676262;CP=6;O;
-	# MU;P0=-4284;P1=865;P2=-1403;P3=-2706;P4=-20914;P5=8132;P6=-932;D=01213121312121212121213121212121312121312131312131456121312131212121212121312121212131212131213131213141;CP=1;R=252;
-	"13.1"    => 			## FLAMINGO FA20 
+	"13.1"  =>	## FLAMINGO FA20RF
+				# MU;P0=-1384;P1=815;P2=-2725;P3=-20001;P4=8159;P5=-891;D=01010121212121010101210101345101210101210101212101010101012121212101010121010134510121010121010121210101010101212121210101012101013451012101012101012121010101010121212121010101210101345101210101210101212101010101012121212101010121010134510121010121010121;CP=1;O;
+				# MU;P0=-17201;P1=112;P2=-1419;P3=-28056;P4=8092;P5=-942;P6=777;P7=-2755;D=12134567676762626762626762626767676762626762626267626260456767676262676262676262676767676262676262626762626045676767626267626267626267676767626267626262676262604567676762626762626762626767676762626762626267626260456767676262676262676262676767676262676262;CP=6;O;
+				## FLAMINGO FA22RF (only MU Message)
+				# MU;P0=-5684;P1=8149;P2=-887;P3=798;P4=-1393;P5=-2746;P6=-19956;D=0123434353534353434343434343435343534343534353534353612343435353435343434343434343534353434353435353435361234343535343534343434343434353435343435343535343536123434353534353434343434343435343534343534353534353612343435353435343434343434343534353434353435;CP=3;R=0;
+				# Times measured
+				# Sync 8100 microSec, 900 microSec | Bit1 2700 microSec low - 800 microSec high | Bit0 1400 microSec low - 800 microSec high | Pause Repeat 20000 microSec | 1 Sync + 24Bit, Totaltime 65550 microSec without Sync
 		{
-            name			=> 'FLAMINGO FA21 / LM-101LD',	
+            name			=> 'FLAMINGO FA21 / LM-101LD',
 			comment		=> 'FLAMINGO oder Unitec Rauchmelder',
 			id          	=> '13',
 			one				=> [1,-1.8],
@@ -466,15 +464,15 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => 'P13#.*',  				# not used now
 			length_min      => '24',
 			length_max      => '24',
-		},
+		}, 		
 	"13.2" => ##  MS;P1=-2708;P2=796;P3=-1387;P4=-8477;P5=8136;P6=-904;D=2456212321212323232321212121212121212123212321212121;CP=2;SP=4;
 		{
 			name		=> 'LM-101LD Rauchm',
 			comment		=> 'Unitec Rauchmelder',
 			id		=> '13',
-			zero		=> [1,-1.8], 	#
-			one		=> [1,-3.5],   	# 
-			sync		=> [1,-11,10,-1.2],	#
+			zero		=> [1,-1.8],
+			one		=> [1,-3.5],
+			sync		=> [1,-11,10,-1.2],
 			clockabs     	=> 790,
 			format 		=> 'twostate',	    # 
 			preamble	=> 'P13#',	# prepend to converted message	
@@ -483,14 +481,15 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '24',
 		},
-	"14"    => 			## Heidemann HX
+	"14"    =>	## Heidemann HX BELL
 		{
             name			=> 'Heidemann HX',	
+			comment         => 'Heidemann HX doorbell',
 			id          	=> '14',
 			one				=> [1,-2],
 			zero			=> [1,-1],
 			#float			=> [-1,3],				# not full supported now, for later use
-			sync			=> [1,-14],				# 
+			sync			=> [1,-14],
 			clockabs		=> 350,
 			format 			=> 'twostate',	  		
 			preamble		=> 'u14#',				# prepend to converted message	
@@ -501,11 +500,12 @@ my %ProtocolListSIGNALduino  = (
 		}, 			
 	"15"    => 			## TCM234759
 			{
-            name			=> 'TCM Bell',	
+			name			=> 'TCM 234759 Bell',	
+			comment         => 'wireless doorbell TCM 234759 Tchibo',
 			id          	=> '15',
 			one				=> [1,-1],
 			zero			=> [1,-2],
-			sync			=> [1,-45],				# 
+			sync			=> [1,-45],
 			clockabs		=> 700,
 			format 			=> 'twostate',	  		
 			preamble		=> 'u15#',				# prepend to converted message	
@@ -516,6 +516,10 @@ my %ProtocolListSIGNALduino  = (
 			#method          => \&SIGNALduino_Cresta	# Call to process this message
 		}, 	
 	"16" => # Rohrmotor24 und andere Funk Rolladen / Markisen Motoren
+			# ! same definition how ID 72 !
+			# https://forum.fhem.de/index.php/topic,49523.0.html							   
+            # MU;P0=-1608;P1=-785;P2=288;P3=650;P4=-419;P5=4676;D=1212121213434212134213434212121343434212121213421213434212134345021213434213434342121212121343421213421343421212134343421212121342121343421213432;CP=2;
+			# MU;P0=-1562;P1=-411;P2=297;P3=-773;P4=668;P5=4754;D=1232341234141234141234141414123414123232341232341412323414150234123234123232323232323234123414123414123414141412341412323234123234141232341415023412323412323232323232323412341412341412341414141234141232323412323414123234142;CP=2;
 		{
             name			=> 'Dooya shutter',	
 			id          	=> '16',
@@ -525,14 +529,14 @@ my %ProtocolListSIGNALduino  = (
 			clockabs		=> 280,
 			format 			=> 'twostate',	  		
 			preamble		=> 'P16#',				# prepend to converted message	
-			clientmodule    => 'Dooya',   				# not used now
+			clientmodule    => 'Dooya',
 			#modulematch     => '',  				# not used now
 			length_min      => '39',
 			length_max      => '40',
 		}, 	
     "17"    => 
         {
-            name			=> 'arctech',	
+            name			=> 'arctech / intertechno',
 			id          	=> '17',
 			one				=> [1,-5,1,-1],  
 			zero			=> [1,-1,1,-5],  
@@ -545,36 +549,37 @@ my %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
 			preamble		=> 'i',			# Append to converted message	
 			postamble		=> '00',		# Append to converted message	 	
-			clientmodule    => 'IT',   		# not used now
-			modulematch     => '^i......',  # not used now
+			clientmodule    => 'IT',
+			modulematch     => '^i......',
 			length_min      => '32',
-			#length_max     => '76',		# Don't know maximal lenth of a valid message
+			length_max      => '34',
 			postDemodulation => \&SIGNALduino_bit2Arctec,
 		},
-     "17.1"	=> # intertechno --> MU
- #			# MU;P0=344;P1=-1230;P2=-200;D=01020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201010200;CP=0;R=0;
- #			# MU;P0=346;P1=-1227;P2=-190;P4=-10224;P5=-2580;D=0102010102020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010102020102010201020104050201020102010102020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010102020102010201020;CP=0;R=0;
- #			# MU;P0=351;P1=-1220;P2=-185;D=01 0201 0102 020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201020100;CP=0;R=0;
- #			# MU;P0=355;P1=-189;P2=-1222;P3=-10252;P4=-2604;D=01020201010201020201020101020102020102010201020102010201010201020102010201020201020101020102010201020102010201020 304 0102 01020102020101020201010201020201020101020102020102010201020102010201010201020102010201020201020101020102010201020102010201020 304 01020;CP=0;R=0;
-#			# https://www.sweetpi.de/blog/329/ein-ueberblick-ueber-433mhz-funksteckdosen-und-deren-protokolle
-{
- 			name			=> 'intertechno',
- 			comment 		=> 'PIR-1000 | ITT-1500',
- 			id          => '17.2',
+	 "17.1"	=> # intertechno --> MU anstatt sonst MS (ID 17)
+			# MU;P0=344;P1=-1230;P2=-200;D=01020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201010200;CP=0;R=0;
+			# MU;P0=346;P1=-1227;P2=-190;P4=-10224;P5=-2580;D=0102010102020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010102020102010201020104050201020102010102020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010102020102010201020;CP=0;R=0;
+			# MU;P0=351;P1=-1220;P2=-185;D=01 0201 0102 020101020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201020100;CP=0;R=0;
+			# MU;P0=355;P1=-189;P2=-1222;P3=-10252;P4=-2604;D=01020201010201020201020101020102020102010201020102010201010201020102010201020201020101020102010201020102010201020 304 0102 01020102020101020201010201020201020101020102020102010201020102010201010201020102010201020201020101020102010201020102010201020 304 01020;CP=0;R=0;
+			# https://www.sweetpi.de/blog/329/ein-ueberblick-ueber-433mhz-funksteckdosen-und-deren-protokolle
+        {
+			name			=> 'intertechno',
+			comment 		=> 'PIR-1000 | ITT-1500',
+			id          	=> '17.1',
  			one			=> [1,-5,1,-1],
  			zero			=> [1,-1,1,-5],
  			start			=> [1,-44,1,-11],
- 			clockabs    => 230,			# -1 = auto
- 			format 		=> 'twostate',	# tristate can't be migrated from bin into hex!
- 			preamble		=> 'i',			# Append to converted message	
- 			postamble		=> '00',		# Append to converted message	 	
- 			clientmodule    => 'IT',   		# not used now
- 			modulematch     => '^i......',  # not used now
+			clockabs    	=> 230,			# -1 = auto
+			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
+			preamble		=> 'i',			# Append to converted message	
+			postamble		=> '00',		# Append to converted message	 	
+			clientmodule    => 'IT',
+			modulematch     => '^i......',
  			length_min      => '28',
- 			length_max     	=> '34',		# Don't know maximal lenth of a valid message
- 			postDemodulation => \&SIGNALduino_bit2Arctec,
-},	
-	"18"    => 			## Oregon Scientific v1
+			length_max     	=> '34',
+			postDemodulation => \&SIGNALduino_bit2Arctec,
+	   },
+	"18"    => ## Oregon Scientific v1
+			   # MC;LL=-2721;LH=3139;SL=-1246;SH=1677;D=1A51FF47;C=1463;L=32;R=12;
 		{
             name			=> 'OSV1',	
 			id          	=> '18',
@@ -605,8 +610,16 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',  				# not used now
 			length_min      => '19',
 			length_max      => '23',				# not confirmed, length one more as MU Message
-		},	 	
-	"20" => #Livolo	
+		},
+	"20" => # Livolo         	
+            # https://github.com/RFD-FHEM/RFFHEM/issues/29
+         	# MU;P0=-195;P1=151;P2=475;P3=-333;D=010101010102010101010101013101013101010101013101010201010101010101010101010101010101010101020101010101010101010101010101010101010102010101010101013101013101;CP=1;																																														 
+			#
+			# protocol sends 24 to 47 pulses per message.
+			# First pulse is the header and is 595 μs long. All subsequent pulses are either 170 μs (short pulse) or 340 μs (long pulse) long.
+			# Two subsequent short pulses correspond to bit 0, one long pulse corresponds to bit 1. There is no footer. The message is repeated for about 1 second.
+			#             _____________                 ___                 _______
+			# Start bit: |             |___|    bit 0: |   |___|    bit 1: |       |___|								   
 		{
             name			=> 'livolo',	
 			id          	=> '20',
@@ -652,7 +665,6 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',  				# not used now
 			length_min      => '40',
 			#length_max      => '',				    # must be tested
-
 		},
 	"23" => # Pearl Sensor
 		{
@@ -668,9 +680,10 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',  				# not used now
 			length_min      => '36',
 			length_max      => '44',				
-
 		},
 	"24" => # visivon
+	        # https://github.com/RFD-FHEM/RFFHEM/issues/39
+			# MU;P0=132;P1=500;P2=-233;P3=-598;P4=-980;P5=4526;D=012120303030303120303030453120303121212121203121212121203121212121212030303030312030312031203030303030312031203031212120303030303120303030453120303121212121203121212121203121212121212030303030312030312031203030303030312031203031212120303030;CP=0;O;
 		{
             name			=> 'visivon remote',	
 			id          	=> '24',
@@ -686,10 +699,10 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',  				# not used now
 			length_min      => '54',
 			length_max      => '58',				
-
 		},
-		
 	"25" => # LES remote for led lamp
+            # https://github.com/RFD-FHEM/RFFHEM/issues/40
+	        # MS;P0=-376;P1=697;P2=-726;P3=322;P4=-13188;P5=-15982;D=3530123010101230123230123010101010101232301230123234301230101012301232301230101010101012323012301232;CP=3;SP=5;O;
 		{
             name			=> 'les led remote',	
 			id          	=> '25',
@@ -750,25 +763,28 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '8',
 			length_max      => '8',				
 		},
-	"29" => # 
+	"29" => # example remote control with HT12E chip
+           # MU;P0=250;P1=-492;P2=166;P3=-255;P4=491;P5=-8588;D=052121212121234121212121234521212121212341212121212345212121212123412121212123452121212121234121212121234;CP=0;
+           # https://forum.fhem.de/index.php/topic,58397.960.html
 		{
             name			=> 'HT12e remote',	
+			comment         => 'Remote control for example Westinghouse airfan with five Buttons (developModule SD_UT is only in github available)',
 			id          	=> '29',
 			one				=> [-2,1],
 			zero			=> [-1,2],
-			#float          => [1,-1],	
-			start			=> [-38,1],				# Message is not provided as MS, worakround is start
-			clockabs		=> 220,                 #ca 220
-			format 			=> 'tristate',	  		# there is a pause puls between words
-			preamble		=> 'u29#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
-			length_min      => '10',
-			length_max      => '12',				# message has only 10 bit but is paddet to 12
+			start           => [-35,1],         # Message is not provided as MS, worakround is start
+			clockabs        => 235,             # ca 220
+			format          => 'twostate',      # there is a pause puls between words
+			preamble        => 'u29#',				# prepend to converted message	
+			clientmodule    => 'SD_UT', 
+			modulematch     => '^u29#.{3}',
+			length_min      => '12',
+			length_max      => '12',
 		},
 	"30" => # a unitec remote door reed switch
-		# MU;P0=-10026;P1=-924;P2=309;P3=-688;P4=-361;P5=637;D=123245453245324532453245320232454532453245324532453202324545324532453245324532023245453245324532453245320232454532453245324532453202324545324532453245324532023245453245324532453245320232454532453245324532453202324545324532453245324532023240;CP=2;O;
-		# MU;P0=307;P1=-10027;P2=-691;P3=-365;P4=635;D=0102034342034203420342034201020343420342034203420342010203434203420342034203420102034342034203420342034201020343420342034203420342010203434203420342034203420102034342034203420342034201;CP=0;
+			# https://forum.fhem.de/index.php?topic=43346.0
+			# MU;P0=-10026;P1=-924;P2=309;P3=-688;P4=-361;P5=637;D=123245453245324532453245320232454532453245324532453202324545324532453245324532023245453245324532453245320232454532453245324532453202324545324532453245324532023245453245324532453245320232454532453245324532453202324545324532453245324532023240;CP=2;O;
+			# MU;P0=307;P1=-10027;P2=-691;P3=-365;P4=635;D=0102034342034203420342034201020343420342034203420342010203434203420342034203420102034342034203420342034201020343420342034203420342010203434203420342034203420102034342034203420342034201;CP=0;
 		{
             name			=> 'unitec47031',	
 			comment         => 'unitec remote door reed switch 47031 (developModule SD_UT module is only in github available)',
@@ -780,14 +796,17 @@ my %ProtocolListSIGNALduino  = (
 			clockabs		=> 330,                 # ca 300 us
 			format 			=> 'twostate',	  		# there is a pause puls between words
 			preamble		=> 'P30#',				# prepend to converted message	
-			clientmodule    => 'SD_UT',   			# not used now
+			clientmodule    => 'SD_UT', 
 			modulematch     => '^P30#.{3}',
 			length_min      => '12',
 			length_max      => '12',				# message has only 10 bit but is paddet to 12
 		},
-	"31" => # Pollin Isotronic
+	"31" => # Pollin Isotronik - 12 Tasten remote
+			# https://github.com/RFD-FHEM/RFFHEM/issues/44            
+			# MU;P0=-32001;P1=1208;P2=-682;P3=-1324;P4=570;P5=-15617;D=12121212121212121212121212121342121213454212121212121212121212121212121342121213454212121212121212121212121212121342121213454212121212121212121212121212121342121213405;CP=1;
 		{
-            name			=> 'pollin isotronic',	
+            name			=> 'Pollin Isotronik',
+            comment         => 'remote',
 			id          	=> '31',
 			one				=> [-1,2],
 			zero			=> [-2,1],
@@ -799,16 +818,18 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',  				# not used now
 			length_min      => '20',
 			length_max      => '20',				
-
 		},
 	"32" => #FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
+			# https://github.com/RFD-FHEM/RFFHEM/issues/49
+			# MS;P0=-266;P1=160;P3=-690;P4=580;P5=-6628;D=15131313401340134013401313404040404040404040404040;CP=1;SP=5;O;
     	{   
-            name			=> 'freetec 6946',	
+            name			=> 'freetec 6946',
+            comment         => 'Doorbell FreeTec PE-6946',
 			id          	=> '32',
 			one				=> [4,-2],
-			zero			=> [1,-5],
-			sync			=> [1,-49],				
-			clockabs		=> 140,                 #ca 140us
+			zero			=> [1,-4],
+			sync			=> [1,-43],				
+			clockabs		=> 150,                 #ca 150us
 			format 			=> 'twostate',	  		
 			preamble		=> 'u32#',				# prepend to converted message	
 			#clientmodule    => '',   				# not used now
@@ -816,44 +837,69 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '24',				
     	},
-    "33" => #Thermo-/Hygrosensor S014
-	# MS;P0=-7871;P2=-1960;P3=578;P4=-3954;D=030323232323434343434323232323234343434323234343234343234343232323432323232323232343234;CP=3;SP=0;R=0;m=0;
-	# sensor id=62, channel=1, temp=21.0555555555556, hum=76, bat=ok
+	"32.1" => #FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
+			# https://github.com/RFD-FHEM/RFFHEM/issues/315
+			# MU;P0=-6676;P1=578;P2=-278;P4=-680;P5=176;P6=-184;D=541654165412545412121212121212121212121250545454125412541254125454121212121212121212121212;CP=1;R=0;
+			# MU;P0=146;P1=245;P3=571;P4=-708;P5=-284;P7=-6689;D=14351435143514143535353535353535353535350704040435043504350435040435353535353535353535353507040404350435043504350404353535353535353535353535070404043504350435043504043535353535353535353535350704040435043504350435040435353535353535353535353507040404350435;CP=3;R=0;O;
+			# MU;P0=-6680;P1=162;P2=-298;P4=253;P5=-699;P6=555;D=45624562456245456262626262626262626262621015151562156215621562151562626262626262626262626210151515621562156215621515626262626262626262626262;CP=6;R=0;
     	{   
-       		name			=> 'weather33',
-			comment         => 's014/TFA 30.3200/TCM/Conrad',
+            name			=> 'freetec 6946',	
+            comment         => 'Doorbell FreeTec PE-6946',
+			id          	=> '32',
+			one				=> [4,-2],
+			zero			=> [1,-5],
+			start           => [1,-46],
+			clockabs		=> 150,
+			format 			=> 'twostate',	  		
+			preamble		=> 'u32#',				# prepend to converted message	
+			#clientmodule    => '',   				# not used now
+			#modulematch     => '',  				# not used now
+			length_min      => '24',
+			length_max      => '24',				
+    	},
+    "33" => # Thermo-/Hygrosensor S014, renkforce E0001PA, Conrad S522
+            # MS;P0=-7871;P2=-1960;P3=578;P4=-3954;D=030323232323434343434323232323234343434323234343234343234343232323432323232323232343234;CP=3;SP=0;R=0;m=0;
+            # sensor id=62, channel=1, temp=21.1, hum=76, bat=ok
+    	{   
+       		name			=> 'weather33',		
+			comment         => 'S014/TFA 30.3200/TCM/Conrad S522/renkforce E0001PA',
 			id          	=> '33',
 			one				=> [1,-8],
 			zero			=> [1,-4],
-			sync			=> [1,-15],
-			clockabs   		=> '500',				# not used now
+			sync			=> [1,-16],
+			clockabs   		=> '500',
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'W33#',				# prepend to converted message	
 			postamble		=> '',					# Append to converted message	 	
-			clientmodule    => 'SD_WS',      		# not used now
+			clientmodule    => 'SD_WS',
 			#modulematch     => '',     			# not used now
 			length_min      => '42',
 			length_max      => '44',
     	},
-#    "34" =>   # replaced by 37
-#     	 {   
-#       		name			=> 'unknown34',		
-#       		id          	=> '34',
-#			one				=> [2,-1],
-#			zero			=> [1,-2],
-#			start			=> [3,-3,3,-3,3,-3,3,-3],
-#			clockabs   		=> '240',		
-#			format     		=> 'twostate',  		# not used now
-#			preamble		=> 'u34#',				# prepend to converted message	
-#			postamble		=> '',					# Append to converted message	 	
-#			#clientmodule    => '',      			# not used now
-#			#modulematch     => '',     			# not used now
-#			length_min      => '40',
-#			length_max      => '40',
- #   	},
-     "35" =>
-     	 {   
-		# MS;P0=907;P1=-376;P2=266;P3=-1001;P6=-4860;D=2601010123230123012323230101012301230101010101230123012301;CP=2;SP=6;
+    "34" => # QUIGG GT-7000 Funk-Steckdosendimmer | transmitter DMV-7000 - receiver DMV-7009AS
+			# https://github.com/RFD-FHEM/RFFHEM/issues/195
+			# MU;P0=-9808;P1=608;P2=-679;P3=1243;D=01232323232323232323232323232323232323232;CP=3;R=254;
+            # MU;P0=-5476;P1=592;P2=-665;P3=1226;P4=-1309;D=01232323232323232323232323412323412323414;CP=3;R=1;
+            # MU;P0=-3156;P1=589;P2=-668;P3=1247;P4=-1370;D=01232323232323232323232323412323232323412;CP=3;R=255;
+            # MU;P0=-9800;P1=592;P2=-665;P3=1259;P4=-1332;D=01232323232323232323232323234123412323232;CP=3;R=1;
+		{   
+			name 			=> 'QUIGG_GT-7000',
+			comment         => 'remote QUIGG DMV-7000',
+			id 				=> '34',
+			one             => [-1,2],
+			zero            => [-2,1],
+			start			=> [1],
+			clockabs   		=> '660',
+			format			=> 'twostate', 
+			preamble 		=> 'u34#',
+			#clientmodule	=> '',
+			#modulematch 	=> '',
+			length_min 		=> '19',
+			length_max 		=> '20',
+    	},
+     "35" => # Homeeasy
+			 # MS;P0=907;P1=-376;P2=266;P3=-1001;P6=-4860;D=2601010123230123012323230101012301230101010101230123012301;CP=2;SP=6;
+		{   
 			name		=> 'HE800',
 			comment		=> 'Homeeasy',	
 			id          	=> '35',
@@ -864,7 +910,7 @@ my %ProtocolListSIGNALduino  = (
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'ih',				# prepend to converted message	
 			postamble		=> '',					# Append to converted message	 	
-			clientmodule    => 'IT',      			# not used now
+			clientmodule    => 'IT',
 			#modulematch     => '',     			# not used now
 			length_min      => '28',
 			length_max      => '40',
@@ -905,24 +951,28 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '40',
 			length_max      => '41',
     	},
-    "38" =>
+    "38" => ## Lidl Wetterstation
+         	# https://github.com/RFD-FHEM/RFFHEM/issues/63
+         	# MS;P1=367;P2=-2077;P4=-9415;P5=-4014;D=141515151515151515121512121212121212121212121212121212121212121212;CP=1;SP=4;O;
       	 {   
        		name			=> 'weather38',		
        		id          	=> '38',
 			one				=> [1,-10],
 			zero			=> [1,-5],
 			sync 			=> [1,-25],
-			clockabs   		=> '360',		# not used now
+			clockabs   		=> '360',
 			format     		=> 'twostate',  # not used now
 			preamble		=> 's',			# prepend to converted message	 	
 			postamble		=> '00',		# Append to converted message	 	
-			clientmodule    => 'CUL_TCM97001',   # not used now
+			clientmodule    => 'CUL_TCM97001',
 			#modulematch     => '^s[A-Fa-f0-9]+', # not used now
 			length_min      => '32',
 			length_max      => '32',
-			paddingbits     => '8',			
+			paddingbits     => '8',
     	},   
 	"39" => ## X10 Protocol
+         	# https://github.com/RFD-FHEM/RFFHEM/issues/65
+         	# MU;P0=10530;P1=-2908;P2=533;P3=-598;P4=-1733;P5=767;D=0123242323232423242324232324232423242323232324232323242424242324242424232423242424232501232423232324232423242323242324232423232323242323232424242423242424242324232424242325012324232323242324232423232423242324232323232423232324242424232424242423242324242;CP=2;O;
 		{
 			name => 'X10 Protocol',
 			id => '39',
@@ -932,15 +982,18 @@ my %ProtocolListSIGNALduino  = (
 			clockabs => 560, 
 			format => 'twostate', 
 			preamble => '', # prepend to converted message
-			clientmodule => 'RFXX10REC', # not used now
+			clientmodule => 'RFXX10REC',
 			#modulematch => '^TX......', # not used now
 			length_min => '32',
 			length_max => '44',
-			paddingbits     => '8',		
+			paddingbits     => '8',
 			postDemodulation => \&SIGNALduino_lengtnPrefix,			
 			filterfunc      => 'SIGNALduino_compPattern',
-		},
+		},    
 	"40" => ## Romotec
+			# https://github.com/RFD-FHEM/RFFHEM/issues/71
+			# MU;P0=300;P1=-772;P2=674;P3=-397;P4=4756;P5=-1512;D=4501232301230123230101232301010123230101230103;CP=0;
+			# MU;P0=-132;P1=-388;P2=675;P4=271;P5=-762;D=012145212145452121454545212145452145214545454521454545452145454541;CP=4;
 		{
 			name => 'romotec',
 			id => '40',
@@ -951,23 +1004,29 @@ my %ProtocolListSIGNALduino  = (
 			preamble => 'u40#', # prepend to converted message
 			#clientmodule => '', # not used now
 			#modulematch => '', # not used now
-			length_min => '10',
 			length_min => '12',
-			
 		},    
-	"41" => ## Elro (Smartwares) Doorbell DB200
+	"41" => ## Elro (Smartwares) Doorbell DB200 / 16 melodies
+            # https://github.com/RFD-FHEM/RFFHEM/issues/70
+            # MS;P0=-526;P1=1450;P2=467;P3=-6949;P4=-1519;D=231010101010242424242424102424101010102410241024101024241024241010;CP=2;SP=3;O;
+            # MS;P0=468;P1=-1516;P2=1450;P3=-533;P4=-7291;D=040101230101010123230101232323012323010101012301232323012301012323;CP=0;SP=4;O;
+            # unitec Modell:98156+98YK / 36 melodies
+            # repeats 15, change two codes every 15 repeats --> one button push, 2 codes
+            # MS;P0=1474;P1=-521;P2=495;P3=-1508;P4=-6996;D=242323232301232323010101230123232301012301230123010123230123230101;CP=2;SP=4;R=51;m=0;
+            # MS;P1=-7005;P2=482;P3=-1511;P4=1487;P5=-510;D=212345454523452345234523232345232345232323234523454545234523234545;CP=2;SP=1;R=47;m=2;
 		{
-			name => 'elro doorbell',
-			comment => 'Elro (Smartwares) Doorbell DB200',
+			name => 'Doorbell',
+			comment => 'Elro (Smartwares) DB200 / unitec',
 			id => '41',
 			zero => [1,-3],
 			one => [3,-1],
-			sync => [1,-15],
-			clockabs => 450, 
+			sync => [1,-14],
+			clockabs => 500, 
 			preamble => 'u41#', # prepend to converted message
 			#clientmodule => '', # not used now
 			#modulematch => '', # not used now
-			length_min => '20',
+			length_min => '32',
+			length_max => '32',
 		},     
 	#"42" => ## MKT Multi Kon Trade  // Sollte eigentlich als MS ITv1 erkannt werden
 	#	{
@@ -983,6 +1042,7 @@ my %ProtocolListSIGNALduino  = (
 	#		length_min => '24',
 	#	},
 	"43" => ## Somfy RTS
+            # MC;LL=-1405;LH=1269;SL=-723;SH=620;D=98DBD153D631BB;C=669;L=56;R=229;
 		{
 			name 			=> 'Somfy RTS',
 			id 				=> '43',
@@ -999,13 +1059,14 @@ my %ProtocolListSIGNALduino  = (
 			frequency		=> '10AB85550A',
 		},
 	"44" => ## Bresser Temeo Trend
+		# MU;P0=-1947;P1=-3891;P2=3880;P3=-478;P4=494;P5=-241;P7=1963;D=34570712171717071707070717071717170707070717170707070707070707170707070717070717071717170717070707171717170707171717171717171707171717170717171707170717;CP=7;R=28;
 		{
             		name 			=> 'BresserTemeo',
             		id 			=> '44',
-            		clockabs		=> 500,
-            		zero 			=> [4,-4],
-            		one				=> [4,-8],
-            		start	 		=> [8,-8],
+            		clockabs		=> 2000,
+            		zero 			=> [1,-1],
+            		one			=> [1,-2],
+            		start	 		=> [2,-2],
             		preamble 		=> 'W44#',
             		clientmodule		=> 'SD_WS',
             		modulematch		=> '^W44#[A-F0-9]{18}',
@@ -1018,7 +1079,7 @@ my %ProtocolListSIGNALduino  = (
             		id 			=> '44',
             		clockabs		=> 500,
             		zero 			=> [4,-4],
-            		one				=> [4,-8],
+            		one			=> [4,-8],
             		start 			=> [8,-12],
             		preamble 		=> 'W44x#',
             		clientmodule		=> 'SD_WS',
@@ -1026,7 +1087,6 @@ my %ProtocolListSIGNALduino  = (
             		length_min 		=> '64',
             		length_max 		=> '72',
 		},
-
     "45"  => #  Revolt 
 			 #	MU;P0=-8320;P1=9972;P2=-376;P3=117;P4=-251;P5=232;D=012345434345434345454545434345454545454543454343434343434343434343434543434345434343434545434345434343434343454343454545454345434343454345434343434343434345454543434343434345434345454543454343434543454345434545;CP=3;R=2
 		{
@@ -1043,7 +1103,9 @@ my %ProtocolListSIGNALduino  = (
 			length_max   => '120',	
 			postDemodulation => sub {	my ($name, @bit_msg) = @_;	my @new_bitmsg = splice @bit_msg, 0,88;	return 1,@new_bitmsg; },
 		},    
-    "46"    => 
+    "46"    => ## Berner Garagentorantrieb GA401
+               # https://github.com/RFD-FHEM/RFFHEM/issues/91
+			   # MU;P0=-15829;P1=-3580;P2=1962;P3=-330;P4=245;P5=-2051;D=1234523232345234523232323234523234540023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323;CP=2;
         {
             name			=> 'EKX1BE',	
 			id          	=> '46',
@@ -1056,24 +1118,29 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '', # not used now
 			length_min      => '16',
 			length_max 		=> '18',
-			
 			},
-   	"47"    => 			## maverick
+   	"47"    => ## maverick
+               # MC;LL=-507;LH=490;SL=-258;SH=239;D=AA9995599599A959996699A969;C=248;L=104;
 		{
             name			=> 'Maverick protocol',	
 			id          	=> '47',
-			clockrange     	=> [220,260],                   
+			clockrange     	=> [180,260],                   
 			format 			=> 'manchester',	
 			preamble		=> 'P47#',						# prepend to converted message	
-			clientmodule    => 'SD_WS_Maverick',   						# not used now
-			modulematch     => '^P47#[569A]{12}.*',  					# not used now
+			clientmodule    => 'SD_WS_Maverick',   					
+			modulematch     => '^P47#[569A]{12}.*',  					
 			length_min      => '100',
 			length_max      => '108',
-			method          => \&SIGNALduino_Maverick		# Call to process this message
+			method          => \&SIGNALduino_Maverick,		# Call to process this message
+			#polarity		=> 'invert'
 		}, 			
-     "48"    => 			## Joker Dostmann TFA
+     "48"    => ## Joker Dostmann TFA 30.3055.01
+				# https://github.com/RFD-FHEM/RFFHEM/issues/92
+				# MU;P0=591;P1=-1488;P2=-3736;P3=1338;P4=-372;P6=-988;D=23406060606063606363606363606060636363636363606060606363606060606060606060606060636060636360106060606060606063606363606363606060636363636363606060606363606060606060606060606060636060636360106060606060606063606363606363606060636363636363606060606363606060;CP=0;O;
+				# MU;P0=96;P1=-244;P2=510;P3=-1000;P4=1520;P5=-1506;D=01232323232343234343232343234323434343434343234323434343232323232323232323232323234343234325232323232323232343234343232343234323434343434343234323434343232323232323232323232323234343234325232323232323232343234343232343234323434343434343234323434343232323;CP=2;O;
 		{
             name			=> 'TFA Dostmann',	
+            comment			=> 'Funk-Thermometer Joker TFA 30.3055.01',
 			id          	=> '48',
 			clockabs     	=> 250, 						# In real it is 500 but this leads to unprceise demodulation 
 			one				=> [-4,6],
@@ -1086,7 +1153,9 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '47',
 			length_max      => '48',
 		}, 			
-	"49"    => 			## quigg / Aldi gt_9000
+	"49"    => ## quigg / Aldi gt_9000
+			   # https://github.com/RFD-FHEM/RFFHEM/issues/93
+               # MU;P0=-563;P1=479;P2=991;P3=-423;P4=361;P5=-1053;P6=3008;P7=-7110;D=2345454523452323454523452323452323452323454545456720151515201520201515201520201520201520201515151567201515152015202015152015202015202015202015151515672015151520152020151520152020152020152020151515156720151515201520201515201520201520201520201515151;CP=1;R=21;
 		{
             name			=> 'quigg_gt9000',	
 			id          	=> '49',
@@ -1097,7 +1166,7 @@ my %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	
 			preamble		=> 'U49#',						# prepend to converted message	
 			#clientmodule    => '',   						# not used now
-			modulematch     => '^U49#.*',  					# not used now
+			modulematch     => '^U49#.*',
 			length_min      => '22',
 			length_max      => '28',
 		}, 
@@ -1111,21 +1180,22 @@ my %ProtocolListSIGNALduino  = (
 		#	start			=> [1,-25],						# Wenn das startsignal empfangen wird, fehlt das 1 bit
 			format 			=> 'twostate',	
 			preamble		=> 'W50#',						# prepend to converted message	
-			clientmodule    => 'SD_WS',   					# not used now
-			modulematch     => '^W50#.*',  					# not used now
+			clientmodule    => 'SD_WS',
+			modulematch     => '^W50#.*',
 			length_min      => '47',
 			length_max      => '48',
 		},
 	 "51"    => 
-        {  # MS;P0=-16046;P1=552;P2=-1039;P3=983;P5=-7907;P6=-1841;P7=-4129;D=15161716171616161717171716161616161617161717171717171617171617161716161616161616171032323232;CP=1;SP=5;O;
-		# https://github.com/RFD-FHEM/RFFHEM/issues/118
+			# MS;P0=-16046;P1=552;P2=-1039;P3=983;P5=-7907;P6=-1841;P7=-4129;D=15161716171616161717171716161616161617161717171717171617171617161716161616161616171032323232;CP=1;SP=5;O;
+			# https://github.com/RFD-FHEM/RFFHEM/issues/118
+		{  
             name			=> 'weather51',		# Logilink, NC, WS, TCM97001 etc.
 			comment			=> 'IAN 275901 Wetterstation Lidl',
 			id          	=> '51',
 			one				=> [1,-8],
 			zero			=> [1,-4],
 			sync			=> [1,-13],		
-			clockabs   		=> '560',		# not used now
+			clockabs   		=> '560',
 			format     		=> 'twostate',  # not used now
 			preamble		=> 'W51#',		# prepend to converted message	 	
 			postamble		=> '',			# Append to converted message	 	
@@ -1159,8 +1229,8 @@ my %ProtocolListSIGNALduino  = (
 			sync			=> [1,-8],						
 			format 			=> 'twostate',	
 			preamble		=> 'i',						# prepend to converted message	
-			clientmodule    => 'IT',   					# not used now
-			modulematch     => '^i.*',  					# not used now
+			clientmodule    => 'IT',
+			modulematch     => '^i.*',
 			length_min      => '24',
 			length_max      => '24',
 		},	
@@ -1175,13 +1245,18 @@ my %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	
 			preamble		=> 'u56#',						# prepend to converted message	
 			#clientmodule    => ''	,   					# not used now
-			modulematch     => '',  						# not used now
+			#modulematch     => '',  						# not used now
 			length_min      => '56',
 			length_max      => '68',
 		},		
- 		"57"    => 			## m-e doorbell
+ 	"57" =>	## m-e doorbell fuer FG- und Basic-Serie
+			# https://forum.fhem.de/index.php/topic,64251.0.html
+			# MC;LL=-653;LH=665;SL=-317;SH=348;D=D55B58;C=330;L=21;
+			# MC;LL=-654;LH=678;SL=-314;SH=351;D=D55B58;C=332;L=21;
+			# MC;LL=-653;LH=679;SL=-310;SH=351;D=D55B58;C=332;L=21;					  
 		{
             name			=> 'm-e',	
+            comment         => 'radio gong transmitter for FG- and Basic-Serie ',
 			id          	=> '57',
 			clockrange     	=> [300,360],			# min , max
 			format 			=> 'manchester',	    # tristate can't be migrated from bin into hex!
@@ -1207,7 +1282,10 @@ my %ProtocolListSIGNALduino  = (
 			method          => \&SIGNALduino_MCTFA, # Call to process this message
 			polarity        => 'invert',			
 		}, 	 
-		"59" => ##  AK-HD-4 remote
+		"59" => ##  AK-HD-4 remote | 4 Buttons
+                # https://github.com/RFD-FHEM/RFFHEM/issues/133
+                # MU;P0=819;P1=-919;P2=234;P3=-320;P4=8602;P6=156;D=01230301230301230303012123012301230303030301230303412303012303012303030121230123012303030303012303034123030123030123030301212301230123030303030123030341230301230301230303012123012301230303030301230303412303012303012303030121230123012303030303012303034163;CP=0;O;
+                # MU;P0=-334;P2=8581;P3=237;P4=-516;P5=782;P6=-883;D=23456305056305050563630563056305050505056305050263050563050563050505636305630563050505050563050502630505630505630505056363056305630505050505630505026305056305056305050563630563056305050505056305050263050563050563050505636305630563050505050563050502630505;CP=5;O;
 		{
 			name			=> 'AK-HD-4',	
 			id          	=> '59',
@@ -1219,40 +1297,48 @@ my %ProtocolListSIGNALduino  = (
 			preamble		=> 'u59#',			# Append to converted message	
 			postamble		=> '',		# Append to converted message	 	
 			#clientmodule    => '',   		# not used now
-			modulematch     => '',  # not used now
+			#modulematch     => '',  # not used now
 			length_min      => '24',
 			length_max      => '24',
 		},			
-  "60" =>	## ELV, LA CROSSE (WS2000/WS7000)
-  {
-     	# MU;P0=32001;P1=-381;P2=835;P3=354;P4=-857;D=01212121212121212121343421212134342121213434342121343421212134213421213421212121342121212134212121213421212121343421343430;CP=2;R=53;
-		# tested sensors:  	WS-7000-20, AS2000, ASH2000, S2000, S2000I, S2001A, S2001IA,
-     	#                    ASH2200, S300IA, S2001I, S2000ID, S2001ID, S2500H 
-     	# not tested:        AS3, S2000W, S2000R, WS7000-15, WS7000-16, WS2500-19, S300TH, S555TH
-     	# das letzte Bit 1 und 1 x 0 Preambel fehlt meistens
-	    #  ___        _
-	    # |   |_     | |___
-	    #  Bit 0      Bit 1
-	    # kurz 366 µSek / lang 854 µSek / gesamt 1220 µSek - Sollzeiten 
-	  		name                 => 'WS2000',
-     		id                   => '60',
-     		one                  => [3,-7],	
-     		zero                 => [7,-3],
-	     	clockabs             => 122,
-     		preamble      	 	   => 'K',        # prepend to converted message
-     		postamble     	 	   => '',         # Append to converted message
-     		clientmodule         => 'CUL_WS',   
-     		length_min           => '44',	      # eigentlich 46
-     		length_max           => '82',	      # eigentlich 81
+	"60" =>	## ELV, LA CROSSE (WS2000/WS7000)
+			# MU;P0=32001;P1=-381;P2=835;P3=354;P4=-857;D=01212121212121212121343421212134342121213434342121343421212134213421213421212121342121212134212121213421212121343421343430;CP=2;R=53;
+			# tested sensors:   WS-7000-20, AS2000, ASH2000, S2000, S2000I, S2001A, S2001IA,
+			#                   ASH2200, S300IA, S2001I, S2000ID, S2001ID, S2500H 
+			# not tested:       AS3, S2000W, S2000R, WS7000-15, WS7000-16, WS2500-19, S300TH, S555TH
+			# das letzte Bit (1) und mehrere Bit (0) Preambel fehlen meistens
+			#  ___        _
+			# |   |_     | |___
+			#  Bit 0      Bit 1
+			# kurz 366 mikroSek / lang 854 mikroSek / gesamt 1220 mikroSek - Sollzeiten 
+		{
+			name                 => 'WS2000',
+			comment              => 'Series WS2000/WS7000 of various sensors',
+			id                   => '60',
+			one                  => [3,-7],	
+			zero                 => [7,-3],
+			clockabs             => 122,
+			preamble             => 'K',        # prepend to converted message
+			postamble            => '',         # Append to converted message
+			clientmodule         => 'CUL_WS',   
+			length_min           => '38',       # 46, letztes Bit fehlt = 45, 10 Bit Preambel = 35 Bit Daten
+			length_max           => '82',
 			postDemodulation     => \&SIGNALduino_postDemo_WS2000,
-	}, 
+		}, 
 
 	"61" =>	## ELV FS10
 		# tested transmitter:   FS10-S8, FS10-S4, FS10-ZE
 		# tested receiver:      FS10-ST, FS10-MS, WS3000-TV, PC-Wettersensor-Empfaenger
-		# das letzte Bit 1 und 1 x 0 Preambel fehlt immer
+		# sends 2 messages with 43 or 48 bits in distance of 100 mS (on/off) , last bit 1 is missing
+		# sends x messages with 43 or 48 bits in distance of 200 mS (dimm) , repeats second message
+		# MU;P0=1776;P1=-410;P2=383;P3=-820;D=01212121212121212121212123212121232323212323232121212323232121212321212123232123212120;CP=2;R=74;
+		#  __         __
+		# |  |__     |  |____
+		#  Bit 0      Bit 1
+		# kurz 400 mikroSek / lang 800 mikroSek / gesamt 800 mikroSek = 0, gesamt 1200 mikroSek = 1 - Sollzeiten 
 		{
 			name   		=> 'FS10',
+			comment        => 'Remote Control (434Mhz)',
 			id		=> '61',
 			one		=> [1,-2],
 			zero		=> [1,-1],
@@ -1265,10 +1351,10 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch	=> '',
 			length_min	=> '38',	# eigentlich 41 oder 46 (Pruefsumme nicht bei allen)
 			length_max      => '48',	# eigentlich 46
-			
 		}, 
 	"62" => ## Clarus_Switch  
-		{    #MU;P0=-5893;P4=-634;P5=498;P6=-257;P7=116;D=45656567474747474745656707456747474747456745674567456565674747474747456567074567474747474567456745674565656747474747474565670745674747474745674567456745656567474747474745656707456747474747456745674567456565674747474747456567074567474747474567456745674567;CP=7;O;
+			# MU;P0=-5893;P4=-634;P5=498;P6=-257;P7=116;D=45656567474747474745656707456747474747456745674567456565674747474747456567074567474747474567456745674565656747474747474565670745674747474745674567456745656567474747474745656707456747474747456745674567456565674747474747456567074567474747474567456745674567;CP=7;O;		
+		{
 			name         => 'Clarus_Switch',
 			id           => '62',
 			one          => [3,-1],
@@ -1298,27 +1384,26 @@ my %ProtocolListSIGNALduino  = (
 			filterfunc   => 'SIGNALduino_filterMC',
 		},
 	"64" => ##  WH2 #############################################################################
+			# MU;P0=-32001;P1=457;P2=-1064;P3=1438;D=0123232323212121232123232321212121212121212323212121232321;CP=1;R=63;
+			# MU;P0=-32001;P1=473;P2=-1058;P3=1454;D=0123232323212121232123232121212121212121212121232321212321;CP=1;R=51;
+			# MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
 		{
-    # MU;P0=-32001;P1=457;P2=-1064;P3=1438;D=0123232323212121232123232321212121212121212323212121232321;CP=1;R=63;
-    # MU;P0=-32001;P1=473;P2=-1058;P3=1454;D=0123232323212121232123232121212121212121212121232321212321;CP=1;R=51;
-    # MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
-
 			name         => 'WH2',
 			id           => '64',
-      one          => [1,-2],   
-      zero			   => [3,-2], 
-      clockabs     => 490,
-      clientmodule    => 'SD_WS',  
+			one          => [1,-2],   
+			zero			   => [3,-2], 
+			clockabs     => 490,
+			clientmodule    => 'SD_WS',  
 			modulematch  => '^W64*',
 			preamble     => 'W64#',       # prepend to converted message
-			postamble    => '',           # Append to converted message       
+			#postamble    => '',           # Append to converted message       
 			#clientmodule => '',
 			length_min   => '48',
 			length_max   => '54',
 		},
 	"65" => ## Homeeasy
+			# MS;P1=231;P2=-1336;P4=-312;P5=-8920;D=15121214141412121212141414121212121414121214121214141212141212141212121414121414141212121214141214121212141412141212;CP=1;SP=5;
 		{
-		# MS;P1=231;P2=-1336;P4=-312;P5=-8920;D=15121214141412121212141414121212121414121214121214141212141212141212121414121414141212121214141214121212141412141212;CP=1;SP=5;
 			name         => 'HE_EU',
 			comment      => 'Homeeasy',
 			id           => '65',
@@ -1330,6 +1415,7 @@ my %ProtocolListSIGNALduino  = (
 			preamble     => 'ih',
 			clientmodule => 'IT',
 			length_min   => '57',
+			length_max   => '72',
 			postDemodulation => \&SIGNALduino_HE_EU,
 		},
 	"66" => ## TX2 Protocol (Remote Temp Transmitter & Remote Thermo Model 7035)
@@ -1349,40 +1435,40 @@ my %ProtocolListSIGNALduino  = (
 			length_max   => '44',
 			postDemodulation => \&SIGNALduino_postDemo_WS7035,
 		},
- 	"67" => ## TX2 Protocol (Remote Datalink & Remote Thermo Model 7053)
-            # MU;P0=3381;P1=-672;P2=-4628;P3=1142;P4=-30768;D=0102320232020202020232020232020202320232323202323202020202020202020401023202320202020202320202320202023202323232023232020202020202020200;CP=0;R=45;
-            # MU;P0=1148;P1=3421;P6=-664;P7=-4631;D=16170717071717171717071717071717171717070707170717171717070717171710;CP=1;R=29;
-            # MU;P0=3389;P3=2560;P4=-720;P5=1149;P7=-4616;D=345407570757070707070757070757070707070757570707075707070707570757575;CP=5;R=253;
-            #           __               ____
-            #  ________|  |     ________|    |
-            #      Bit 1             Bit 0
-            #    4630  1220       4630   3420   µSek - mit Oszi gemessene Zeiten
-      {
-			name           => 'WS7053',	
-			id             => '67',
-         	one            => [-38,10],
-         	zero           => [-38,28],      
-         	clockabs       => 122,
-         	preamble	      => 'TX', 	      # prepend to converted message
-         	clientmodule   => 'CUL_TX',
-         	modulematch    => '^TX......',
-         	length_min     => '32',
-         	length_max     => '34',
-         	postDemodulation => \&SIGNALduino_postDemo_WS7053,
-      },
+	"67" => ## TX2 Protocol (Remote Datalink & Remote Thermo Model 7053, 7054)
+			# MU;P0=3381;P1=-672;P2=-4628;P3=1142;P4=-30768;D=010 2320232020202020232020232020202320232323202323202020202020202020 4 010 2320232020202020232020232020202320232323202323202020202020202020 0;CP=0;R=45;
+			# MU;P0=1148;P1=3421;P6=-664;P7=-4631;D=161 7071707171717171707171707171717171707070717071717171707071717171 0;CP=1;R=29;
+			# Message repeats 4 x with pause of ca. 30-34 mS
+			#           __               ____
+			#  ________|  |     ________|    |
+			#      Bit 1             Bit 0
+			#    4630  1220       4630   3420   mikroSek - mit Oszi gemessene Zeiten
+			{
+				name             => 'WS7053',	
+				id               => '67',
+				one              => [-38,10],     # -4636, 1220
+				zero             => [-38,28],     # -4636, 3416
+				clockabs         => 122,
+				preamble         => 'TX',         # prepend to converted message
+				clientmodule     => 'CUL_TX',
+				modulematch      => '^TX......',
+				length_min       => '32',
+				length_max       => '34',
+				postDemodulation => \&SIGNALduino_postDemo_WS7053,
+			},
   "68" => ##  PFR-130 ###########################################################################
+		  # MS;P0=-3890;P1=386;P2=-2191;P3=-8184;D=1312121212121012121212121012121212101012101010121012121210121210101210101012;CP=1;SP=3;R=20;O;
+		  # MS;P0=-2189;P1=371;P2=-3901;P3=-8158;D=1310101010101210101010101210101010121210121212101210101012101012121012121210;CP=1;SP=3;R=20;O;
 		{
-    # MS;P0=-3890;P1=386;P2=-2191;P3=-8184;D=1312121212121012121212121012121212101012101010121012121210121210101210101012;CP=1;SP=3;R=20;O;
-    # MS;P0=-2189;P1=371;P2=-3901;P3=-8158;D=1310101010101210101010101210101010121210121212101210101012101012121012121210;CP=1;SP=3;R=20;O;
 			name         => 'PFR-130',
 			id           => '68',
       		one				=> [1,-10],
 			zero			=> [1,-5],
       		sync			=> [1,-21],	
-			clockabs   		=> 380,		# not used now
+			clockabs   		=> 380,
       		preamble		=> 's',			# prepend to converted message	 	
 			postamble		=> '00',		# Append to converted message	 	
-			clientmodule    => 'CUL_TCM97001',   # not used now
+			clientmodule    => 'CUL_TCM97001',
      		length_min      => '24',
 			length_max      => '42',
 			paddingbits     => '8',				 # pad up to 8 bits, default is 4
@@ -1437,15 +1523,14 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '48',
 			length_max      => '48',
 		},
-	# MU;P0=-760;P1=334;P2=693;P3=-399;P4=-8942;P5=4796;P6=-1540;D=01010102310232310101010102310232323101010102310101010101023102323102323102323102310101010102310232323101010102310101010101023102310231023102456102310232310232310231010101010231023232310101010231010101010102310231023102310245610231023231023231023101010101;CP=1;R=45;O;
-    # MU;P0=-8848;P1=4804;P2=-1512;P3=336;P4=-757;P5=695;P6=-402;D=0123456345656345656345634343434345634565656343434345634343434343456345634563456345;CP=3;R=49;
-    		
 	"72" => # Siro blinds MU    @Dr. Smag
+			# ! same definition how ID 16 !
+			# https://forum.fhem.de/index.php?topic=77167.0
+			# MU;P0=-760;P1=334;P2=693;P3=-399;P4=-8942;P5=4796;P6=-1540;D=01010102310232310101010102310232323101010102310101010101023102323102323102323102310101010102310232323101010102310101010101023102310231023102456102310232310232310231010101010231023232310101010231010101010102310231023102310245610231023231023231023101010101;CP=1;R=45;O;
+			# MU;P0=-8848;P1=4804;P2=-1512;P3=336;P4=-757;P5=695;P6=-402;D=0123456345656345656345634343434345634565656343434345634343434343456345634563456345;CP=3;R=49;	
 		{
 			name			=> 'Siro shutter',
-			comment         => 'developModule. Siro is not in github or SVN available',
 			id				=> '72',
-			developId		=> 'm',
 			dispatchequals  =>  'true',
 			one				=> [2,-1.2],    # 680, -400
 			zero			=> [1,-2.2],    # 340, -750
@@ -1459,13 +1544,13 @@ my %ProtocolListSIGNALduino  = (
 			length_max   	=> '40',
 			msgOutro		=> 'SR;P0=-8500;D=0;',
 		},
- 	
- 	# MS;P0=4803;P1=-1522;P2=333;P3=-769;P4=699;P5=-393;P6=-9190;D=2601234523454523454523452323232323452345454523232323452323232323234523232345454545;CP=2;SP=6;R=61;
  	"72.1" => # Siro blinds MS     @Dr. Smag
+			  # MS;P0=4803;P1=-1522;P2=333;P3=-769;P4=699;P5=-393;P6=-9190;D=2601234523454523454523452323232323452345454523232323452323232323234523232345454545;CP=2;SP=6;R=61;
 		{
 			name			=> 'Siro shutter',
-			comment     	=> 'developModule. Siro is not in github or SVN available',
+			comment     	=> 'developModule. Siro is not in github',
 			id				=> '72',
+			developId		=> 'm',
 			dispatchequals  =>  'true',
 			one				=> [2,-1.2],    # 680, -400
 			zero			=> [1,-2.2],    # 340, -750
@@ -1480,6 +1565,7 @@ my %ProtocolListSIGNALduino  = (
 			#msgOutro	=> 'SR;P0=-8500;D=0;',
 		},
 	"73" => ## FHT80 - Raumthermostat (868Mhz),  @HomeAutoUser
+			# MU;P0=136;P1=-112;P2=631;P3=-392;P4=402;P5=-592;P6=-8952;D=0123434343434343434343434325434343254325252543432543434343434325434343434343434343254325252543254325434343434343434343434343252525432543464343434343434343434343432543434325432525254343254343434343432543434343434343434325432525254325432543434343434343434;CP=4;R=250;
 		{
 			name		=> 'FHT80',
 			comment 	=> 'Roomthermostat (868Mhz only receive)',
@@ -1497,11 +1583,11 @@ my %ProtocolListSIGNALduino  = (
 			postDemodulation => \&SIGNALduino_postDemo_FHT80,
 		},
 	"74" => ## FS20 - 'Remote Control (868Mhz),  @HomeAutoUser
+			# MU;P0=-10420;P1=-92;P2=398;P3=-417;P5=596;P6=-592;D=1232323232323232323232323562323235656232323232356232356232623232323232323232323232323235623232323562356565623565623562023232323232323232323232356232323565623232323235623235623232323232323232323232323232323562323232356235656562356562356202323232323232323;CP=2;R=72;
 		{
 			name			=> 'FS20',
-			comment			=> 'Remote Control (868Mhz only receive)',
+			comment			=> 'Remote Control (868Mhz)',
 			id			=> '74',
-			developId		=> 'y',
 			one			=> [1.5,-1.5], # 600
 			zero			=> [1,-1], # 400
 			pause			=> [-25],
@@ -1514,7 +1600,8 @@ my %ProtocolListSIGNALduino  = (
 			postDemodulation => \&SIGNALduino_postDemo_FS20,
 		},
 	"75" => ## ConradRSL2 @litronics https://github.com/RFD-FHEM/SIGNALDuino/issues/69
-		# MU;P0=-1365;P1=477;P2=1145;P3=-734;P4=-6332;D=01023202310102323102423102323102323101023232323101010232323231023102323102310102323102423102323102323101023232323101010232323231023102323102310102323102;CP=1;R=12;
+            # ! same definition how ID 5, but other length !
+		    # MU;P0=-1365;P1=477;P2=1145;P3=-734;P4=-6332;D=01023202310102323102423102323102323101023232323101010232323231023102323102310102323102423102323102323101023232323101010232323231023102323102310102323102;CP=1;R=12;
 		{
 			name			=> 'ConradRSL2', 
 			id			=> '75',
@@ -1573,13 +1660,14 @@ my %ProtocolListSIGNALduino  = (
 			name			=> 'NANO_DS1820_4Fach',
 			comment			=> 'Selbstbau Sensor',
 			id				=> '77',
-			zero			=> [4,-6], 		#
-			one				=> [1,-6],   	# 
-			clockabs     	=> 250,			# 
-			format 			=> 'pwm',	    # 
+			developId		=> 'y', 
+			zero			=> [4,-6],
+			one				=> [1,-6],
+			clockabs     	=> 250,
+			format 			=> 'pwm',
 			preamble		=> 'TX',		# prepend to converted message	
-			clientmodule    => 'CUL_TX',   	# not used now
-			modulematch     => '^TX......', # not used now
+			clientmodule    => 'CUL_TX',
+			modulematch     => '^TX......',
 			length_min      => '43',
 			length_max      => '44',
 			remove_zero     => 1,           # Removes leading zeros from output
@@ -1590,7 +1678,7 @@ my %ProtocolListSIGNALduino  = (
 			name			=> 'geiger',
 			comment			=> 'geiger blind motors',
 			id				=> '78',
-			developId		=> 'y', 
+			developId		=> 'y',
 			zero			=> [1,-6.6], 		
 			one				=> [6.6,-1],   		 
 			start  			=> [-53],		
@@ -1600,56 +1688,63 @@ my %ProtocolListSIGNALduino  = (
 			clientmodule    => 'SIGNALduino_un',   	
 			#modulematch	=> '^TX......', 
 			length_min      => '14',
-			#length_max      => '18',
+			length_max      => '18',
 			paddingbits     => '2'				 # pad 1 bit, default is 4
 		},
-	"79" => ##  MU;P0=656;P1=-656;P2=335;P3=-326;P4=-5024;D=01230121230123030303012423012301212301230303030124230123012123012303030301242301230121230123030303012423012301212301230303030124230123012123012303030301242301230121230123030303012423012301212301230303030124230123012123012303030301242301230121230123030303;CP=2;O;
+	"79" => ## m-e Funkmodul VTX-BELL
 			# https://github.com/RFD-FHEM/SIGNALDuino/issues/84
+			# MU;P0=656;P1=-656;P2=335;P3=-326;P4=-5024;D=0123012123012303030301 24 230123012123012303030301 24 230123012123012303030301 24 2301230121230123030303012423012301212301230303030124230123012123012303030301242301230121230123030303012423012301212301230303030124230123012123012303030301242301230121230123030303;CP=2;O;
+			# https://forum.fhem.de/index.php/topic,64251.0.html			
+			# MU;P0=540;P1=-421;P2=-703;P3=268;P4=-4948;D=4 323102323101010101010232 34 323102323101010101010232 34 323102323101010101010232 34 3231023231010101010102323432310232310101010101023234323102323101010101010232343231023231010101010102323432310232310101010101023234323102323101010101010232343231023231010101010;CP=3;O;
+			# https://github.com/RFD-FHEM/RFFHEM/issues/252
+			# MU;P0=-24096;P1=314;P2=-303;P3=615;P4=-603;P5=220;P6=-4672;D=0123456123412341414141412323234 16 123412341414141412323234 16 12341234141414141232323416123412341414141412323234161234123414141414123232341612341234141414141232323416123412341414141412323234161234123414141414123232341612341234141414141232323416123412341414;CP=1;R=26;O;
+			# MU;P0=-10692;P1=602;P2=-608;P3=311;P4=-305;P5=-4666;D=01234123232323234141412 35 341234123232323234141412 35 341234123232323234141412 35 34123412323232323414141235341234123232323234141412353412341232323232341414123534123412323232323414141235341234123232323234141412353412341232323232341414123534123412323232323414;CP=3;R=47;O;
+			# MU;P0=-7152;P1=872;P2=-593;P3=323;P4=-296;P5=622;P6=-4650;D=01234523232323234545452 36 345234523232323234545452 36 345234523232323234545452 36 34523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454;CP=3;R=26;O;																																																																				 
 		{
-			name		=> 'VTX-BELL_Funkklingel',
-			#comment	=> '',
+			name		=> 'm-e VTX-BELL',
+			comment	    => 'wireless chime VTX-BELL',
 			id		=> '79',
-			#developId       => 'm',
-			zero		=> [-2,1], 	#
-			one		=> [-1,2],   	# 
-			start  		=> [-15,1],	#
+			zero		=> [-2,1],
+			one		=> [-1,2],
+			start  		=> [-15,1],
 			clockabs     	=> 330,
 			format 		=> 'twostate',	    # 
 			preamble	=> 'U79#',	# prepend to converted message	
 			#clientmodule    => 'SD_UT',   	# not used now
-			#modulematch     => '^TX......', # not used now
+			#modulematch     => '^P79#.*', # not used now
 			length_min      => '12',
-			#length_max      => '44',
+			length_max      => '12',
 		},
 	"80" => ## EM (Energy-Monitor) Funkprotokoll (868Mhz),  @HomeAutoUser | Derwelcherichbin
-		{
 			# MU;P1=-417;P2=385;P3=-815;P4=-12058;D=42121212121212121212121212121212121232321212121212121232321212121212121232323212323212321232121212321212123232121212321212121232323212121212121232121212121212121232323212121212123232321232121212121232123232323212321;CP=2;R=87;
-			#- MU;P0=32001;P1=-419;P2=376;P3=-824;P4=-12056;D=012121212121212121212121212121212123232121212121212123232121212121212123232321232321232123212121232121212323212121232121212123232321212121212123212121212121212123232321212121212323232123212121212123212323232321232124;CP=2;R=87;w=0
-			
+		{	
 			name			=> 'EM (Energy-Monitor)',
-			comment		=> 'EM (Energy-Monitor) (868Mhz)',
+			comment         => 'EM (Energy-Monitor) (868Mhz)',
 			id				=> '80',
-			developId	=> 'y',
-			one			=> [1,-2],	# 800
+			one             => [1,-2],	# 800
 			zero			=> [1,-1],	# 400
 			clockabs		=> 400,
 			format			=> 'twostate', # not used now
 			clientmodule	=> 'CUL_EM',
-			preamble			=> 'E',
+			preamble        => 'E',
 			length_min		=> '104',
 			length_max		=> '114',
 			postDemodulation => \&SIGNALduino_postDemo_EM,
 		},
-	"81" => ## Remote control SA-434-1 @elektron-bbs
+	"81" => ## Remote control SA-434-1 based on HT12E @ elektron-bbs
 			# MU;P0=-485;P1=188;P2=-6784;P3=508;P5=1010;P6=-974;P7=-17172;D=0123050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056;CP=3;R=0;																																																																																				   
 			# MU;P0=-1756;P1=112;P2=-11752;P3=496;P4=-495;P5=998;P6=-988;P7=-17183;D=0123454545634545456345634563734545456345454563456345637345454563454545634563456373454545634545456345634563734545456345454563456345637345454563454545634563456373454545634545456345634563734545456345454563456345637345454563454545634563456373454545634545456;CP=3;R=0;
+			#      __        ____
+			# ____|  |    __|    |
+			#  Bit 1       Bit 0
+			# short 500 microSec / long 1000 microSec / bittime 1500 mikroSek / pilot 12 * bittime, from that 1/3 bitlength high
 		{
 			name             => 'SA-434-1',
-			comment          => 'Remote control SA-434-1 mini 923301',
+			comment          => 'Remote control SA-434-1 mini 923301 based on HT12E (developModule SD_UT is only in github available)',
 			id               => '81',
 			developId		 => 'm',
-			one              => [-2,1],
-			zero             => [-1,2],
+			one              => [-2,1],			# i.O.
+			zero             => [-1,2],			# i.O.
 			start            => [-35,1],		# Message is not provided as MS, worakround is start
 			clockabs		 => 500,                 
 			format           => 'twostate',
@@ -1667,9 +1762,10 @@ my %ProtocolListSIGNALduino  = (
 			name           => 'Fernotron',
 			id             => '82',       # protocol number
 			developId      => 'm',
+			dispatchBin    => 'y',
 			one            => [1,-2],     # on=400us, off=800us
 			zero           => [2,-1],     # on=800us, off=400us
-			float          => [1,-8],     # on=400us, off=3200us. each 10bit word has one [1,-8] in front
+			float          => [1,-8],     # on=400us, off=3200us. the preamble and each 10bit word has one [1,-8] in front
 			pause          => [1,-1],     # preamble (5x)
 			clockabs       => 400,        # 400us
 			preamble       => 'P82#',     # prepend our protocol number to converted message
@@ -1677,18 +1773,18 @@ my %ProtocolListSIGNALduino  = (
 			length_min     => '100',      # actual 120 bit (12 x 10bit words to decode 6 bytes data), but last 20 are for checksum
 			length_max     => '3360',     # 3360 bit (336 x 10bit words to decode 168 bytes data) for full timer message
 	    },
-	"83" => ## Westinghouse Deckenventilator Delancey, @zwiebelxxl
-			# !MOSDESIGN SEMICONDUCTOR CORP (CMOS ASIC encoder) M1EN - compatible HT12E!
+	"83" => ## Remote control RH787T based on MOSDESIGN SEMICONDUCTOR CORP (CMOS ASIC encoder) M1EN compatible HT12E
+			# for example Westinghouse Deckenventilator Delancey, 6 speed buttons, @zwiebelxxl
 			# https://github.com/RFD-FHEM/RFFHEM/issues/250
 			# Taste 1 MU;P0=388;P1=-112;P2=267;P3=-378;P5=585;P6=-693;P7=-11234;D=0123035353535356262623562626272353535353562626235626262723535353535626262356262627235353535356262623562626272353535353562626235626262723535353535626262356262627235353535356262623562626272353535353562626235626262723535353535626262356262627235353535356262;CP=2;R=43;O;
 			# Taste 2 MU;P0=-176;P1=262;P2=-11240;P3=112;P5=-367;P6=591;P7=-695;D=0123215656565656717171567156712156565656567171715671567121565656565671717156715671215656565656717171567156712156565656567171715671567121565656565671717156715671215656565656717171567156712156565656567171715671567121565656565671717171717171215656565656717;CP=1;R=19;O;
 			# Taste 3 MU;P0=564;P1=-392;P2=-713;P3=245;P4=-11247;D=0101010101023231023232323431010101010232310232323234310101010102323102323232343101010101023231023232323431010101010232310232323234310101010102323102323232343101010101023231023232323431010101010232310232323234310101010102323102323232343101010101023231023;CP=3;R=40;O;
 		{
-			name		=> 'Westinghouse Delancey 7800140',	
-			comment         => '(developModule SD_UT module is only in github available)',
+            name			=> 'RH787T',	
+			comment         => 'Remote control for example Westinghouse Delancey 7800140 (developModule SD_UT is only in github available)',
 			id          	=> '83',
 			developId       => 'm',
-			one			=> [-2,1],
+			one				=> [-2,1],
 			zero			=> [-1,2],
 			start			=> [-35,1],				# calculated 12126,31579 µS
 			clockabs		=> 335,                 # calculated ca 336,8421053 µS short - 673,6842105µS long 
@@ -1697,8 +1793,70 @@ my %ProtocolListSIGNALduino  = (
 			clientmodule    => 'SD_UT', 
 			modulematch     => '^P83#.{3}',
 			length_min      => '12',
-			length_max      => '12',				# message has only 10 bit but is paddet to 12
+			length_max      => '12',
 		},
+	"84" => ## Funk Wetterstation Auriol IAN 283582 Version 06/2017 (Lidl), Modell-Nr.: HG02832D, 09/2018@roobbb
+			# https://github.com/RFD-FHEM/RFFHEM/issues/263
+			# MU;P0=-28796;P1=376;P2=-875;P3=834;P4=220;P5=-632;P6=592;P7=-268;D=0123232324545454545456767454567674567456745674545454545456767676767674567674567676767456;CP=4;R=22;
+			#	MU;P0=-28784;P1=340;P2=-903;P3=814;P4=223;P5=-632;P6=604;P7=-248;D=0123232324545454545456767456745456767674545674567454545456745454545456767454545456745676;CP=4;R=22;
+			# MU;P0=-21520;P1=235;P2=-855;P3=846;P4=620;P5=-236;P7=-614;D=012323232454545454545451717451717171745171717171717171717174517171745174517174517174545;CP=1;R=217;
+			# todo: es werden noch Nachrichten mit ausgeschalteter Komprimierung benötigt
+			{
+			name         => 'IAN283582',
+			comment      => 'Weatherstation Auriol IAN 283582',
+			id           => '84',
+			one          => [3,-1],
+			zero         => [1,-3],
+			start        => [4,-4,4,-4,4,-4],
+			clockabs     => 215, 
+			format       => 'twostate',
+			preamble     => 'W84#',             # prepend to converted message	
+			postamble    => '',                 # append to converted message	 	
+			clientmodule => 'SD_WS',
+			length_min   => '39',               # das letzte Bit fehlt meistens
+			length_max   => '40',
+		},
+	"85" => ## Funk Wetterstation TFA 35.1140.01 mit Temperatur-/Feuchte- und Windsensor TFA 30.3222.02 09/2018@Iron-R
+			# https://github.com/RFD-FHEM/RFFHEM/issues/266
+			# MU;P0=-509;P1=474;P2=-260;P3=228;P4=718;P5=-745;D=01212303030303012301230123012301230301212121230454545453030303012123030301230303012301212123030301212303030303030303012303012303012303012301212303030303012301230123012301230301212121212454545453030303012123030301230303012301212123030301212303030303030303;CP=3;R=46;O;
+			# MU;P0=-504;P1=481;P2=-254;P3=227;P4=723;P5=-739;P6=-1848;D=01230121212303030121230303030303030453030303012123030301230303012301212303030303030304530303030121230303012303030123012121230303012123030303030303030123030123030123030123012123030303030123012301230123012303012121212364545454530303030121230303012303030123;CP=3;R=45;O;
+			# MU;P0=7944;P1=-724;P2=742;P3=241;P4=-495;P5=483;P6=-248;D=01212121343434345656343434563434345634565656343434565634343434343434345634345634345634343434343434343434345634565634345656345634343456563421212121343434345656343434563434345634565656343434565634343434343434345634345634345634343434343434343434345634565634;CP=3;R=47;O;�
+		{
+			name         => 'TFA 35.1140.01',
+			comment      => 'Combisensor TFA 30.3222.02 for Weatherstation TFA 35.1140.01',
+			id           => '85',
+			one          => [2,-1],
+			zero         => [1,-2],
+			start        => [3,-3,3,-3,3,-3],
+			clockabs     => 250,
+			format       => 'twostate',
+			preamble     => 'W85#',             # prepend to converted message	
+			#postamble    => '',                 # append to converted message	 	
+			clientmodule => 'SD_WS',
+			length_min   => '64',
+			length_max   => '68',
+		},
+	"86" => ## CAME Drehtor Antrieb
+            # https://forum.fhem.de/index.php/topic,63370.msg849400.html#msg849400
+			# https://github.com/RFD-FHEM/RFFHEM/issues/151
+			# MU;P0=711;P1=-15288;P4=132;P5=-712;P6=316;P7=-313;D=4565656705656567056567056 16 565656705656567056567056 16 56565670565656705656705616565656705656567056567056165656567056565670565670561656565670565656705656705616565656705656567056567056165656567056565670565670561656565670565656705656705616565656705656567056;CP=6;R=52;
+            # MU;P0=-322;P1=136;P2=-15241;P3=288;P4=-735;P6=723;D=012343434306434343064343430623434343064343430643434306 2343434306434343064343430 623434343064343430643434306234343430643434306434343062343434306434343064343430623434343064343430643434306234343430643434306434343062343434306434343064343430;CP=3;R=27;
+            # MU;P0=-15281;P1=293;P2=-745;P3=-319;P4=703;P5=212;P6=152;P7=-428;D=0 1212121342121213421213421 01 212121342121213421213421 01 21212134212121342121342101212121342121213421213421012121213421212134212134210121243134212121342121342101252526742121213425213421012121213421212134212134210121212134212;CP=1;R=23;
+	{
+		name		  => 'CAME Drehtor Antrieb',
+		#comment	   => '',
+		id            => '86',
+		zero		  => [-2,1],
+		one           => [-1,2],
+		start         => [-44,1],
+		clockabs      => 345,
+		format        => 'twostate',
+		preamble      => 'u86#',	  # prepend to converted message	
+		#clientmodule  => 'SD_UT',
+		#modulematch   => '^u86#.{3}',
+		length_min    => '12',
+		length_max    => '18',
+	},
 );
 
 
