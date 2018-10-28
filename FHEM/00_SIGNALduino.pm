@@ -1857,6 +1857,10 @@ my %ProtocolListSIGNALduino  = (
 		length_min    => '12',
 		length_max    => '18',
 	},
+	"999" =>  # 
+	{
+		versionProtocolList  => '28.10.18'
+	}
 );
 
 
@@ -1996,6 +2000,9 @@ SIGNALduino_Define($$)
   $hash->{LASTDMSG} = "nothing";
   $hash->{TIME}=time();
   $hash->{versionmodul} = SDUINO_VERSION;
+  if (exists($ProtocolListSIGNALduino{999}) && defined($ProtocolListSIGNALduino{999}{versionProtocolList})) {
+	$hash->{versionprotoL} = $ProtocolListSIGNALduino{999}{versionProtocolList};
+  }
   
   Log3 $name, 3, "$name: Firmwareversion: ".$hash->{READINGS}{version}{VAL}  if ($hash->{READINGS}{version}{VAL});
 
