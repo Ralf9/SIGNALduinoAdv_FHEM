@@ -1944,7 +1944,7 @@ SIGNALduino_FingerprintFn($$)
   # Store only the "relevant" part, as the Signalduino won't compute the checksum
   #$msg = substr($msg, 8) if($msg =~ m/^81/ && length($msg) > 8);
 
-  return ($name, $msg);
+  return ("", $msg);
 }
 
 #####################################
@@ -2035,7 +2035,7 @@ sub SIGNALduino_Connect($$)
 
 	# damit wird die err-msg nur einmal ausgegeben
 	if (!defined($hash->{disConnFlag}) && $err) {
-		SIGNALduino_Log3($hash, 3, "SIGNALduino $hash->{NAME}: ${err}");
+		SIGNALduino_Log3($hash, 3, "$hash->{NAME}: ${err}");
 		$hash->{disConnFlag} = 1;
 	}
 }
@@ -2148,11 +2148,14 @@ SIGNALduino_Set($@)
     my $hexFile = "";
     my @deviceName = split('@', $hash->{DeviceName});
     my $port = $deviceName[0];
-	my $hardware=AttrVal($name,"hardware","nano328");
+	my $hardware=AttrVal($name,"hardware","");
 	my $baudrate=$hardware eq "uno" ? 115200 : 57600;
     my $defaultHexFile = "./FHEM/firmware/$hash->{TYPE}_$hardware.hex";
     my $logFile = AttrVal("global", "logdir", "./log/") . "$hash->{TYPE}-Flash.log";
 
+	return "Please define your hardware! (attr $name hardware <model of your receiver>) " if ($hardware eq "");
+	return "ERROR: argument failed! flash [hexFile|url]" if (!$args[0]);
+	
     if(!$arg || $args[0] !~ m/^(\w|\/|.)+$/) {
       $hexFile = AttrVal($name, "hexFile", "");
       if ($hexFile eq "") {
@@ -2557,6 +2560,8 @@ SIGNALduino_Get($@)
 	
 	foreach $id (@IdList)
 	{
+		next if ($id > 900);
+		
 		$ret .= sprintf("%3s",$id) . " ";
 		
 		if (exists ($ProtocolListSIGNALduino{$id}{format}) && $ProtocolListSIGNALduino{$id}{format} eq "manchester")
