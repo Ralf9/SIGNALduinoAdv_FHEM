@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-10-28 18:00:00Z v3.3.2-dev $
+# $Id: 00_SIGNALduino.pm 10488 2018-11-02 22:00:00Z v3.3.2-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -24,7 +24,7 @@ no warnings 'portable';
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.2ralf_28.10.",
+	SDUINO_VERSION            => "v3.3.2ralf_02.11.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -37,7 +37,8 @@ use constant {
 	SDUINO_DISPATCH_VERBOSE     => 5,      # default 5
 	SDUINO_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
 	SDUINO_MC_DISPATCH_LOG_ID   => '12.1', # die o.g. Ausgabe erfolgt nur wenn der Wert mit der ID uebereinstimmt
-	SDUINO_PARSE_DEFAULT_LENGHT_MIN => 8
+	SDUINO_PARSE_DEFAULT_LENGHT_MIN => 8,
+	SDUINO_PARSE_MU_CLOCK_CHECK => 0
 };
 
 
@@ -3902,7 +3903,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 					$msgclock = $msg_parts{pattern}{$clockidx};
 					if (!SIGNALduino_inTol($clockabs,$msgclock,$msgclock*0.30)) {
 						Log3 $name, 5, "$name: clock for MU Protocol id $id, clockId=$clockabs, clockmsg=$msgclock (cp) is not in tol=" . $msgclock*0.30 if ($dummy);
-						next;
+						next if (SDUINO_PARSE_MU_CLOCK_CHECK);
 					} else {
 						$clockMsg = ", msgClock=$msgclock (cp) is in tol" if ($dummy);
 					}
@@ -3963,7 +3964,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 				$protocListClock = $clockabs * $ProtocolListSIGNALduino{$id}{one}[$ProtocolListSIGNALduino{$id}{clockpos}[1]];
 				if (!SIGNALduino_inTol($protocListClock,$msgclock,$msgclock*0.30)) {
 					Log3 $name, 5, "$name: clock for MU Protocol id $id, protocClock=$protocListClock, msgClock=$msgclock (one) is not in tol=" . $msgclock*0.30 if ($dummy);
-					next;
+					next if (SDUINO_PARSE_MU_CLOCK_CHECK);
 				} else {
 					$clockMsg = ", msgClock=$msgclock (one) is in tol" if ($dummy);
 				}
@@ -3986,7 +3987,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 					$protocListClock = $clockabs * $ProtocolListSIGNALduino{$id}{zero}[$ProtocolListSIGNALduino{$id}{clockpos}[1]];
 					if (!SIGNALduino_inTol($protocListClock,$msgclock,$msgclock*0.30)) {
 						Log3 $name, 5, "$name: clock for MU Protocol id $id, protocClock=$protocListClock, msgClock=$msgclock (zero) is not in tol=" . $msgclock*0.30 if ($dummy);
-						next;
+						next if (SDUINO_PARSE_MU_CLOCK_CHECK);
 					} else {
 						$clockMsg = ", msgClock=$msgclock (zero) is in tol" if ($dummy);
 					}
@@ -4103,10 +4104,6 @@ sub SIGNALduino_Parse_MU($$$$@)
 						SIGNALduino_Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr;
 					}
 					
-					$repeat += 1;
-					$repeatStr = " repeat $repeat";
-					last if ($repeat > $maxRepeat);	# Abbruch, wenn die max repeat anzahl erreicht ist
-					
 					my $modulematch;
 					if (defined($ProtocolListSIGNALduino{$id}{modulematch})) {
 						$modulematch = $ProtocolListSIGNALduino{$id}{modulematch};
@@ -4125,6 +4122,10 @@ sub SIGNALduino_Parse_MU($$$$@)
 						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
 						$message_dispatched=1;
 					}
+					
+					$repeat++;
+					$repeatStr = " repeat $repeat";
+					last if ($repeat > $maxRepeat);	# Abbruch, wenn die max repeat anzahl erreicht ist
 			}
 			SIGNALduino_Log3 $name, 5, "$name: regex ($regex) did not match, aborting" if ($nrRestart == 0);
 		}
