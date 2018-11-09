@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-11-02 22:00:00Z v3.3.2-dev $
+# $Id: 00_SIGNALduino.pm 10488 2018-11-09 18:00:00Z v3.3.2-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -24,7 +24,7 @@ no warnings 'portable';
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.2ralf_02.11.",
+	SDUINO_VERSION            => "v3.3.2ralf_09.11.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -38,7 +38,7 @@ use constant {
 	SDUINO_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
 	SDUINO_MC_DISPATCH_LOG_ID   => '12.1', # die o.g. Ausgabe erfolgt nur wenn der Wert mit der ID uebereinstimmt
 	SDUINO_PARSE_DEFAULT_LENGHT_MIN => 8,
-	SDUINO_PARSE_MU_CLOCK_CHECK => 0
+	SDUINO_PARSE_MU_CLOCK_CHECK => 0       # wenn 1 dann ist der test ob die clock in der Toleranz ist, aktiv
 };
 
 
@@ -619,7 +619,7 @@ my %ProtocolListSIGNALduino  = (
 		},
 	"20" => # Livolo         	
             # https://github.com/RFD-FHEM/RFFHEM/issues/29
-         	# MU;P0=-195;P1=151;P2=475;P3=-333;D=010101010102010101010101013101013101010101013101010201010101010101010101010101010101010101020101010101010101010101010101010101010102010101010101013101013101;CP=1;																																														 
+         	# MU;P0=-195;P1=151;P2=475;P3=-333;D=010101010102010101010101013101013101010101013101010201010101010101010101010101010101010101020101010101010101010101010101010101010102010101010101013101013101;CP=1;
 			#
 			# protocol sends 24 to 47 pulses per message.
 			# First pulse is the header and is 595 μs long. All subsequent pulses are either 170 μs (short pulse) or 340 μs (long pulse) long.
@@ -1747,7 +1747,7 @@ my %ProtocolListSIGNALduino  = (
 			# https://github.com/RFD-FHEM/RFFHEM/issues/252
 			# MU;P0=-24096;P1=314;P2=-303;P3=615;P4=-603;P5=220;P6=-4672;D=0123456123412341414141412323234 16 123412341414141412323234 16 12341234141414141232323416123412341414141412323234161234123414141414123232341612341234141414141232323416123412341414141412323234161234123414141414123232341612341234141414141232323416123412341414;CP=1;R=26;O;
 			# MU;P0=-10692;P1=602;P2=-608;P3=311;P4=-305;P5=-4666;D=01234123232323234141412 35 341234123232323234141412 35 341234123232323234141412 35 34123412323232323414141235341234123232323234141412353412341232323232341414123534123412323232323414141235341234123232323234141412353412341232323232341414123534123412323232323414;CP=3;R=47;O;
-			# MU;P0=-7152;P1=872;P2=-593;P3=323;P4=-296;P5=622;P6=-4650;D=01234523232323234545452 36 345234523232323234545452 36 345234523232323234545452 36 34523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454;CP=3;R=26;O;																																																																				 
+			# MU;P0=-7152;P1=872;P2=-593;P3=323;P4=-296;P5=622;P6=-4650;D=01234523232323234545452 36 345234523232323234545452 36 345234523232323234545452 36 34523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454;CP=3;R=26;O;
 		{
 			name		=> 'm-e VTX-BELL',
 			comment	    => 'wireless chime VTX-BELL',
@@ -1781,7 +1781,7 @@ my %ProtocolListSIGNALduino  = (
 			postDemodulation => \&SIGNALduino_postDemo_EM,
 		},
 	"81" => ## Remote control SA-434-1 based on HT12E @ elektron-bbs
-			# MU;P0=-485;P1=188;P2=-6784;P3=508;P5=1010;P6=-974;P7=-17172;D=0123050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056;CP=3;R=0;																																																																																				   
+			# MU;P0=-485;P1=188;P2=-6784;P3=508;P5=1010;P6=-974;P7=-17172;D=0123050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056;CP=3;R=0;
 			# MU;P0=-1756;P1=112;P2=-11752;P3=496;P4=-495;P5=998;P6=-988;P7=-17183;D=0123454545634545456345634563734545456345454563456345637345454563454545634563456373454545634545456345634563734545456345454563456345637345454563454545634563456373454545634545456345634563734545456345454563456345637345454563454545634563456373454545634545456;CP=3;R=0;
 			#      __        ____
 			# ____|  |    __|    |
@@ -1807,7 +1807,8 @@ my %ProtocolListSIGNALduino  = (
 	"82" => ## Fernotron shutters and light switches   
 			# MU;P0=-32001;P1=435;P2=-379;P4=-3201;P5=831;P6=-778;D=01212121212121214525252525252521652161452525252525252161652141652521652521652521614165252165252165216521416521616165216525216141652161616521652165214165252161616521652161416525216161652161652141616525252165252521614161652525216525216521452165252525252525;CP=1;O;
 			# the messages received are usual missing 12 bits at the end for some reason. So the checksum byte is missing.
-			# Fernotron protocol is unidirectional. Here we can only receive messages from controllers send to receivers. 
+			# Fernotron protocol is unidirectional. Here we can only receive messages from controllers send to receivers.
+			# https://github.com/RFD-FHEM/RFFHEM/issues/257
 		{
 			name           => 'Fernotron',
 			id             => '82',       # protocol number
@@ -1816,9 +1817,10 @@ my %ProtocolListSIGNALduino  = (
 			one            => [1,-2],     # on=400us, off=800us
 			zero           => [2,-1],     # on=800us, off=400us
 			float          => [1,-8],     # on=400us, off=3200us. the preamble and each 10bit word has one [1,-8] in front
-			pause          => [1,-1],     # preamble (5x)
+			pause          => [1,-1],     # preamble (7x)
 			clockabs       => 400,        # 400us
 			clockpos       => ['one',0],
+			format         => 'twostate',
 			preamble       => 'P82#',     # prepend our protocol number to converted message
 			clientmodule   => 'Fernotron',
 			length_min     => '100',      # actual 120 bit (12 x 10bit words to decode 6 bytes data), but last 20 are for checksum
@@ -1852,7 +1854,7 @@ my %ProtocolListSIGNALduino  = (
 			# MU;P0=-28796;P1=376;P2=-875;P3=834;P4=220;P5=-632;P6=592;P7=-268;D=0123232324545454545456767454567674567456745674545454545456767676767674567674567676767456;CP=4;R=22;
 			#	MU;P0=-28784;P1=340;P2=-903;P3=814;P4=223;P5=-632;P6=604;P7=-248;D=0123232324545454545456767456745456767674545674567454545456745454545456767454545456745676;CP=4;R=22;
 			# MU;P0=-21520;P1=235;P2=-855;P3=846;P4=620;P5=-236;P7=-614;D=012323232454545454545451717451717171745171717171717171717174517171745174517174517174545;CP=1;R=217;
-			# todo: es werden noch Nachrichten mit ausgeschalteter Komprimierung benötigt
+			# todo: es werden noch Nachrichten mit ausgeschalteter Komprimierung benoetigt
 			{
 			name         => 'IAN283582',
 			comment      => 'Weatherstation Auriol IAN 283582',
@@ -1888,8 +1890,8 @@ my %ProtocolListSIGNALduino  = (
 			length_min   => '64',
 			length_max   => '68',
 		},
-	"86" => ## for two remote controls: Novy Pureline 6830 kitchen hood / CAME TOP 432EV 433,92 MHz für z.B. Drehtor Antrieb
-			### CAME TOP 432EV 433,92 MHz für z.B. Drehtor Antrieb:
+	"86" => ## for two remote controls: Novy Pureline 6830 kitchen hood / CAME TOP 432EV 433,92 MHz fuer z.B. Drehtor Antrieb
+			### CAME TOP 432EV 433,92 MHz fuer z.B. Drehtor Antrieb:
 			# https://forum.fhem.de/index.php/topic,63370.msg849400.html#msg849400
 			# https://github.com/RFD-FHEM/RFFHEM/issues/151
 			# MU;P0=711;P1=-15288;P4=132;P5=-712;P6=316;P7=-313;D=4565656705656567056567056 16 565656705656567056567056 16 56565670565656705656705616565656705656567056567056165656567056565670565670561656565670565656705656705616565656705656567056567056165656567056565670565670561656565670565656705656705616565656705656567056;CP=6;R=52;
@@ -3118,12 +3120,13 @@ SIGNALduino_Read($)
 					$mL = ord($D) & 7;
 					$partD .= "$mH$mL";
 				}
-				#Log3 $name, 3, "$name/msg READredu1$m0: $partD";
+				#SIGNALduino_Log3 $name, 3, "$name/msg READredu1$m0: $partD";
 				if ($m0 eq "d") {
+					#SIGNALduino_Log3 $name, 4, "$name/msg ##READredu## $m0=$partD";
 					$partD =~ s/.$//;	   # letzte Ziffer entfernen wenn Anzahl der Ziffern ungerade
 				}
 				$partD =~ s/^8//;	           # 8 am Anfang entfernen
-				#Log3 $name, 3, "$name/msg READredu2$m0: $partD";
+				#SIGNALduino_Log3 $name, 3, "$name/msg READredu2$m0: $partD";
 				$part = $part . $partD . ';';
 			}
 			elsif (($m0 eq "C" || $m0 eq "S") && length($m1) == 1) {
@@ -3261,12 +3264,12 @@ sub SIGNALduino_ParseHttpResponse
 
     if($err ne "")               											 		# wenn ein Fehler bei der HTTP Abfrage aufgetreten ist
     {
-        SIGNALduino_Log3 $name, 3, "$name: error while requesting ".$param->{url}." - $err";    		# Eintrag fürs Log
+        SIGNALduino_Log3 $name, 3, "$name: error while requesting ".$param->{url}." - $err";    		# Eintrag fuers Log
     }
     elsif($param->{code} eq "200" && $data ne "")                                                       		# wenn die Abfrage erfolgreich war ($data enthaelt die Ergebnisdaten des HTTP Aufrufes)
     {
     	
-        SIGNALduino_Log3 $name, 3, "url ".$param->{url}." returned: ".length($data)." bytes Data";  # Eintrag fürs Log
+        SIGNALduino_Log3 $name, 3, "url ".$param->{url}." returned: ".length($data)." bytes Data";  # Eintrag fuers Log
 		    	
     	if ($param->{command} eq "flash")
     	{
@@ -3288,14 +3291,14 @@ sub SIGNALduino_ParseHttpResponse
 			print $file $data;
 			close $file;
 	
-			# Den Flash Befehl mit der soebene heruntergeladenen Datei ausführen
-			SIGNALduino_Log3 $name, 3, "calling set ".$param->{command}." $filename";    		# Eintrag fürs Log
+			# Den Flash Befehl mit der soebene heruntergeladenen Datei ausfuehren
+			SIGNALduino_Log3 $name, 3, "calling set ".$param->{command}." $filename";    		# Eintrag fuers Log
 
 			SIGNALduino_Set($hash,$name,$param->{command},$filename); # $hash->{SetFn}
 			
     	}
     } else {
-    	SIGNALduino_Log3 $name, 3, "$name: undefined error while requesting ".$param->{url}." - $err - code=".$param->{code};    		# Eintrag fürs Log
+    	SIGNALduino_Log3 $name, 3, "$name: undefined error while requesting ".$param->{url}." - $err - code=".$param->{code};    		# Eintrag fuers Log
     }
 }
 
@@ -3597,13 +3600,23 @@ sub SIGNALduno_Dispatch($$$$$)
 		$hash->{MSGCNT}++;
 		$hash->{TIME} = time();
 		$hash->{DMSG} = $dmsg;
+		$hash->{EQMSGCNT} = 0;
 		#my $event = 0;
 		if (substr(ucfirst($dmsg),0,1) eq 'U') { # u oder U
 			#$event = 1;
 			DoTrigger($name, "DMSG " . $dmsg);
-			return if (substr($dmsg,0,1) eq 'U') # && !defined($ProtocolListSIGNALduino{$id}{dispatchU})); # Fuer $dmsg die mit U anfangen ist kein Dispatch notwendig, da es dafuer kein Modul gibt klein u wird dagegen dispatcht
+			return if (substr($dmsg,0,1) eq 'U') # Fuer $dmsg die mit U anfangen ist kein Dispatch notwendig, da es dafuer kein Modul gibt klein u wird dagegen dispatcht
 		}
 		#readingsSingleUpdate($hash, "state", $hash->{READINGS}{state}{VAL}, $event);
+		
+		if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
+			my $devid = "m$id";
+			my $develop = lc(AttrVal($name,"development",""));
+			if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
+				SIGNALduino_Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
+				return;
+			}
+		}
 		
 		$hash->{RAWMSG} = $rmsg;
 		my %addvals = (DMSG => $dmsg);
@@ -3618,20 +3631,14 @@ sub SIGNALduno_Dispatch($$$$$)
 		else {
 			$rssi = "";
 		}
-		if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
-			my $devid = "m$id";
-			my $develop = lc(AttrVal($name,"development",""));
-			if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
-				SIGNALduino_Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
-				return;
-			}
-		}
+		
 		$dmsg = lc($dmsg) if ($id eq '74');
-		SIGNALduino_Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, $rssi dispatch";
+		SIGNALduino_Log3 $name, 4, "$name Dispatch: $dmsg, $rssi dispatch";
 		Dispatch($hash, $dmsg, \%addvals);  ## Dispatch to other Modules 
 		
 	}	else {
-		SIGNALduino_Log3 $name, 4, "$name Dispatch: $dmsg, Dropped due to short time or equal msg";
+		$hash->{EQMSGCNT}++;
+		SIGNALduino_Log3 $name, 4, "$name Dispatch: $dmsg, Dropped (" . $hash->{EQMSGCNT} . ") due to short time and equal msg";
 	}
    }
 }
@@ -5164,7 +5171,7 @@ sub SIGNALduino_postDemo_WS2000($@) {
 		SIGNALduino_Log3 $name, 4, "$name: WS2000 Sensortyp $typ Adr $adr - ERROR check XOR";
 		return (0, undef);
 	} else {
-		if ($datalength < 45 || $datalength > 46) { 			# Summe prüfen, außer Typ 1 ohne Summe
+		if ($datalength < 45 || $datalength > 46) { 			# Summe pruefen, ausser Typ 1 ohne Summe
 			$data = oct( "0b".(join "", reverse @bit_msg[$dataindex .. $dataindex + 3]));
 			if ($data != ($sum & 0x0F)) {
 				SIGNALduino_Log3 $name, 4, "$name: WS2000 Sensortyp $typ Adr $adr - ERROR sum";
@@ -6308,7 +6315,7 @@ With a # at the beginnging whitelistIDs can be deactivated.
 	</ul>
 	<br>
 
-	Es ist m&ouml;glich, mehr als ein Ger&auml;t anzuschließen, um beispielsweise besseren Empfang zu erhalten. FHEM wird doppelte Nachrichten herausfiltern.
+	Es ist m&ouml;glich, mehr als ein Ger&auml;t anzuschliessen, um beispielsweise besseren Empfang zu erhalten. FHEM wird doppelte Nachrichten herausfiltern.
 	Mehr dazu im dem <a href="#global">global</a> Abschnitt unter dem Attribut dupTimeout<br><br>
 
 	Hinweis: Dieses Modul erfordert das Device::SerialPort oder Win32::SerialPort
@@ -6355,11 +6362,11 @@ With a # at the beginnging whitelistIDs can be deactivated.
 				<li><code>freq</code> , legt sowohl die Empfangsfrequenz als auch die &Uuml;bertragungsfrequenz fest.<br>
 				Hinweis: Obwohl der CC1101 auf Frequenzen zwischen 315 und 915 MHz eingestellt werden kann, ist die Antennenschnittstelle und die Antenne des CUL auf genau eine Frequenz abgestimmt. Standard ist 868,3 MHz (oder 433 MHz)</li>
 				<a name="cc1101_bWidth"></a>
-				<li><code>bWidth</code> , kann auf Werte zwischen 58 kHz und 812 kHz eingestellt werden. Große Werte sind st&ouml;ranf&auml;llig, erm&ouml;glichen jedoch den Empfang von ungenau kalibrierten Sendern. Es wirkt sich auch auf die &Uuml;bertragung aus. Standard ist 325 kHz.</li>
+				<li><code>bWidth</code> , kann auf Werte zwischen 58 kHz und 812 kHz eingestellt werden. Grosse Werte sind st&ouml;ranf&auml;llig, erm&ouml;glichen jedoch den Empfang von ungenau kalibrierten Sendern. Es wirkt sich auch auf die &Uuml;bertragung aus. Standard ist 325 kHz.</li>
 				<a name="cc1101_patable"></a>
 				<li><code>patable</code> , &Auml;nderung der PA-Tabelle (Leistungsverst&auml;rkung f&uuml;r HF-Senden)</li>
 				<a name="cc1101_rAmpl"></a>
-				<li><code>rAmpl</code> , ist die Empf&auml;ngerverst&auml;rkung mit Werten zwischen 24 und 42 dB. Gr&ouml;ßere Werte erlauben den Empfang schwacher Signale. Der Standardwert ist 42.</li>
+				<li><code>rAmpl</code> , ist die Empf&auml;ngerverst&auml;rkung mit Werten zwischen 24 und 42 dB. Gr&ouml;ssere Werte erlauben den Empfang schwacher Signale. Der Standardwert ist 42.</li>
 				<a name="cc1101_sens"></a>
 				<li><code>sens</code> , ist die Entscheidungsgrenze zwischen den Ein- und Aus-Werten und betr&auml;gt 4, 8, 12 oder 16 dB. Kleinere Werte erlauben den Empfang von weniger klaren Signalen. Standard ist 4 dB.</li>
 			</ul><br>
@@ -6406,12 +6413,12 @@ With a # at the beginnging whitelistIDs can be deactivated.
 		<ul><li>1) Module welche einen BSL-Button besitzen:</li>
 			<ul>
 			- Spannung anlegen<br>
-			- drücke & halte BSL- und RESET-Button<br>
+			- dr&uuml;cke & halte BSL- und RESET-Button<br>
 			- RESET-Button loslassen und danach den BSL-Button loslassen<br>
 			 (Wiederholen Sie diese Schritte, wenn Ihr radino nicht sofort in den Bootloader-Modus wechselt.)
 			</ul>
 			<li>2) Bootloader erzwingen:<ul>
-			- durch zweimaliges drücken der Reset-Taste</ul>
+			- durch zweimaliges dr&uuml;cken der Reset-Taste</ul>
 			</li>
 		</ul>
 		<li>Im Bootloader-Modus erh&auml;lt der radino eine andere USB ID.</li><br>
@@ -6428,7 +6435,7 @@ With a # at the beginnging whitelistIDs can be deactivated.
 				<li>Beispiel 3: <code>set sduino raw SC;R=3;SR;P0=5000;SM;P0=500;C=250;D=A4F7FDDE</code> , sendet eine kombinierte Nachricht von Raw und Manchester codiert 3 mal wiederholt</li>
 			</ul><br>
 		<ul>
-         <u>NUR für DEBUG Nutzung | <small>Befehle sind abhänging vom Firmwarestand!</small></u><br>
+         <u>NUR f&uuml;r DEBUG Nutzung | <small>Befehle sind abh&auml;nging vom Firmwarestand!</small></u><br>
          <small>(Hinweis: Die falsche Benutzung kann zu Fehlfunktionen des SIGNALduino´s f&uuml;hren!)</small>
             <li>CED -> Debugausgaben ein</li>
             <li>CDD -> Debugausgaben aus</li>
@@ -6436,10 +6443,10 @@ With a # at the beginnging whitelistIDs can be deactivated.
             <li>CEL -> LED ein</li>
             <li>CER -> Einschalten der Datenkomprimierung (config: Mred=1)</li>
             <li>CDR -> Abschalten der Datenkomprimierung (config: Mred=0)</li>
-            <li>CSmscnt=[Wert] -> Wiederholungszähler für den split von MS Nachrichten</li>
-            <li>CSmuthresh=[Wert] -> Schwellwert für den split von MU Nachrichten (0=aus)</li>
-            <li>CSmcmbl=[Wert] -> minbitlen für MC-Nachrichten</li>
-            <li>CSfifolimit=[Wert] -> Schwellwert für debug Ausgabe der Pulsanzahl im FIFO Puffer</li>
+            <li>CSmscnt=[Wert] -> Wiederholungsz&auml;hler f&uuml;r den split von MS Nachrichten</li>
+            <li>CSmuthresh=[Wert] -> Schwellwert f&uuml;r den split von MU Nachrichten (0=aus)</li>
+            <li>CSmcmbl=[Wert] -> minbitlen f&uuml;r MC-Nachrichten</li>
+            <li>CSfifolimit=[Wert] -> Schwellwert f&uuml;r debug Ausgabe der Pulsanzahl im FIFO Puffer</li>
          </ul><br>
 	<a name="reset"></a>
 	<li>reset<br></li>
@@ -6447,19 +6454,19 @@ With a # at the beginnging whitelistIDs can be deactivated.
 	<a name="sendMsg"></a>
 	<li>sendMsg</li>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
-	Alternativ ist es auch möglich, die zu sendenden Daten in hexadezimaler Form zu übergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
+	Alternativ ist es auch m&ouml;glich, die zu sendenden Daten in hexadezimaler Form zu &uuml;bergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
 	<br><br>
-	Bitte beachte, dieses Kommando funktioniert nur für MU oder MS Protokolle nach dieser Vorgehensweise:
+	Bitte beachte, dieses Kommando funktioniert nur f&uuml;r MU oder MS Protokolle nach dieser Vorgehensweise:
 		<br><br>
 		Argumente sind:
 		<p>
 		<ul><li>P<protocol id>#binarydata#R<anzahl der wiederholungen>#C<optional taktrate>   (#C is optional) 
 		<br>Beispiel binarydata: <code>set sduino sendMsg P0#0101#R3#C500</code>
-		<br>Wird eine sende Kommando für die Bitfolge 0101 anhand der protocol id 0 erzeugen. Als Takt wird 500 verwendet.
+		<br>Wird eine sende Kommando f&uuml;r die Bitfolge 0101 anhand der protocol id 0 erzeugen. Als Takt wird 500 verwendet.
 		<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;<br></li></ul><br>
 		<ul><li>P<protocol id>#0xhexdata#R<anzahl der wiederholungen>#C<optional taktrate>    (#C is optional) 
 		<br>Beispiel 0xhexdata: <code>set sduino sendMsg P29#0xF7E#R4</code>
-		<br>Wird eine sende Kommando für die Hexfolge F7E anhand der protocol id 29 erzeugen. Die Nachricht soll 4x gesenset werden.
+		<br>Wird eine sende Kommando f&uuml;r die Hexfolge F7E anhand der protocol id 29 erzeugen. Die Nachricht soll 4x gesenset werden.
 		<br>SR;R=4;P0=-8360;P1=220;P2=-440;P3=-220;P4=440;D=01212121213421212121212134;
 		</p></li></ul>
 	</ul><br>
@@ -6576,7 +6583,7 @@ With a # at the beginnging whitelistIDs can be deactivated.
 	</li><br>
 	<a name="longids"></a>
 	<li>longids<br></li>
-	Durch Komma getrennte Liste von Device-Typen f&uuml;r Empfang von langen IDs mit dem SIGNALduino. Diese zus&auml;tzliche ID erlaubt es Wettersensoren, welche auf dem gleichen Kanal senden zu unterscheiden. Hierzu wird eine zuf&auml;llig generierte ID hinzugef&uuml;gt. Wenn Sie longids verwenden, dann wird in den meisten F&auml;llen nach einem Batteriewechsel ein neuer Sensor angelegt. Standardm&auml;ßig werden keine langen IDs verwendet.
+	Durch Komma getrennte Liste von Device-Typen f&uuml;r Empfang von langen IDs mit dem SIGNALduino. Diese zus&auml;tzliche ID erlaubt es Wettersensoren, welche auf dem gleichen Kanal senden zu unterscheiden. Hierzu wird eine zuf&auml;llig generierte ID hinzugef&uuml;gt. Wenn Sie longids verwenden, dann wird in den meisten F&auml;llen nach einem Batteriewechsel ein neuer Sensor angelegt. Standardm&auml;ssig werden keine langen IDs verwendet.
 	Folgende Module verwenden diese Funktionalit&auml;t: 14_Hideki, 41_OREGON, 14_CUL_TCM97001, 14_SD_WS07.<br>
 	Beispiele:<br>
 	<br>
@@ -6589,7 +6596,7 @@ With a # at the beginnging whitelistIDs can be deactivated.
     attr SIGNALduino longids SD_WS07<br><br>
 	<a name="maxMuMsgRepeat "></a>
 	<li>maxMuMsgRepeat <br><
-	In MU Signalen können mehrere Wiederholungen stecken. Diese werden einzeln ausgewertet und an ein logisches Modul übergeben. Mit diesem Attribut kann angepasst werden, wie viele Wiederholungen gesucht werden. Standard ist 4. 	
+	In MU Signalen k&ouml;nnen mehrere Wiederholungen stecken. Diese werden einzeln ausgewertet und an ein logisches Modul &uuml;bergeben. Mit diesem Attribut kann angepasst werden, wie viele Wiederholungen gesucht werden. Standard ist 4. 	
 	<br></li>
 	<a name="minsecs"></a>
 	<li>minsecs<br></li>
