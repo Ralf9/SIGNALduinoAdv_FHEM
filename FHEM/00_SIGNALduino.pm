@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-11-09 18:00:00Z v3.3.2-dev $
+# $Id: 00_SIGNALduino.pm 10488 2018-12-16 20:00:00Z v3.3.2-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -24,7 +24,7 @@ no warnings 'portable';
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.2ralf_09.11.",
+	SDUINO_VERSION            => "v3.3.2ralf_16.12.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -132,6 +132,7 @@ my $clientsSIGNALduino = ":IT:"
 						."RFXX10REC:"
 						."Dooya:"
 						."SOMFY:"
+						."SD_BELL:"	## bells
 						."SD_UT:"	## BELL 201.2 TXA
 			        	."SD_WS_Maverick:"
 			        	."FLAMINGO:"
@@ -2974,7 +2975,7 @@ SIGNALduino_DoInit($)
     @{$hash->{QUEUE}} = ();
     $hash->{sendworking} = 0;
     
- if (($hash->{DEF} !~ m/\@directio/) and ($hash->{DEF} !~ m/none/) )
+    if (($hash->{DEF} !~ m/\@directio/) and ($hash->{DEF} !~ m/none/) )
 	{
 		SIGNALduino_Log3 $name, 1, "$name/init: ".$hash->{DEF};
 		$hash->{initretry} = 0;
@@ -4902,7 +4903,7 @@ sub SIGNALduino_PreparingSend_FS20_FHT($$$) {
 		$newmsg .= SIGNALduino_dec2binppari($temp);
 	}
 	
-	$newmsg .= SIGNALduino_dec2binppari($sum & 0xFF);   # Checksum
+	$newmsg .= SIGNALduino_dec2binppari($sum & 0xFF);   # Checksum		
 	my $repeats = $id - 71;			# FS20(74)=3, FHT(73)=2
 	$newmsg .= "0P#R" . $repeats;		# EOT, Pause, 3 Repeats    
 	
@@ -4994,20 +4995,6 @@ sub SIGNALduino_HE_EU($@)
 		}
 	}
 	return (1,@bit_msg);
-}
-
-sub SIGNALduino_postDemo_Hoermann($@) {
-	my ($name, @bit_msg) = @_;
-	my $msg = join("",@bit_msg);
-	
-	if (substr($msg,0,9) ne "000000001") {		# check ident
-		SIGNALduino_Log3 $name, 4, "$name: Hoermann ERROR - Ident not 000000001";
-		return 0, undef;
-	} else {
-		SIGNALduino_Log3 $name, 5, "$name: Hoermann $msg";
-		$msg = substr($msg,9);
-		return (1,split("",$msg));
-	}
 }
 
 sub SIGNALduino_postDemo_EM($@) {
@@ -5752,9 +5739,9 @@ sub SIGNALduino_OSPIR()
 sub SIGNALduino_MCRAW()
 {
 	my ($name,$bitData,$id,$mcbitnum) = @_;
-	my $debug = AttrVal($name,"debug",0);
 
-
+	return (-1," message is to long") if (defined($ProtocolListSIGNALduino{$id}{length_max}) && $mcbitnum > $ProtocolListSIGNALduino{$id}{length_max} );
+	
 	my $hex=SIGNALduino_b2h($bitData);
 	return  (1,$hex); ## Return the bits unchanged in hex
 }
@@ -5850,6 +5837,7 @@ sub SIGNALduino_filterMC($$$%)
 	return (undef ,$rawData, %patternListRawFilter);
 	
 }
+
 # - - - - - - - - - - - -
 #=item SIGNALduino_filterSign()
 #This functons, will act as a filter function. It will remove the sign from the pattern, and compress message and pattern
