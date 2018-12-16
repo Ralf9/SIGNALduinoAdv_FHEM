@@ -167,8 +167,8 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"            		=> '^[P|u](30|79|81|83)#.*', # universal - more devices with different protocols
-     "18:FLAMINGO"            	=> '^P13#[A-Fa-f0-9]+',						## Flamingo Smoke
+     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|81|83|86)#.*',		# universal - more devices with different protocols     "18:FLAMINGO"				=> '^P13\.?1?#[A-Fa-f0-9]+',						## Flamingo Smoke
+     "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
      "21:FS10"					=> '^P61#[A-F0-9]+',
@@ -177,7 +177,8 @@ my %matchListSIGNALduino = (
      "24:FS20"    				=> "^81..(04|0c)..0101a001", 
      "25:CUL_EM"    				=> "^E0.................", 
      "26:Fernotron"  			=> '^P82#.*',
-     "X:SIGNALduino_un"			=> '^[u]\d+#.*',
+     "27:SD_BELL"				=> '^P(?:15|32|41|57|79)#.*',
+	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
 
