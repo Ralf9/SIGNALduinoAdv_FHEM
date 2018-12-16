@@ -55,8 +55,6 @@ sub SIGNALduino_Log3($$$);
 
 #my $debug=0;
 
-my $MuPartmsg = "";
-
 my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "version"  => ["V", 'V\s.*SIGNAL(duino|ESP).*'],
   "freeram"  => ["R", '^[0-9]+'],
@@ -2107,7 +2105,6 @@ my %ProtocolListSIGNALduino  = (
 
 
 
-
 sub
 SIGNALduino_Initialize($)
 {
@@ -2646,7 +2643,6 @@ SIGNALduino_Set($@)
 	#SIGNALduino_SimpleWrite($hash, $sendData);
 	SIGNALduino_AddSendQueue($hash,$sendData);
 	SIGNALduino_Log3 $name, 4, "$name/set: sending via SendMsg: $sendData";
-	
   } else {
   	SIGNALduino_Log3 $name, 5, "$name/set: set $name $cmd $arg";
 	#SIGNALduino_SimpleWrite($hash, $arg);
@@ -2684,7 +2680,7 @@ SIGNALduino_Get($@)
 
   if (IsDummy($name))
   {
-  	if ($arg =~ /^M[CcSUO];.*/)
+  	if ($arg =~ /^M[CcSU];.*/)
   	{
 		$arg="\002$arg\003";  	## Add start end end marker if not already there
 		SIGNALduino_Log3 $name, 5, "$name/msg adding start and endmarker to message";
@@ -2974,12 +2970,10 @@ SIGNALduino_DoInit($)
   	SIGNALduino_Log3 $name, 1, "$name/define: ".$hash->{DEF};
   
 	delete($hash->{disConnFlag}) if defined($hash->{disConnFlag});
-	
 	RemoveInternalTimer("HandleWriteQueue:$name");
     @{$hash->{QUEUE}} = ();
     $hash->{sendworking} = 0;
     
- # 	if (($hash->{DEF} !~ m/\@DirectIO/) and ($hash->{DEF} !~ m/none/) )
  if (($hash->{DEF} !~ m/\@directio/) and ($hash->{DEF} !~ m/none/) )
 	{
 		SIGNALduino_Log3 $name, 1, "$name/init: ".$hash->{DEF};
@@ -3249,7 +3243,7 @@ SIGNALduino_Read($)
     ($rmsg,$SIGNALduinodata) = split("\n", $SIGNALduinodata, 2);
     $rmsg =~ s/\r//;
     
-    	if ($rmsg =~ m/^\002(M(s|u|o);.*;)\003/) {
+    	if ($rmsg =~ m/^\002(M(s|u);.*;)\003/) {
 		$rmsg =~ s/^\002//;                # \002 am Anfang entfernen
 		my @msg_parts = split(";",$rmsg);
 		my $m0;
@@ -3259,6 +3253,7 @@ SIGNALduino_Read($)
 		my $mH;
 		my $part = "";
 		my $partD;
+		my $dOverfl = 0;
 		
 		foreach my $msgPart (@msg_parts) {
 			next if ($msgPart eq "");
@@ -3285,7 +3280,13 @@ SIGNALduino_Read($)
 			}
 			elsif (($m0 eq "D" || $m0 eq "d") && length($m1) > 0) {
 				my @arrayD = split(//, $m1);
-				$part .= "D=";
+				if ($dOverfl == 0) {
+					$part .= "D=";
+				}
+				else {
+					$part =~ s/;$//;	# ; am Ende entfernen
+				}
+				$dOverfl++;
 				$partD = "";
 				foreach my $D (@arrayD) {
 					$mH = ord($D) >> 4;
@@ -3307,6 +3308,10 @@ SIGNALduino_Read($)
 			elsif ($m0 eq "o" || $m0 eq "m") {
 				$part .= "$m0$m1;";
 			}
+			elsif ($m0 eq "F") {
+				my $F = hex($m1);
+				SIGNALduino_Log3 $name, AttrVal($name,"noMsgVerbose",4), "$name/msg READredu(o$dOverfl) FIFO=$F";
+			}
 			elsif ($m1 =~ m/^[0-9A-Z]{1,2}$/) {        # bei 1 oder 2 Hex Ziffern nach Dez wandeln 
 				$part .= "$m0=" . hex($m1) . ";";
 			}
@@ -3318,7 +3323,12 @@ SIGNALduino_Read($)
 				$part .= ";";
 			}
 		}
-		Log3 $name, 4, "$name/msg READredu: $part";
+		my $MuOverfl = "";
+		if ($dOverfl > 1) {
+			$dOverfl--;
+			$MuOverfl = "(o$dOverfl)";
+		}
+		Log3 $name, 4, "$name/msg READredu$MuOverfl: $part";
 		$rmsg = "\002$part\003";
 	}
 	else {
@@ -4035,7 +4045,6 @@ SIGNALduino_Parse_MS($$$$%)
 }
 
 
-
 ## //Todo: check list as reference
 sub SIGNALduino_padbits(\@$)
 {
@@ -4494,7 +4503,7 @@ SIGNALduino_Parse($$$$@)
     	
 	if (!($rmsg=~ s/^\002(M.;.*;)\003/$1/)) 			# Check if a Data Message arrived and if it's complete  (start & end control char are received)
 	{							# cut off start end end character from message for further processing they are not needed
-		Log3 $name, AttrVal($name,"noMsgVerbose",5), "$name/noMsg Parse: $rmsg";
+		SIGNALduino_Log3 $name, AttrVal($name,"noMsgVerbose",5), "$name/noMsg Parse: $rmsg";
 		return undef;
 	}
 
@@ -4506,62 +4515,31 @@ SIGNALduino_Parse($$$$@)
 	my $debug = AttrVal($iohash->{NAME},"debug",0);
 	
 	
-	Debug "$name: incomming message: ($rmsg)\n" if ($debug);
+	Debug "$name: incoming message: ($rmsg)\n" if ($debug);
 	
 	if (AttrVal($name, "rawmsgEvent", 0)) {
 		DoTrigger($name, "RAWMSG " . $rmsg);
 	}
 	
-	#my %signal_parts=SIGNALduino_Split_Message($rmsg,$name);   ## Split message and save anything in an hash %signal_parts
+	my %signal_parts=SIGNALduino_Split_Message($rmsg,$name);   ## Split message and save anything in an hash %signal_parts
 	#Debug "raw data ". $signal_parts{rawData};
 	
 	
 	my $dispatched;
-	my %signal_parts;
 
+	# Message synced type   -> MS
 	if (@{$hash->{msIdList}} && $rmsg=~ m/^MS;(P\d=-?\d+;){3,8}D=\d+;CP=\d;SP=\d;/) 
 	{
-		%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
 		$dispatched= SIGNALduino_Parse_MS($hash, $iohash, $name, $rmsg,%signal_parts);
 	}
 	# Message unsynced type   -> MU
   	elsif (@{$hash->{muIdList}} && $rmsg=~ m/^MU;(P\d=-?\d+;){3,8}((CP|R)=\d+;){0,2}D=\d+;/)
 	{
-		my $MuPart = index($rmsg, ';o');
-		if ($MuPart > 0)
-		{
-			$MuPartmsg = substr($rmsg,0,$MuPart);
-			Log3 $name, 4, "$name/Remember MUmsg: $MuPartmsg";
-		}
-		else {
-			$MuPartmsg = "";
-			%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
-			$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
-		}
-	}
-	elsif ($rmsg=~ m/^MO;D=\d+;/)
-	{
-		if (length($MuPartmsg) > 10)
-		{
-			my $MoPart = index($rmsg, ';o');
-			if ($MoPart > 0)
-			{
-				$MuPartmsg = $MuPartmsg . substr($rmsg,5,$MoPart-5);	# zu gemerkter MU-Nachricht zufuegen
-				Log3 $name, 4, "$name/add Overflowmsg to MuPartmsg: " . substr($rmsg,5,$MoPart-5);
-			}
-			else {
-				$rmsg = $MuPartmsg . substr($rmsg,5);
-				$MuPartmsg = "";
-				Log3 $name, 4, "$name/Overflowmsg Parse_MU: $rmsg";
-				%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
-				$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
-			}
-		}
+		$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
 	}
 	# Manchester encoded Data   -> MC
   	elsif (@{$hash->{mcIdList}} && $rmsg=~ m/^M[cC];.*;/) 
 	{
-		%signal_parts=SIGNALduino_Split_Message($rmsg,$name);
 		$dispatched=  SIGNALduino_Parse_MC($hash, $iohash, $name, $rmsg,%signal_parts);
 	}
 	else {
@@ -4569,7 +4547,7 @@ SIGNALduino_Parse($$$$@)
 		return undef;
 	}
 	
-	if ( AttrVal($hash->{NAME},"verbose","0") > 4 && !$dispatched)
+	if ( AttrVal($hash->{NAME},"verbose","0") > 4 && !$dispatched)	# bei verbose 5 wird die $rmsg in $hash->{unknownmessages} hinzugefuegt
 	{
    	    my $notdisplist;
    	    my @lines;
