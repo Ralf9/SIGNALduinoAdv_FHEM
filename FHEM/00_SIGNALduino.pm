@@ -66,7 +66,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
 # "ITParms"  => ["ip",'.*'],
   "ping"     => ["P",'^OK$'],
   "config"   => ["CG",'^MS.*MU.*MC.*'],
-  "protocolIDs"   => ["none",'none'],
+#  "protocolIDs"   => ["none",'none'],
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
   "ccpatable" => ["C3E", '^C3E = .*'],
@@ -2222,7 +2222,8 @@ SIGNALduino_Initialize($)
 					  ." maxMuMsgRepeat"
 		              ." $readingFnAttributes";
 
-  $hash->{ShutdownFn} = "SIGNALduino_Shutdown";
+  $hash->{ShutdownFn}		= "SIGNALduino_Shutdown";
+  $hash->{FW_detailFn}		= "SIGNALduino_FW_Detail";
   
   $hash->{msIdList} = ();
   $hash->{muIdList} = ();
@@ -2920,72 +2921,8 @@ SIGNALduino_Get($@)
   }
   elsif ($a[1] eq "protocolIDs")
   {
-	my $id;
-	my $ret;
-	my $s;
-	my $moduleId;
-	my @IdList = ();
-	
-	foreach $id (keys %ProtocolListSIGNALduino)
-	{
-		next if ($id eq 'id');
-		push (@IdList, $id);
-	}
-	@IdList = sort { $a <=> $b } @IdList;
-	
-	$ret = " ID    modulname       protocolname # comment\n\n";
-	
-	foreach $id (@IdList)
-	{
-		next if ($id > 900);
-		
-		$ret .= sprintf("%3s",$id) . " ";
-		
-		if (exists ($ProtocolListSIGNALduino{$id}{format}) && $ProtocolListSIGNALduino{$id}{format} eq "manchester")
-		{
-			$ret .= "MC";
-		}
-		elsif (exists $ProtocolListSIGNALduino{$id}{sync})
-		{
-			$ret .= "MS";
-		}
-		elsif (exists ($ProtocolListSIGNALduino{$id}{clockabs}))
-		{
-			$ret .= "MU";
-		}
-		
-		if (exists ($ProtocolListSIGNALduino{$id}{clientmodule}))
-		{
-			$moduleId .= "$id,";
-			$s = $ProtocolListSIGNALduino{$id}{clientmodule};
-			if (length($s) < 15)
-			{
-				$s .= substr("               ",length($s) - 15);
-			}
-			$ret .= " $s";
-		}
-		else
-		{
-			$ret .= "                ";
-		}
-		
-		if (exists ($ProtocolListSIGNALduino{$id}{name}))
-		{
-			$ret .= " $ProtocolListSIGNALduino{$id}{name}";
-		}
-		
-		if (exists ($ProtocolListSIGNALduino{$id}{comment}))
-		{
-			$ret .= " # $ProtocolListSIGNALduino{$id}{comment}";
-		}
-		
-		$ret .= "\n";
-	}
-	#$moduleId =~ s/,$//;
-	
-	return "$a[1]: \n\n$ret\n";
-	#return "$a[1]: \n\n$ret\nIds with modules: $moduleId";
-  }
+	return SIGNALduino_FW_getProtocolList($name);
+  } 
   
   #SIGNALduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
   SIGNALduino_AddSendQueue($hash, $gets{$a[1]}[0] . $arg);
@@ -3955,11 +3892,10 @@ sub SIGNALduno_Dispatch($$$$$)
 		}
 		#readingsSingleUpdate($hash, "state", $hash->{READINGS}{state}{VAL}, $event);
 		
-		if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
-			my $devid = "m$id";
-			my $develop = lc(AttrVal($name,"development",""));
-			if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
-				SIGNALduino_Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
+		if (defined($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "m") {
+			my $IDsNoDispatch = "," . InternalVal($name,"IDsNoDispatch","") . ",";
+			if ($IDsNoDispatch ne ",," && index($IDsNoDispatch, ",$id,") >= 0) {	# kein dispatch wenn die Id im Internal IDsNoDispatch steht
+				SIGNALduino_Log3 $name, 3, "$name: ID=$id skiped dispatch (developId=m). $IDsNoDispatch To use, please add $id to the attr whitelist_IDs";
 				return;
 			}
 		}
@@ -4893,6 +4829,196 @@ SIGNALduino_Attr(@)
   	return undef;
 }
 
+
+sub SIGNALduino_FW_Detail($@) {
+  my ($FW_wname, $name, $room, $pageHash) = @_;
+  
+  my $hash = $defs{$name};
+  
+  my @dspec=devspec2array("DEF=.*fakelog");
+  my $lfn = $dspec[0];
+  my $fn=$defs{$name}->{TYPE}."-Flash.log";
+  
+  my $ret = "<div class='makeTable wide'><span>Information menu</span>
+<table class='block wide' id='SIGNALduinoInfoMenue' nm='$hash->{NAME}' class='block wide'>
+<tr class='even'>";
+
+
+  if (-s AttrVal("global", "logdir", "./log/") .$fn)
+  { 
+	  my $flashlogurl="$FW_ME/FileLog_logWrapper?dev=$lfn&type=text&file=$fn";
+	  
+	  $ret .= "<td>";
+	  $ret .= "<a href=\"$flashlogurl\">Last Flashlog<\/a>";
+	  $ret .= "</td>";
+	  #return $ret;
+  }
+
+  my $protocolURL="$FW_ME/FileLog_logWrapper?dev=$lfn&type=text&file=$fn";
+  
+  $ret.="<td><a href='#showProtocolList' id='showProtocolList'>Display protocollist</a></td>";
+  $ret .= '</tr></table></div>
+  
+<script>
+$( "#showProtocolList" ).click(function(e) {
+	e.preventDefault();
+	FW_cmd(FW_root+\'?cmd={SIGNALduino_FW_getProtocolList("'.$FW_detail.'")}&XHR=1\', function(data){SD_plistWindow(data)});
+	
+});
+
+function SD_plistWindow(txt)
+{
+  var div = $("<div id=\"SD_protocolDialog\">");
+  $(div).html(txt);
+  $("body").append(div);
+  var oldPos = $("body").scrollTop();
+  var element = document.getElementById("SD_protoCaption");
+  var caption = element.innerHTML;
+  var btxtStable = "";
+  var btxtBlack = "";
+  if (caption.substr(0,1) != "d") {
+    btxtStable = "stable";
+  }
+  if (caption.substr(-1) == ".") {
+    btxtBlack = " except blacklist";
+  }
+  $(div).dialog({
+    dialogClass:"no-close", modal:true, width:"auto", closeOnEscape:true, 
+    maxWidth:$(window).width()*0.9, maxHeight:$(window).height()*0.9,
+    title: "Protocollist Overview",
+    buttons: [
+      {text:"select all " + btxtStable + btxtBlack, click:function(){
+           FW_cmd(FW_root+ \'?XHR=1&cmd={SIGNALduino_FW_selectAll("'.$name.'")}\', function(data){SD_selectAll(data)});
+      }},
+      {text:"deselect all", click:function(){
+           // FW_cmd(FW_root+ \'?XHR=1&cmd={SIGNALduino_FW_deselectAll()}\', function(){SD_deselectAll()});
+           SD_deselectAll()
+      }},
+      {text:"save to whitelist and close", click:function(){
+          var ret = SD_saveWhitelist();
+          FW_cmd(FW_root+ \'?XHR=1&cmd={SIGNALduino_FW_saveWhitelist("'.$name.'","\'+ret+\'")}\');
+          $(this).dialog("close");
+          $(div).remove();
+          location.reload();
+      }},
+      {text:"close", click:function(){
+        $(this).dialog("close");
+        $(div).remove();
+        location.reload();
+      }}]
+  });
+}
+
+function SD_deselectAll()
+{
+  var element = document.getElementById("SD_protocolDialog");
+  var checkboxes = element.getElementsByTagName("input");
+  for (var i = 0; i < checkboxes.length; i++) {
+     checkboxes[i].checked = false;
+  }
+}
+
+function SD_selectAll(data)
+{
+  var ids = JSON.parse("[" + data + "]");
+  var element = document.getElementById("SD_protocolDialog");
+  var checkboxes = element.getElementsByTagName("input");
+  var i = 0;
+    for (var icb = 0; icb < checkboxes.length; icb++) {
+       if (checkboxes[icb].name == ids[i]) {
+          checkboxes[icb].checked = false;
+          if (i < ids.length) {
+             i++;
+          }
+       }
+       else {
+          checkboxes[icb].checked = true;
+       }
+    }
+}
+
+function SD_saveWhitelist()
+{
+  var element = document.getElementById("SD_protocolDialog");
+  var checkboxes = element.getElementsByTagName("input");
+  var txt = "";
+  for (var i = 0; i < checkboxes.length; i++) {
+    if (checkboxes[i].checked == true) {
+      txt = txt + checkboxes[i].name + ",";
+    }
+  }
+  return txt;
+}
+
+
+</script>';
+  return $ret;
+}
+
+sub SIGNALduino_FW_saveWhitelist
+{
+	my $name = shift;
+	my $wl_attr = shift;
+	
+	if ($wl_attr eq "") {
+		$wl_attr = 0;
+	}
+	else {
+		$wl_attr =~ s/,$//;			# Komma am Ende entfernen
+	}
+	$attr{$name}{whitelist_IDs} = $wl_attr;
+	SIGNALduino_Log3 $name, 3, "$name Protocolist save: $wl_attr";
+	SIGNALduino_IdList("x:$name", $wl_attr);
+}
+
+sub SIGNALduino_FW_selectAll
+{
+	my $name = shift;
+	my $hash = $defs{$name};
+	my %BlacklistIDs;
+	my @IdList = ();
+	my $ret = "";
+	my $bflag = 0;
+	my $devFlag = 0;
+	
+	my $blacklist = AttrVal($name,"blacklist_IDs","");
+	if (length($blacklist) > 0) {							# Blacklist in Hash wandeln
+		SIGNALduino_Log3 $name, 5, "$name Protocolist selectAll: attr blacklistIds=$blacklist";
+		%BlacklistIDs = map { $_ => 1 } split(",", $blacklist);
+		#my $w = join ', ' => map "$_" => keys %BlacklistIDs;
+		#SIGNALduino_Log3 $name, 3, "$name IdList, Attr blacklist $w";
+		$bflag = 1;
+	}
+	
+	my $develop = SIGNALduino_getAttrDevelopment($name);
+	if ($develop eq "1" || substr($develop,0,1) eq "y") {		# Entwicklerversion
+		$devFlag = 1;
+	}
+	
+	my $id;
+	foreach $id (keys %ProtocolListSIGNALduino)
+	{
+		next if ($id >= 900);
+		
+		if ($bflag == 1 && defined($BlacklistIDs{$id})) {
+			#SIGNALduino_Log3 $name, 3, "$name Protocolist activateAll, skip Blacklist ID $id";
+			push(@IdList, $id);
+		}
+		elsif (defined($ProtocolListSIGNALduino{$id}{developId})) {
+			if ($devFlag == 1 && $ProtocolListSIGNALduino{$id}{developId} eq "p") {
+				push(@IdList, $id);
+			}
+			elsif ($devFlag == 0 && $ProtocolListSIGNALduino{$id}{developId} eq "y") {
+				push(@IdList, $id);
+			}
+		}
+	}
+	@IdList = sort {$a <=> $b} @IdList;
+	$ret = join(",",@IdList);
+	
+	SIGNALduino_Log3 $name, 4, "$name Protocolist selectAll: ret=$ret";
+	return $ret;
+}
 
 sub SIGNALduino_IdList($@)
 {
@@ -6193,6 +6319,117 @@ sub SIGNALduino_Log3($$$)
   Log3($name,$loglevel,$text);
   
   return;
+}
+
+
+
+################################################
+# Functions for fhemweb actions 
+
+
+################################################
+# Helper to get a reference of the protocolList Hash
+sub SIGNALduino_getProtocolList()
+{
+	return \%ProtocolListSIGNALduino
+}
+
+
+
+sub SIGNALduino_FW_getProtocolList
+{
+	my $name = shift;
+	
+	my $hash = $defs{$name};
+	
+	my $id;
+	my $ret;
+	my $devFlag = 0;	# 1 - develop version
+	my $devText = "";
+	my $blackTxt = "";
+	my @IdList = ();
+	my $comment;
+	my $knownFreqs;
+	
+	my $whitelist = AttrVal($name,"whitelist_IDs","#");
+	if (AttrVal($name,"blacklist_IDs","") ne "") {				# wenn es eine blacklist gibt, dann "." an die Ueberschrift anhaengen
+		$blackTxt = ".";
+	}
+	
+	my $develop = SIGNALduino_getAttrDevelopment($name);
+	if ($develop eq "1" || substr($develop,0,1) eq "y") {		# develop version
+		$devFlag = 1;
+		$devText = "development version - ";
+	}
+	
+	my %activeIdHash;
+	@activeIdHash{@{$hash->{msIdList}}, @{$hash->{muIdList}}, @{$hash->{mcIdList}}} = (undef);
+	#SIGNALduino_Log3 $name,4, "$name IdList: $mIdList";
+	
+	foreach $id (keys %ProtocolListSIGNALduino)
+	{
+		next if ($id >= 900);
+		push (@IdList, $id);
+	}
+	@IdList = sort { $a <=> $b } @IdList;
+
+	$ret = "<table class=\"block wide internals wrapcolumns\">";
+	
+	$ret .="<caption id=\"SD_protoCaption\">$devText";
+	if (substr($whitelist,0,1) ne "#") {
+		$ret .="whitelist active$blackTxt</caption>";
+	}
+	else {
+		$ret .="whitelist not active (save activate it)$blackTxt</caption>";
+	}
+	$ret .= "<thead style=\"text-align:center\"><td>act.</td><td>dev</td><td>ID</td><td>Msg Type</td><td>modulname</td><td>protocolname</td> <td># comment</td></thead>";
+	$ret .="<tbody>";
+	my $oddeven="odd";
+	
+	foreach $id (@IdList)
+	{
+		my $msgtype;
+		my $chkbox;
+		
+		if (exists ($ProtocolListSIGNALduino{$id}{format}) && $ProtocolListSIGNALduino{$id}{format} eq "manchester")
+		{
+			$msgtype = "MC";
+		}
+		elsif (exists $ProtocolListSIGNALduino{$id}{sync})
+		{
+			$msgtype = "MS";
+		}
+		elsif (exists ($ProtocolListSIGNALduino{$id}{clockabs}))
+		{
+			$msgtype = "MU";
+		}
+		
+		my $checked="";
+		
+		if (exists($activeIdHash{$id}))
+		{
+			$checked="checked";
+		}
+		
+		if ($devFlag == 0 && defined($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "p") {
+			$chkbox="<div> </div>";
+		}
+		else {
+			$chkbox=sprintf("<INPUT type=\"checkbox\" name=\"%s\" %s/>",$id,$checked);
+		}
+		
+		$comment = SIGNALduino_getProtoProp($id,"comment","");
+		$knownFreqs = SIGNALduino_getProtoProp($id,"knownFreqs","");
+		if (length($knownFreqs) > 2) {
+			$comment .= " (" . $knownFreqs . "MHz)";
+		}
+		$ret .= sprintf("<tr class=\"%s\"><td>%s</td><td><div>%s</div></td><td><div>%3s</div></td><td><div>%s</div></td><td><div>%s</div></td><td><div>%s</div></td><td><div>%s</div></td></tr>",$oddeven,$chkbox,SIGNALduino_getProtoProp($id,"developId",""),$id,$msgtype,SIGNALduino_getProtoProp($id,"clientmodule",""),SIGNALduino_getProtoProp($id,"name",""),$comment);
+		$oddeven= $oddeven eq "odd" ? "even" : "odd" ;
+		
+		$ret .= "\n";
+	}
+	$ret .= "</tbody></table>";
+	return $ret;
 }
 
 
