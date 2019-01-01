@@ -215,14 +215,14 @@ my %ProtocolListSIGNALduino  = (
 						## LIDL Wetterstation
 						# https://github.com/RFD-FHEM/RFFHEM/issues/63
 						# MS;P1=367;P2=-2077;P4=-9415;P5=-4014;D=141515151515151515121512121212121212121212121212121212121212121212;CP=1;SP=4;O;
-			# 201812xx move from ID 38
 		{
 			name			=> 'weather (v2)',
 			comment			=> 'temperature / humidity or other sensors',
+			changed			=> '20181216 move from ID 38',
 			id			=> '0.1',
 			one			=> [1,-12],
 			zero			=> [1,-6],
-			sync			=> [1,-26],
+			sync			=> [1,-25],
 			clockabs		=> -1,
 			format			=> 'twostate',		# not used now
 			preamble		=> 's',						# prepend to converted message
@@ -240,6 +240,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name			=> 'weather (v3)',
 			comment			=> 'temperature / humidity or other sensors',
+			changed			=> '20181219 new',
 			id			=> '0.2',
 			one			=> [1,-18],
 			zero			=> [1,-9],
@@ -260,10 +261,10 @@ my %ProtocolListSIGNALduino  = (
 						# MS;P0=-2189;P1=371;P2=-3901;P3=-8158;D=1310101010101210101010101210101010121210121212101210101012101012121012121210;CP=1;SP=3;R=20;O;
 						# Ventus W174
 						# MS;P3=-2009;P4=479;P5=-9066;P6=-4047;D=45434343464343434643464643464643434643464646434346464343434343434346464643;CP=4;SP=5;R=55;O;m2;
-			# 201812xx move from ID 68
 		{
 			name			=> 'weather (v4)',
 			comment			=> 'temperature / humidity or other sensors | Pollin PFR-130, Ventus W174 ...',
+			changed			=> '20181219 move from ID 68',
 			id			=> '0.3',
 			one			=> [1,-10],
 			zero			=> [1,-5],
@@ -296,7 +297,7 @@ my %ProtocolListSIGNALduino  = (
     "2"    => 
         {
 			name			=> 'AS, Self build arduino sensor',
-			comment         => 'developModule. SD_AS module is only in github available',
+			comment         => 'developModule. SD_AS module is only in github available.',
 			developId 		=> 'm',
 			id          	=> '2',
 			one				=> [1,-2],
@@ -447,7 +448,7 @@ my %ProtocolListSIGNALduino  = (
 			name			=> 'CTW 600',	
 			comment			=> 'FunkWS WH1080/WH3080/CTW600',
 			id          => '9',
-			knownFreqs      => '433.92 und 868.35',
+			knownFreqs      => '433.92 | 868.35',
 			zero			=> [3,-2],
 			one			=> [1,-2],
 			#float			=> [-1,3],		# not full supported now, for later use
@@ -583,19 +584,19 @@ my %ProtocolListSIGNALduino  = (
 						# https://github.com/RFD-FHEM/RFFHEM/issues/421 | https://forum.fhem.de/index.php/topic,94211.msg869214.html#msg869214
 						# MS;P0=988;P1=-384;P2=346;P3=-1026;P4=-4923;D=240123012301230123012323232323232301232323;CP=2;SP=4;R=0;O;m=1;
 						# MS;P0=-398;P1=974;P3=338;P4=-1034;P6=-4939;D=361034103410341034103434343434343410103434;CP=3;SP=6;R=0;
-			# 201812xx new, old Heidemann HX BELL
 		{
 			name				=> 'LED X-MAS',
 			comment				=> 'Chilitec model 22640',
+			changed				=> '20181210 new, old Heidemann HX BELL (move to ID 79)',
 			id				=> '14',
 			one				=> [3,-1],
 			zero				=> [1,-3],
-			sync					=> [1,-14],
-			clockabs				=> 350,
-			format					=> 'twostate',
-			preamble				=> 'P14#',				# prepend to converted message
+			sync				=> [1,-14],
+			clockabs			=> 350,
+			format				=> 'twostate',
+			preamble			=> 'P14#',				# prepend to converted message
 			clientmodule		=> 'SD_UT',
-			#modulematch			=> '^P14#.*',
+			#modulematch		=> '^P14#.*',
 			length_min			=> '20',
 			length_max			=> '20',
 		}, 			
@@ -704,6 +705,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name			=> 'minify',
 			comment			=> 'remote control RC202',
+			changed			=> '20181004 new',
 			id			=> '19',
 			one			=> [3,-1],
 			zero			=> [1,-3],
@@ -767,21 +769,21 @@ my %ProtocolListSIGNALduino  = (
 					# https://forum.fhem.de/index.php?topic=89301.0
 					# MU;P0=-589;P1=209;P2=-336;P3=32001;P4=-204;P5=1194;P6=-1200;P7=602;D=0123414145610747474101010101074741010747410741074101010101074741010741074741414141456107474741010101010747410107474107410741010101010747410107410747414141414561074747410101010107474101074741074107410101010107474101074107474141414145610747474101010101074;CP=1;R=25;
 					# MU;P0=204;P1=-596;P2=598;P3=-206;P4=1199;P5=-1197;D=0123230123012301010101012323010123012323030303034501232323010101010123230101232301230123010101010123230101230123230303030345012323230101010101232301012323012301230101010101232301012301232303030303450123232301010101012323010123230123012301010101012323010;CP=0;R=25;
-			# 201812xx new, old move to ID 33
 		{
-			name						=> 'HAMULiGHT',
+			name					=> 'HAMULiGHT',
 			comment					=> 'remote control for LED Transformator',
-			id							=> '22',
-			one							=> [1,-3],
-			zero						=> [3,-1],
-			start						=> [6,-6],
+			changed					=> '20181204 new, old move to ID 33',
+			id					=> '22',
+			one					=> [1,-3],
+			zero					=> [3,-1],
+			start					=> [6,-6],
 			clockabs				=> 200,						# ca 200us
 			format					=> 'twostate',
 			preamble				=> 'u22#',				# prepend to converted message
 			#clientmodule    => '',
 			#modulematch     => '',
-			length_min      => '32',
-			length_max      => '32',
+			length_min				=> '32',
+			length_max				=> '32',
 		},
 	"23"	=>	## Pearl Sensor
 		{
@@ -1019,8 +1021,9 @@ my %ProtocolListSIGNALduino  = (
 		{   
 			name 			=> 'QUIGG_GT-7000',
 			comment         => 'remote QUIGG DMV-7000',
-			id 		=> '34',
-			one             => [-1,2],
+			changed			=> '20181025 new',
+			id 			=> '34',
+			one			=> [-1,2],
 			zero            => [-2,1],
 			start			=> [1],
 			clockabs   		=> '660',
@@ -1164,12 +1167,13 @@ my %ProtocolListSIGNALduino  = (
 						# MU;P0=1446;P1=-487;P2=477;D=0101012121212121212121212101010101212121212121212121210101010121212121212121212121010101012121212121212121212101010101212121212121212121210101010121212121212121212121010101012121212121212121212101010101212121212121212121210101010121212121212121212121010;CP=2;R=93;O;
 						# MU;P0=-112;P1=1075;P2=-511;P3=452;P5=1418;D=01212121232323232323232323232525252523232323232323232323252525252323232323232323232325252525;CP=3;R=77;
 		{
-			name					=> 'wireless doorbell',
+			name				=> 'wireless doorbell',
 			comment				=> 'Pollin 94-551227',
-			id					=> '42',
-			one					=> [1,-1],
-			zero					=> [3,-1],
-			start					=> [1,-1,1,-1,1,-1,],
+			changed				=> '20181210 new',
+			id				=> '42',
+			one				=> [1,-1],
+			zero				=> [3,-1],
+			start				=> [1,-1,1,-1,1,-1,],
 			clockabs			=> 500,
 			clockpos			=> ['one',0],
 			format				=> 'twostate',
@@ -1635,9 +1639,26 @@ my %ProtocolListSIGNALduino  = (
 				length_max       => '34',
 				postDemodulation => \&SIGNALduino_postDemo_WS7053,
 		},
-
-		# "68"	=>	can use
-
+	"68"	=>	## Pollin PFR-130 ###########################################################################
+						# MS;P0=-3890;P1=386;P2=-2191;P3=-8184;D=1312121212121012121212121012121212101012101010121012121210121210101210101012;CP=1;SP=3;R=20;O;
+						# MS;P0=-2189;P1=371;P2=-3901;P3=-8158;D=1310101010101210101010101210101010121210121212101210101012101012121012121210;CP=1;SP=3;R=20;O;
+		{
+			name				=> 'Pollin PFR-130',
+			comment				=> 'temperature sensor with rain. !!!deprecated, will be removed soon!!!',
+			changed				=> '20181219 move to ID 0.3, deprecated, will be removed soon!!!',
+			id				=> '68',
+			one				=> [1,-10],
+			zero				=> [1,-5],
+			sync				=> [1,-21],	
+			clockabs			=> 380,
+			preamble			=> 's',				# prepend to converted message
+			postamble			=> '00',			# Append to converted message
+			clientmodule	=> 'CUL_TCM97001',
+			length_min		=> '36',
+			length_max		=> '42',
+			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
+			developId		=> 'p',
+		}, 
 	"69"	=>	## Hoermann HSM2, HSM4, HS1-868-BS (868 MHz)
 						# https://github.com/RFD-FHEM/RFFHEM/issues/149
 						# MU;P0=-508;P1=1029;P2=503;P3=-1023;P4=12388;D=01010232323232310104010101010101010102323231010232310231023232323231023101023101010231010101010232323232310104010101010101010102323231010232310231023232323231023101023101010231010101010232323232310104010101010101010102323231010232310231023232323231023101;CP=2;R=37;O;
@@ -1930,6 +1951,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name             => 'SA-434-1',
 			comment          => 'Remote control SA-434-1 mini 923301 based on HT12E (developModule SD_UT is only in github available)',
+			changed          => '20180906 new',
 			id               => '81',
 			one              => [-2,1],			# i.O.
 			zero             => [-1,2],			# i.O.
@@ -1951,6 +1973,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name           => 'Fernotron',
 			id             => '82',       # protocol number
+			changed        => '20180906 new',
 			developId      => 'm',
 			dispatchBin    => 'y',
 			one            => [1,-2],     # on=400us, off=800us
@@ -1974,6 +1997,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name		=> 'RH787T',	
 			comment         => 'Remote control for example Westinghouse Delancey 7800140 (developModule SD_UT is only in github available)',
+			changed			=> '20180908 new',
 			id          	=> '83',
 			one				=> [-2,1],
 			zero			=> [-1,2],
@@ -1999,6 +2023,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name					=> 'IAN 283582',
 			comment				=> 'Weatherstation Auriol IAN 283582 / Sempre 92596/65395',
+			changed					=> '20180930 new',
 			id						=> '84',
 			one						=> [3,-1],
 			zero					=> [1,-3],
@@ -2020,6 +2045,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name					=> 'TFA 30.3222.02',
 			comment				=> 'Combisensor for Weatherstation TFA 35.1140.01',
+			changed					=> '20181021 new',
 			id						=> '85',
 			one						=> [2,-1],
 			zero					=> [1,-2],
@@ -2064,6 +2090,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name					=> 'BOSCH|CAME|Novy|Neff',
 			comment				=> 'remote control CAME TOP 432EV, Novy 840029, BOSCH or Neff SF01 01319004',
+			changed				=> '20181024 new',
 			id						=> '86',
 			one						=> [-2,1],
 			zero					=> [-1,2],
@@ -2084,6 +2111,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name					=> 'JAROLIFT',
 			comment				=> 'remote control JAROLIFT TDRC_16W / TDRCT_04W',
+			changed				=> '20181025 new',
 			id						=> '87',
 			one						=> [1,-2],
 			zero					=> [2,-1],
@@ -2102,12 +2130,13 @@ my %ProtocolListSIGNALduino  = (
 						# MS;P1=361;P2=-435;P4=-4018;P5=-829;P6=759;P7=-16210;D=141562156215156262626215151562626215626215621562151515621562151515156262156262626215151562156215621515151515151562151515156262156215171212121212121212121212;CP=1;SP=4;R=66;O;m0;
 						# MS;P0=-16052;P1=363;P2=-437;P3=-4001;P4=-829;P5=755;D=131452521452145252521452145252521414141452521452145214141414525252145252145252525214141452145214521414141414141452141414145252145252101212121212121212121212;CP=1;SP=3;R=51;O;m1;
 		{
-			name					=> 'Roto shutter',
+			name				=> 'Roto shutter',
 			comment				=> 'remote control Aurel TX-nM-HCS',
-			id						=> '88',
-			one						=> [1,-2],
-			zero					=> [2,-1],
-			sync					=> [1,-10],				# this is a end marker, but we use this as a start marker
+			changed				=> '20181204 new',
+			id				=> '88',
+			one				=> [1,-2],
+			zero				=> [2,-1],
+			sync				=> [1,-10],				# this is a end marker, but we use this as a start marker
 			clockabs			=> 400,						# ca 400us
 			developId			=> 'y',
 			format				=> 'twostate',
@@ -2125,10 +2154,10 @@ my %ProtocolListSIGNALduino  = (
 					# MU;P0=-32001;P1=412;P2=-289;P3=173;P4=-529;P5=777;P6=-899;D=01234345656541212341234123434121212121234123412343412343456565656121212123434343434343412343412343434121234123412343412121212123412341234341234345656565612121212343434343434341234341234343412123412341234341212121212341234123434123434565656561212121234343;CP=3;R=22;O;
 					# MU;P0=22960;P1=-893;P2=775;P3=409;P4=-296;P5=182;P6=-513;D=01212121343434345656565656565634565634565656343456563434565634343434345656565656565656342121212134343434565656565656563456563456565634345656343456563434343434565656565656565634212121213434343456565656565656345656345656563434565634345656343434343456565656;CP=5;R=22;O;
 					# MU;P0=172;P1=-533;P2=401;P3=-296;P5=773;P6=-895;D=01230101230101012323010101230123010101010101230101230101012323010101230123010301230101010101012301012301010123230101012301230101010123010101010101012301565656562323232301010101010101230101230101012323010101230123010101012301010101010101230156565656232323;CP=0;R=23;O;
-			# 201812xx new
 		{
 			name         => 'TFA 30.3221.02',
 			comment      => 'Temperature / humidity sensor for weatherstation TFA 35.1140.01',
+			changed      => '20181209 new',
 			id           => '89',
 			one          => [2,-1],
 			zero         => [1,-2],
@@ -2142,31 +2171,117 @@ my %ProtocolListSIGNALduino  = (
 			length_min   => '40',
 			length_max   => '40',
 		},
-	"90"	=>	## socket remote -  mumbi m-fs300 / manax MX-RCS250
+	"90"	=>	## mumbi m-FS300 / manax MX-RCS250 (CP 260-275)
 						# https://forum.fhem.de/index.php/topic,94327.15.html
-						# MS;P0=-9964;P1=273;P4=-866;P5=792;P6=-343;D=10145614141414565656561414561456561414141456565656561456141414145614;CP=1;SP=0;R=35;O;m2;		//A AN
+						# MS;P0=-9964;P1=273;P4=-866;P5=792;P6=-343;D=10145614141414565656561414561456561414141456565656561456141414145614;CP=1;SP=0;R=35;O;m2;		//A	AN
 						# MS;P0=300;P1=-330;P2=-10160;P3=804;P7=-840;D=02073107070707313131310707310731310707070731313107310731070707070707;CP=0;SP=2;R=23;O;m1;	//A	AUS
-						# MS;P1=260;P2=-873;P3=788;P4=-351;P6=-10157;D=16123412121212343434341212341234341212121234341234341234121212341212;CP=1;SP=6;R=21;O;m2;	//B AN
+						# MS;P1=260;P2=-873;P3=788;P4=-351;P6=-10157;D=16123412121212343434341212341234341212121234341234341234121212341212;CP=1;SP=6;R=21;O;m2;	//B	AN
 						# MS;P1=268;P3=793;P4=-337;P6=-871;P7=-10159;D=17163416161616343434341616341634341616161634341616341634161616343416;CP=1;SP=7;R=24;O;m2;	//B	AUS
-						# need more Device Infos / User Message
-			# 201812xx new
 		{
-			name         => 'm-fs300',
-			comment      => 'IT remote control mumbi FS300, MX-RCS250',
+			name         => 'mumbi | MANAX',
+			comment      => 'remote control mumbi FS300, MANAX MX-RCS250',
+			changed      => '20181219 new',
 			id           => '90',
-			developId    => 'y',
 			one          => [3,-1],
 			zero         => [1,-3],
-			sync         => [1,-38],
-			clockabs     => -1,						# -1=auto
+			sync         => [1,-36],
+			clockabs     => 280,						# -1=auto	
 			format       => 'twostate',
-			preamble     => 'u90#',
+			preamble     => 'u90#',			
 			length_min   => '33',
 			length_max   => '36',
+			#clientmodule	=> 'IT',
+			#modulematch	=> '^P90#.*',
+			developId    => 'y',
+		},
+	"91"	=>	## Atlantic Security / Focus Security China Devices
+						# https://forum.fhem.de/index.php/topic,58397.msg876862.html#msg876862
+						# MU;P0=800;P1=-813;P2=394;P3=-410;P4=-3992;D=0123030303030303012121230301212304230301212301230301212123012301212303012301230303030303030121212303012123042303012123012303012121230123012123030123012303030303030301212123030121230;CP=2;R=46;
+						# MU;P0=406;P1=-402;P2=802;P3=-805;P4=-3994;D=012123012301212121212121230303012123030124012123030123012123030301230123030121230123012121212121212303030121230301240121230301230121230303012301230301212301230121212121212123030301212303012;CP=0;R=52;
+						# MU;P0=14292;P1=-10684;P2=398;P3=-803;P4=-406;P5=806;P6=-4001;D=01232324532453232454532453245454532324545323232453245324562454532324532454532323245324532324545324532454545323245453232324532453245624545323245324545323232453245323245453245324545453232454532323245324532456245453232453245453232324532453232454532453245454;CP=2;R=50;O;
+		{
+			name			=> 'Atlantic security',
+			comment			=> 'example: sensor MD-210R',
+			id			=> '91',
+			changed			=> '20181228 new',
+			knownFreqs		=> '433.92 | 868.35',
+			zero			=> [-2,1],
+			one			=> [-1,2],
+			start			=> [-10,1],
+			clockabs		=> 400,
+			clockpos		=> ['zero',1],
+			format			=> 'twostate',
+			preamble		=> 'u91#',			# prepend to converted message
+			length_min		=> '36',
+			length_max		=> '36',
+			developId		=> 'y',
+		},
+	"91.1"	=>	## Atlantic Security / Focus Security China Devices
+						# https://forum.fhem.de/index.php/topic,58397.msg876862.html#msg876862
+						# MS;P1=-403;P2=813;P3=-812;P4=396;P5=-4005;D=45412123434123412123434341234123434121234123412121212121234343434121234343;CP=4;SP=5;R=39;
+		{
+			name			=> 'Atlantic security',
+			comment			=> 'example: sensor MD-210R',
+			changed			=> '20181230 new',
+			id			=> '91',
+			knownFreqs		=> '433.92 | 868.35',
+			zero			=> [-2,1],
+			one			=> [-1,2],
+			sync			=> [-10,1],
+			clockabs		=> 400,
+			#addbit			=> '0',
+			format			=> 'twostate',
+			preamble		=> 'u91#',			# prepend to converted message
+			length_min		=> '36',
+			length_max		=> '36',
+			developId		=> 'y',
+		},
+	"92"	=>	## KRINNER Lumix - LED X-MAS
+						# https://github.com/RFD-FHEM/RFFHEM/issues/452 | https://forum.fhem.de/index.php/topic,94873.msg876477.html?PHPSESSID=khp4ja64pcqa5gsf6gb63l1es5#msg876477
+						# MU;P0=24188;P1=-16308;P2=993;P3=-402;P4=416;P5=-967;P6=-10162;D=0123234545454523234523234545454545454545232623452345454545454523234523234545454523234523234545454545454545232623452345454545454523234523234545454523234523234545454545454545232623452345454545454523234523234545454523234523234545454545454545232;CP=4;R=25;
+						# MU;P0=11076;P1=-20524;P2=281;P3=-980;P4=982;P5=-411;P6=408;P7=-10156;D=0123232345456345456363636363636363634745634563636363636345456345456363636345456345456363636363636363634745634563636363636345456345456363636345456345456363636363636363634745634563636363636345456345456363636345456345456363636363636363634;CP=6;R=38;
+		{
+			name			=> 'KRINNER Lumix',
+			comment			=> 'LED X-MAS',
+			changed			=> '20181228 new',
+			id			=> '92',
+			zero			=> [1,-2],
+			one			=> [2,-1],
+			start			=> [2,-24],
+			clockabs		=> 420,
+			format			=> 'twostate',	#
+			preamble		=> 'u92#',			# prepend to converted message
+			length_min		=> '32',
+			length_max		=> '32',
+			#clientmodule	=> 'SD_UT',
+			#modulematch	=> '^P92#.*',
+			developId		=> 'y',
+		},
+	"93"	=>	## ESTO Lighting GmbH | remote control KL-RF01 with 9 buttons (CP 375-395)
+						# https://github.com/RFD-FHEM/RFFHEM/issues/449
+						# MS;P1=376;P4=-1200;P5=1170;P6=-409;P7=-12224;D=17141414561456561456565656145656141414145614141414565656145656565614;CP=1;SP=7;R=231;e;m0; 
+						# MS;P1=393;P2=-1174;P4=1180;P5=-401;P6=-12222;D=16121212451245451245454545124545124545451212121212121212454545454512;CP=1;SP=6;R=243;e;m0;
+						# MS;P0=397;P1=-385;P2=-1178;P3=1191;P4=-12230;D=04020202310231310231313131023131023131020202020202020231313131313102;CP=0;SP=4;R=250;e;m0;
+		{
+			name         => 'ESTO Lighting GmbH',
+			comment      => 'remote control KL-RF01',
+			changed      => '20181229 new',
+			id           => '93',
+			one          => [3,-1],
+			zero         => [1,-3],
+			sync         => [1,-32],
+			clockabs     => 385,						# -1=auto	
+			format       => 'twostate',
+			preamble     => 'u93#',
+			length_min   => '33',
+			length_max   => '36',
+			#clientmodule	=> 'SD_UT',
+			#modulematch	=> '^P93#.*',
+			developId    => 'y',
 		},
 	"999" =>  # 
 	{
-		versionProtocolList  => '22.12.18'
+		versionProtocolList  => '01.01.19'
 	}
 );
 
