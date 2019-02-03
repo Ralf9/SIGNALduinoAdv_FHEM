@@ -3142,7 +3142,7 @@ sub SIGNALduino_parseResponse($$$)
 		OUTERLOOP:
 		for (my $e = 0; $e < 4; $e++) {
 			for (my $m = 0; $m < 4; $m++) {
-				$bits = ($e<<6)+($m<<4);
+				$bits = ($e << 6)+($m << 4);
 				$bw  = int(26000/(8 * (4+$m) * (1 << $e))); # KHz
 				last OUTERLOOP if($arg >= $bw);
 			}
@@ -4059,6 +4059,7 @@ sub SIGNALduno_Dispatch($$$$$)
 		
 		$hash->{RAWMSG} = $rmsg;
 		my %addvals = (DMSG => $dmsg);
+		$addvals{ID} = $id if (index($dmsg,"#") == -1);
 		if (AttrVal($name,"suppressDeviceRawmsg",0) == 0) {
 			$addvals{RAWMSG} = $rmsg
 		}
@@ -4843,7 +4844,7 @@ SIGNALduino_Parse($$$$@)
 		return undef;
 	}
 	
-	if ( AttrVal($hash->{NAME},"verbose","0") > 4 && !$dispatched)	# bei verbose 5 wird die $rmsg in $hash->{unknownmessages} hinzugefuegt
+	if ( AttrVal($hash->{NAME},"verbose","0") > 4 && !$dispatched && !IsDummy($name))	# bei verbose 5 wird die $rmsg in $hash->{unknownmessages} hinzugefuegt
 	{
    	    my $notdisplist;
    	    my @lines;
