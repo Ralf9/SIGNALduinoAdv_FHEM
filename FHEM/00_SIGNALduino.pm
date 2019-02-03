@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2018-12-23 12:00:00Z v3.3.2-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-02-03 12:00:00Z v3.3.2-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -26,7 +26,7 @@ use Scalar::Util qw(looks_like_number);
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.3-dev-ralf_23.12.",
+	SDUINO_VERSION            => "v3.3.3-dev-ralf_03.02.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -148,6 +148,7 @@ my $clientsSIGNALduino = ":IT:"
 						."FS20:"
 						."CUL_EM:"
 						."Fernotron:"
+						."SD_Jaro:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -168,7 +169,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86)#.*',		# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|91|91.1|92)#.*',		# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -178,7 +179,8 @@ my %matchListSIGNALduino = (
      "24:FS20"    				=> "^81..(04|0c)..0101a001", 
      "25:CUL_EM"    				=> "^E0.................", 
      "26:Fernotron"  			=> '^P82#.*',
-     "27:SD_BELL"				=> '^P(?:15|32|41|57|79)#.*',
+     "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79)#.*',
+     "28:SD_Jaro"				=> '^P87#.*',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -206,6 +208,8 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '40',
 			paddingbits     => '8',				 # pad up to 8 bits, default is 4
+			
+			versionProtocolList  => '03.02.19',
 		},
 	"0.1"	=>	## other Sensors  (380 | 9650)
 						# CUL_TCM97001 Typ - AURIOL | Mebus
@@ -277,6 +281,26 @@ my %ProtocolListSIGNALduino  = (
 			length_max		=> '42',
 			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
 		},
+	"0.4"	=>	## Auriol Z31092  (450 | 9200)
+						# CUL_TCM97001 Typ - AURIOL
+						# MS;P0=443;P3=-9169;P4=-1993;P5=-3954;D=030405040505050505050404040404040404040505050504050405050504040405;CP=0;SP=3;R=14;O;m0;
+						# MS;P0=-9102;P1=446;P2=-3956;P3=-2008;D=10121312121212121312131213131313131313131212121313121213121213121314;CP=1;SP=0;R=212;O;m2;
+		{
+			name			=> 'weather (v5)',
+			comment			=> 'temperature / humidity or other sensors | Auriol Z31092',
+			changed			=> '20190101 new',
+			id			=> '0.4',
+			one			=> [1,-9],
+			zero			=> [1,-4],
+			sync			=> [1,-20],
+			clockabs		=> 450,
+			preamble		=> 's',				# prepend to converted message
+			postamble		=> '00',			# Append to converted message
+			clientmodule	=> 'CUL_TCM97001',
+			length_min		=> '32',
+			length_max		=> '36',
+			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
+},
 	"1"	=>	## Conrad RSL
 		{
 			name			=> 'Conrad RSL v1',
@@ -387,7 +411,7 @@ my %ProtocolListSIGNALduino  = (
 			clockabs		=> 500,    # ?
 			developId		=> 'y',
 			format 			=> 'twostate',
-			preamble		=> 'u5',
+			preamble		=> 'u5#',
 			#clientmodule	=> '',
 			#modulematch	=> '',
 			length_min      => '24',   # ?
@@ -455,6 +479,7 @@ my %ProtocolListSIGNALduino  = (
 			#sync			=> [1,-8],		# 
 			clockabs     	=> 480,			# -1 = auto undef=noclock
 			clockpos		=> ['one',0],
+			reconstructBit	=> '1',
 			format 			=> 'pwm',	    # tristate can't be migrated from bin into hex!
 			preamble		=> 'P9#',		# prepend to converted message	
 			clientmodule    => 'SD_WS09',
@@ -519,7 +544,7 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '71',
 			length_max      => '128',
 			method          => \&SIGNALduino_Hideki,	# Call to process this message
-			#polarity        => 'invert',			
+			developId		=> 'y',
 		}, 	
 	"13"	=>	## FLAMINGO FA21
 						# https://github.com/RFD-FHEM/RFFHEM/issues/21
@@ -587,7 +612,7 @@ my %ProtocolListSIGNALduino  = (
 		{
 			name				=> 'LED X-MAS',
 			comment				=> 'Chilitec model 22640',
-			changed				=> '20181210 new, old Heidemann HX BELL (move to ID 79)',
+			changed				=> '20181210 new, old Heidemann HX BELL (moved to ID 79)',
 			id				=> '14',
 			one				=> [3,-1],
 			zero				=> [1,-3],
@@ -1054,11 +1079,16 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '40',
 			postDemodulation => \&SIGNALduino_HE800,
     	},
-     "36" =>
-     	 {   
-			name			=> 'socket36',		
-			id          	=> '36',
-			one				=> [1,-3],
+	"36"	=>	## remote - cheap wireless dimmer
+						# https://forum.fhem.de/index.php/topic,38831.msg394238.html#msg394238
+						# MU;P0=499;P1=-1523;P2=-522;P3=10220;P4=-10047;D=01020202020202020134010102020101010201020202020102010202020202020201340101020201010102010202020201020102020202020202013401010202010101020102020202010201020202020202020134010102020101010201020202020102010202020202020201340101020201010102010;CP=0;O;
+						# MU;P0=-520;P1=500;P2=-1523;P3=10220;P4=-10043;D=01010101210121010101010101012341212101012121210121010101012101210101010101010123412121010121212101210101010121012101010101010101234121210101212121012101010101210121010101010101012341212101012121210121010101012101210101010101010123412121010;CP=1;O;
+						# MU;P0=498;P1=-1524;P2=-521;P3=10212;P4=-10047;D=01010102010202020201020102020202020202013401010202010101020102020202010201020202020202020134010102020101010201020202020102010202020202020201340101020201010102010202020201020102020202020202013401010202010101020102020202010201020202020202020;CP=0;O;
+		{
+			name			=> 'remote',
+			comment			=> 'cheap wireless dimmer',
+			id			=> '36',
+			one			=> [1,-3],
 			zero			=> [1,-1],
 			start		 	=> [20,-20],
 			clockabs   		=> '500',		
@@ -1092,8 +1122,16 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '40',
 			length_max      => '41',
 	},
-		# "38"	=>	can use
-
+    "38" => ## ID geloescht!. Lidl Wetterstation
+      	 {   
+			name			=> 'weather38',
+			comment			=> 'deleted. it can not be used!',
+			changed			=> '20181216 deleted. Old moved to ID 0.1',
+			deleted			=> '1',
+			id			=> '38',
+			format			=> 'twostate',  # not used now
+			developId		=> 'p',
+    	}, 
 	"39"	=>	## X10 Protocol
          	# https://github.com/RFD-FHEM/RFFHEM/issues/65
          	# MU;P0=10530;P1=-2908;P2=533;P3=-598;P4=-1733;P5=767;D=0123242323232423242324232324232423242323232324232323242424242324242424232423242424232501232423232324232423242323242324232423232323242323232424242423242424242324232424242325012324232323242324232423232423242324232323232423232324242424232424242423242324242;CP=2;O;
@@ -1126,7 +1164,7 @@ my %ProtocolListSIGNALduino  = (
 			one => [3,-2],
 			zero => [1,-3],
 			start => [1,-2],
-			clockabs => 250, 
+			clockabs => 270, 
 			clockpos => ['zero',0],
 			preamble => 'u40#', # prepend to converted message
 			#clientmodule => '', # not used now
@@ -1177,8 +1215,8 @@ my %ProtocolListSIGNALduino  = (
 			clockabs			=> 500,
 			clockpos			=> ['one',0],
 			format				=> 'twostate',
-			preamble			=> 'u42#',
-			#clientmodule	=> 'SD_Bell',
+			preamble			=> 'P42#',
+			clientmodule	=> 'SD_Bell',
 			#modulematch		=> '^P42#.*',
 			length_min		=> '28',
 			length_max		=> '120',
@@ -1436,18 +1474,19 @@ my %ProtocolListSIGNALduino  = (
 			method          => \&SIGNALduino_MCRAW, # Call to process this message
 			polarity        => 'invert',			
 		}, 	 
-	"58"	=>	## TFA 30.3208.0 
+	"58"	=>	## TFA 30.3208.0
+				# MC;LL=-981;LH=964;SL=-480;SH=520;D=002BA37EBDBBA24F0015D1BF5EDDD127800AE8DFAF6EE893C;C=486;L=194;
 		{
 			name		=> 'TFA 30.3208.0',
 			comment		=> 'temperature / humidity sensor',
 			id          	=> '58',
 			clockrange     	=> [460,520],			# min , max
 			format 			=> 'manchester',	    # tristate can't be migrated from bin into hex!
-			#clientmodule    => '',
+			clientmodule    => 'SD_WS',
 			modulematch     => '^W58*',
 			preamble		=> 'W58#',
-			length_min      => '54',
-			length_max      => '136',
+			length_min      => '52',	# 54
+			length_max      => '52',	# 136
 			method          => \&SIGNALduino_MCTFA, # Call to process this message
 			polarity        => 'invert',			
 		}, 	 
@@ -1555,7 +1594,7 @@ my %ProtocolListSIGNALduino  = (
 			zero         => [0],
 			clockabs     => 800, 
 			syncabs      => '6700',# Special field for filterMC function
-			preamble     => 'u63', # prepend to converted message
+			preamble     => 'u63#', # prepend to converted message
 			#clientmodule => '', 
 			#modulematch => '', 
 			length_min   => '24',
@@ -1644,8 +1683,9 @@ my %ProtocolListSIGNALduino  = (
 						# MS;P0=-2189;P1=371;P2=-3901;P3=-8158;D=1310101010101210101010101210101010121210121212101210101012101012121012121210;CP=1;SP=3;R=20;O;
 		{
 			name				=> 'Pollin PFR-130',
-			comment				=> 'temperature sensor with rain. !!!deprecated, will be removed soon!!!',
-			changed				=> '20181219 move to ID 0.3, deprecated, will be removed soon!!!',
+			comment				=> 'temperature sensor with rain. !!!deprecated, will deleted soon!!!',
+			changed				=> '20181219 moved to ID 0.3, deprecated, will deleted soon!!!',
+			deleted				=> '1',
 			id				=> '68',
 			one				=> [1,-10],
 			zero				=> [1,-5],
@@ -1794,12 +1834,13 @@ my %ProtocolListSIGNALduino  = (
 			name			=> 'FS20',
 			comment			=> 'Remote Control',
 			id			=> '74',
-			knownFreqs      	=> '868.35',
+			knownFreqs      => '868.35',
 			one			=> [1.5,-1.5], # 600
 			zero			=> [1,-1], # 400
 			pause			=> [-25],
 			clockabs		=> 400,
 			clockpos		=> ['zero',0],
+			#reconstructBit	=> '1',
 			format			=> 'twostate', # not used now
 			clientmodule		=> 'FS20',
 			preamble		=> '810b04f70101a001',
@@ -1975,7 +2016,8 @@ my %ProtocolListSIGNALduino  = (
 			id             => '82',       # protocol number
 			changed        => '20180906 new',
 			developId      => 'm',
-			dispatchBin    => 'y',
+			dispatchBin    => '1',
+			paddingbits    => '1',        # This will disable padding 
 			one            => [1,-2],     # on=400us, off=800us
 			zero           => [2,-1],     # on=800us, off=400us
 			float          => [1,-8],     # on=400us, off=3200us. the preamble and each 10bit word has one [1,-8] in front
@@ -2108,19 +2150,23 @@ my %ProtocolListSIGNALduino  = (
 						# https://github.com/RFD-FHEM/RFFHEM/issues/380
 						# MS;P1=1524;P2=-413;P3=388;P4=-3970;P5=-815;P6=778;P7=-16024;D=34353535623562626262626235626262353562623535623562626235356235626262623562626262626262626262626262623535626235623535353535626262356262626262626267123232323232323232323232;CP=3;SP=4;R=226;O;m2;
 						# MS;P0=-15967;P1=1530;P2=-450;P3=368;P4=-3977;P5=-835;P6=754;D=34353562623535623562623562356262626235353562623562623562626235353562623562626262626262626262626262623535626235623535353535626262356262626262626260123232323232323232323232;CP=3;SP=4;R=229;O;
+						# sendMsg P87#AAAAAAAAAAAAB11101000000...00P
 		{
 			name					=> 'JAROLIFT',
 			comment				=> 'remote control JAROLIFT TDRC_16W / TDRCT_04W',
 			changed				=> '20181025 new',
-			id						=> '87',
-			one						=> [1,-2],
-			zero					=> [2,-1],
-			sync					=> [1,-10],				# this is a end marker, but we use this as a start marker
+			id				=> '87',
+			one				=> [1,-2],
+			zero				=> [2,-1],
+			preSync				=> [3.8,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1],
+			sync				=> [1,-10],				# this is a end marker, but we use this as a start marker
+			pause				=> [-40],
 			clockabs			=> 400,						# ca 400us
-			developId			=> 'y',
+			reconstructBit		=> '1',
+			developId			=> 'm',
 			format				=> 'twostate',
-			preamble			=> 'u87#',				# prepend to converted message	
-			#clientmodule	=> '',
+			preamble			=> 'P87#',				# prepend to converted message	
+			clientmodule	=> 'SD_Jaro',
 			#modulematch	=> '',
 			length_min		=> '72',					# 72
 			length_max		=> '85',					# 85
@@ -2171,7 +2217,7 @@ my %ProtocolListSIGNALduino  = (
 			length_min   => '40',
 			length_max   => '40',
 		},
-	"90"	=>	## mumbi m-FS300 / manax MX-RCS250 (CP 260-275)
+	"90"	=>	## mumbi m-FS300 / manax MX-RCS250 (CP 258-298)
 						# https://forum.fhem.de/index.php/topic,94327.15.html
 						# MS;P0=-9964;P1=273;P4=-866;P5=792;P6=-343;D=10145614141414565656561414561456561414141456565656561456141414145614;CP=1;SP=0;R=35;O;m2;		//A	AN
 						# MS;P0=300;P1=-330;P2=-10160;P3=804;P7=-840;D=02073107070707313131310707310731310707070731313107310731070707070707;CP=0;SP=2;R=23;O;m1;	//A	AUS
@@ -2205,16 +2251,16 @@ my %ProtocolListSIGNALduino  = (
 			id			=> '91',
 			changed			=> '20181228 new',
 			knownFreqs		=> '433.92 | 868.35',
-			zero			=> [-2,1],
-			one			=> [-1,2],
+			zero			=> [-1,2],
+			one			=> [-2,1],
 			start			=> [-10,1],
 			clockabs		=> 400,
 			clockpos		=> ['zero',1],
 			format			=> 'twostate',
-			preamble		=> 'u91#',			# prepend to converted message
+			preamble		=> 'P91#',			# prepend to converted message
 			length_min		=> '36',
 			length_max		=> '36',
-			developId		=> 'y',
+			clientmodule	=> 'SD_UT',
 		},
 	"91.1"	=>	## Atlantic Security / Focus Security China Devices
 						# https://forum.fhem.de/index.php/topic,58397.msg876862.html#msg876862
@@ -2225,16 +2271,16 @@ my %ProtocolListSIGNALduino  = (
 			changed			=> '20181230 new',
 			id			=> '91',
 			knownFreqs		=> '433.92 | 868.35',
-			zero			=> [-2,1],
-			one			=> [-1,2],
+			zero			=> [-1,2],
+			one			=> [-2,1],
 			sync			=> [-10,1],
 			clockabs		=> 400,
-			#addbit			=> '0',
+			reconstructBit	=> '1',
 			format			=> 'twostate',
-			preamble		=> 'u91#',			# prepend to converted message
-			length_min		=> '36',
+			preamble		=> 'P91#',			# prepend to converted message
+			length_min		=> '35',
 			length_max		=> '36',
-			developId		=> 'y',
+			clientmodule	=> 'SD_UT',
 		},
 	"92"	=>	## KRINNER Lumix - LED X-MAS
 						# https://github.com/RFD-FHEM/RFFHEM/issues/452 | https://forum.fhem.de/index.php/topic,94873.msg876477.html?PHPSESSID=khp4ja64pcqa5gsf6gb63l1es5#msg876477
@@ -2242,7 +2288,7 @@ my %ProtocolListSIGNALduino  = (
 						# MU;P0=11076;P1=-20524;P2=281;P3=-980;P4=982;P5=-411;P6=408;P7=-10156;D=0123232345456345456363636363636363634745634563636363636345456345456363636345456345456363636363636363634745634563636363636345456345456363636345456345456363636363636363634745634563636363636345456345456363636345456345456363636363636363634;CP=6;R=38;
 		{
 			name			=> 'KRINNER Lumix',
-			comment			=> 'LED X-MAS',
+			comment			=> 'remote control LED X-MAS',
 			changed			=> '20181228 new',
 			id			=> '92',
 			zero			=> [1,-2],
@@ -2250,12 +2296,11 @@ my %ProtocolListSIGNALduino  = (
 			start			=> [2,-24],
 			clockabs		=> 420,
 			format			=> 'twostate',	#
-			preamble		=> 'u92#',			# prepend to converted message
+			preamble		=> 'P92#',			# prepend to converted message
 			length_min		=> '32',
 			length_max		=> '32',
-			#clientmodule	=> 'SD_UT',
+			clientmodule	=> 'SD_UT',
 			#modulematch	=> '^P92#.*',
-			developId		=> 'y',
 		},
 	"93"	=>	## ESTO Lighting GmbH | remote control KL-RF01 with 9 buttons (CP 375-395)
 						# https://github.com/RFD-FHEM/RFFHEM/issues/449
@@ -2273,16 +2318,12 @@ my %ProtocolListSIGNALduino  = (
 			clockabs     => 385,						# -1=auto	
 			format       => 'twostate',
 			preamble     => 'u93#',
-			length_min   => '33',
+			length_min   => '32',
 			length_max   => '36',
 			#clientmodule	=> 'SD_UT',
 			#modulematch	=> '^P93#.*',
 			developId    => 'y',
-		},
-	"999" =>  # 
-	{
-		versionProtocolList  => '01.01.19'
-	}
+		}
 );
 
 
@@ -2430,8 +2471,8 @@ SIGNALduino_Define($$)
   $hash->{LASTDMSG} = "nothing";
   $hash->{TIME}=time();
   $hash->{versionmodul} = SDUINO_VERSION;
-  if (exists($ProtocolListSIGNALduino{999}) && defined($ProtocolListSIGNALduino{999}{versionProtocolList})) {
-	$hash->{versionprotoL} = $ProtocolListSIGNALduino{999}{versionProtocolList};
+  if (defined($ProtocolListSIGNALduino{0}{versionProtocolList})) {
+	$hash->{versionprotoL} = $ProtocolListSIGNALduino{0}{versionProtocolList};
   }
   
   Log3 $name, 3, "$name: Firmwareversion: ".$hash->{READINGS}{version}{VAL}  if ($hash->{READINGS}{version}{VAL});
