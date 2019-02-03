@@ -4372,7 +4372,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 				if ($clocksource ne "one" && $clocksource ne "zero") {	# wenn clocksource nicht one oder zero ist, dann wird CP= aus der Nachricht verwendet
 					$msgclock = $msg_parts{pattern}{$clockidx};
 					if (!SIGNALduino_inTol($clockabs,$msgclock,$msgclock*0.30)) {
-						Log3 $name, 5, "$name: clock for MU Protocol id $id, clockId=$clockabs, clockmsg=$msgclock (cp) is not in tol=" . $msgclock*0.30 if ($dummy);
+						SIGNALduino_Log3 $name, 5, "$name: clock for MU Protocol id $id, clockId=$clockabs, clockmsg=$msgclock (cp) is not in tol=" . $msgclock*0.30 if ($dummy);
 						next if (SDUINO_PARSE_MU_CLOCK_CHECK);
 					} else {
 						$clockMsg = ", msgClock=$msgclock (cp) is in tol" if ($dummy);
@@ -4398,7 +4398,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 				
 				if ( ($startStr=SIGNALduino_PatternExists($hash,@msgStartLst,\%patternList,\$rawData)) eq -1)
 				{
-					Log3 $name, 5, "$name: start pattern for MU Protocol id $id -> $ProtocolListSIGNALduino{$id}{name} not found, aborting" if ($dummy);
+					SIGNALduino_Log3 $name, 5, "$name: start pattern for MU Protocol id $id -> $ProtocolListSIGNALduino{$id}{name} not found, aborting" if ($dummy);
 					next;
 				}
 				Debug "startStr is: $startStr" if ($debug);
@@ -4416,6 +4416,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 			}
 			
 			my %patternLookupHash=();
+			my %endPatternLookupHash=();
 			my $pstr="";
 			my $zeroRegex ="";
 			my $oneRegex ="";
@@ -4424,7 +4425,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 			
 			if (($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{one}},\%patternList,\$rawData)) eq -1)
 			{
-				Log3 $name, 5, "$name: one pattern for MU Protocol id $id not found, aborting" if ($dummy);
+				SIGNALduino_Log3 $name, 5, "$name: one pattern for MU Protocol id $id not found, aborting" if ($dummy);
 				next;
 			}
 			Debug "Found matched one" if ($debug);
@@ -4433,7 +4434,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 				$msgclock = $msg_parts{pattern}{substr($pstr, $ProtocolListSIGNALduino{$id}{clockpos}[1], 1)};
 				$protocListClock = $clockabs * $ProtocolListSIGNALduino{$id}{one}[$ProtocolListSIGNALduino{$id}{clockpos}[1]];
 				if (!SIGNALduino_inTol($protocListClock,$msgclock,$msgclock*0.30)) {
-					Log3 $name, 5, "$name: clock for MU Protocol id $id, protocClock=$protocListClock, msgClock=$msgclock (one) is not in tol=" . $msgclock*0.30 if ($dummy);
+					SIGNALduino_Log3 $name, 5, "$name: clock for MU Protocol id $id, protocClock=$protocListClock, msgClock=$msgclock (one) is not in tol=" . $msgclock*0.30 if ($dummy);
 					next if (SDUINO_PARSE_MU_CLOCK_CHECK);
 				} else {
 					$clockMsg = ", msgClock=$msgclock (one) is in tol" if ($dummy);
@@ -4447,7 +4448,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 			{
 				if  (($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{zero}},\%patternList,\$rawData)) eq -1)
 				{
-					Log3 $name, 5, "$name: zero pattern for MU Protocol id $id not found, aborting" if ($dummy);
+					SIGNALduino_Log3 $name, 5, "$name: zero pattern for MU Protocol id $id not found, aborting" if ($dummy);
 					next;
 				}
 				Debug "Found matched zero" if ($debug);
@@ -4489,7 +4490,24 @@ sub SIGNALduino_Parse_MU($$$$@)
 			$length_max = $ProtocolListSIGNALduino{$id}{length_max} if (defined($ProtocolListSIGNALduino{$id}{length_max}));
 			
 			my $signalRegex = "(?:" . $oneRegex . $zeroRegex . $floatRegex . "){$length_min,}";
+			
+			if (exists($ProtocolListSIGNALduino{$id}{reconstructBit})) {
+				my $partOne = substr($oneRegex,0,$signal_width-1);
+				$endPatternLookupHash{$partOne} = "1";
+				my $partZero = "";
+				if ($zeroRegex ne "") {
+					$partZero = substr($zeroRegex,0,$signal_width);
+					$endPatternLookupHash{substr($partZero,1)} = "0";		# "|" am Anfang entfernen
+				}
+				my $partFloat = "";
+				if ($floatRegex ne "") {
+					$partFloat = substr($floatRegex,0,$signal_width);
+					$endPatternLookupHash{substr($partFloat,1)} = "F";		# "|" am Anfang entfernen
+				}
+				$signalRegex .= "(?:" . $partOne . $partZero . $partFloat . ")?";
+			}
 			my $regex="(?:$startStr)($signalRegex)";
+			
 			Debug "Regex is: $regex" if ($debug);
 			
 			my $repeat=0;
@@ -4499,6 +4517,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 			my $nrRestart = 0;
 			
 			while ( $rawData =~ m/$regex/g) {
+				#SIGNALduino_Log3 $name, 5, "$name: regex=$regex part=$1";
 				my @pairs = unpack "(a$signal_width)*", $1;
 				$message_start = $-[0];
 				$bit_msg_length = scalar @pairs;
@@ -4528,6 +4547,11 @@ sub SIGNALduino_Parse_MU($$$$@)
 				{
 					if (exists $patternLookupHash{$sigStr}) {
 						push(@bit_msg,$patternLookupHash{$sigStr})  ## Add the bits to our bit array
+					}
+					elsif (exists($ProtocolListSIGNALduino{$id}{reconstructBit}) && exists($endPatternLookupHash{$sigStr})) {
+						my $lastbit = $endPatternLookupHash{$sigStr};
+						push(@bit_msg,$lastbit);
+						SIGNALduino_Log3 $name, 4, "$name: last part pair=$sigStr reconstructed, bit=$lastbit";
 					}
 				}
 				
