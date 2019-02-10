@@ -74,7 +74,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
 #  "FAParms"  => ["fp", '.*' ],
 #  "TCParms"  => ["dp", '.*' ],
 #  "HXParms"  => ["hp", '.*' ]
-  "availableFirmware" => ["none",'none'],
+  "zAvailableFirmware" => ["none",'none'],
 );
 
 
@@ -2359,7 +2359,7 @@ SIGNALduino_Initialize($)
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP_1M,ESP32,nano,nanoCC1101,miniculCC1101,promini,radinoCC1101"
+  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,promini,radinoCC1101"
 					  ." updateChannelFW:stable,testing"
 					  ." debug:0$dev"
 					  ." longids"
@@ -2623,15 +2623,16 @@ SIGNALduino_Set($@)
     
 	if( grep $args[0] eq $_ , split(",",$my_sets{flash}) )
 	{
-		SIGNALduino_Log3 $hash, 3, "SIGNALduino_Set flash $args[0] try to fetch github assets for tag $args[0]";
+		SIGNALduino_Log3 $hash, 3, "$name: SIGNALduino_Set flash $args[0] try to fetch github assets for tag $args[0]";
 
-		my $ghurl = "https://api.github.com/repos/RFD-FHEM/<REPONAME>/releases/tags/$args[0]";
+		my ($tags, undef) = split("__", $args[0]);
+		my $ghurl = "https://api.github.com/repos/RFD-FHEM/<REPONAME>/releases/tags/$tags";
 		if ($hardware =~ /ESP/) {
 			$ghurl =~ s/<REPONAME>/SIGNALESP/ ;
 		} else {
 			$ghurl =~ s/<REPONAME>/SIGNALDuino/ ; 
 		}
-		SIGNALduino_Log3 $hash, 3, "SIGNALduino_Set flash $args[0] try to fetch release $ghurl";
+		SIGNALduino_Log3 $hash, 3, "$name: SIGNALduino_Set flash $tags try to fetch release $ghurl";
 		
 	    my $http_param = {
                     url        => $ghurl,
@@ -2704,7 +2705,7 @@ SIGNALduino_Set($@)
 		}
 		
 	
-	    if($flashCommand ne "") {
+	    if($flashCommand ne "" && !IsDummy($name)) {
 	      if (-e $logFile) {
 	        unlink $logFile;
 	      }
@@ -2740,7 +2741,12 @@ SIGNALduino_Set($@)
 	      $log .= "\n\nNo flashCommand found. Please define this attribute.\n\n";
 	    }
 	
-	    DevIo_OpenDev($hash, 0, "SIGNALduino_DoInit", 'SIGNALduino_Connect');
+	    if (!IsDummy($name)) {
+			DevIo_OpenDev($hash, 0, "SIGNALduino_DoInit", 'SIGNALduino_Connect');
+	    }
+	    else {
+			SIGNALduino_Log3 $name, 3, "$name; flashCommand=$flashCommand";
+	    }
 	    $log .= "$name opened\n";
 		
 	    return undef;
@@ -2980,7 +2986,7 @@ SIGNALduino_Get($@)
   
   my ($msg, $err);
 
-  if ($a[1] eq "availableFirmware") {
+  if ($a[1] eq "zAvailableFirmware") {
   	
   	if ($missingModulSIGNALduino =~ m/JSON/ )
   	{
@@ -6716,84 +6722,52 @@ sub SIGNALduino_querygithubreleases
     HttpUtils_NonblockingGet($param);                                                                                     # Starten der HTTP Abfrage. Es gibt keinen Return-Code. 
 }
 
-sub SIGNALduino_githubParseHttpResponse($)
+sub SIGNALduino_githubParseHttpResponse($$$)
 {
     my ($param, $err, $data) = @_;
     my $hash = $param->{hash};
     my $name = $hash->{NAME};
-
+    my $hardware=AttrVal($name,"hardware",undef);
+    
     if($err ne "")                                                                                                         # wenn ein Fehler bei der HTTP Abfrage aufgetreten ist
     {
         Log3 $name, 3, "error while requesting ".$param->{url}." - $err (command: $param->{command}";                                                  # Eintrag fuers Log
         #readingsSingleUpdate($hash, "fullResponse", "ERROR");                                                              # Readings erzeugen
     }
 
-    elsif($data ne "")                                                                                                     # wenn die Abfrage erfolgreich war ($data enthaelt die Ergebnisdaten des HTTP Aufrufes)
+    elsif($data ne "" && defined($hardware))                                                                                                     # wenn die Abfrage erfolgreich war ($data enthaelt die Ergebnisdaten des HTTP Aufrufes)
     {
     	my $json_array = decode_json($data);
     	#print  Dumper($json_array);
-    	
        	if ($param->{command} eq "queryReleases") {
 	        #Log3 $name, 3, "url ".$param->{url}." returned: $data";                                                            # Eintrag fuers Log
-	
+			
+			my $releaselist="";
 			my @fwreleases;
 			if (ref($json_array) eq "ARRAY") {
 				foreach my $item( @$json_array ) { 
-					my %fwrelease;
-		
+					next if (AttrVal($name,"updateChannelFW","stable") eq "stable" && $item->{prerelease});
+
 					#Debug " item = ".Dumper($item);
-					$fwrelease{releasename} = $item->{name};
-					$fwrelease{isprerelease} = $item->{prerelease};
-					$fwrelease{tagname} = $item->{tag_name}; # Anzeige in Auswahlbox
 					
 					foreach my $asset (@{$item->{assets}})
 					{
-				    	my %fileinfo;
-						
-						$fileinfo{filename} = $asset->{name};
-						$fileinfo{dlurl} = $asset->{browser_download_url};
-						$fileinfo{create_date} = $asset->{created_at};
-						push @{$fwrelease{files}}, \%fileinfo;
-						
+						#Log3 $name, 3, "$name queryReleases: hardware=$hardware name=$asset->{name}";
+						next if ($asset->{name} !~ m/$hardware/i);
+						$releaselist.=$item->{tag_name}."__".substr($item->{created_at},0,10)."," ;		
+						last;
 					}
-		            #Debug $item->{name}.": ".$item->{prerelease}.", ".$item->{assets}[0]->{name}."=".$item->{assets}[0]->{browser_download_url};
-		            
-		            
-		      
-				   #for my $key (keys(%$item)) {
-				     # my $val = $item->{$key};
-		      		  
-		      		#  print "$key: $val\n";
-		      		  
-		    		#}
-					push @fwreleases, \%fwrelease;
-			
+					
 				}
 			}
 			#Debug " releases = ".Data::Dumper->new([\@fwreleases],[qw(fwreleases)])->Indent(3)->Quotekeys(0)->Dump;
 			
-			my $releaselist="";
-			foreach my $release (@fwreleases)
-			{
-				next if (AttrVal($name,"updateChannelFW","stable") eq "stable" && $release->{isprerelease});
-				
-				$releaselist.=$release->{tagname}.",";
-			}
 			$releaselist =~ s/,$//;
-			
-	        # An dieser Stelle die Antwort parsen / verarbeiten mit $data
-	        #Debug "updating update set with: $releaselist";
-	
-	
-		  $hash->{additionalSets}{flash} = $releaselist;
-	
-	
-	      #readingsSingleUpdate($hash, "fullResponse", $data);                                                                # Readings erzeugen
-    	} elsif ($param->{command} eq "getReleaseByTag") {
+		  	$hash->{additionalSets}{flash} = $releaselist;                                                               # Readings erzeugen
+    	} elsif ($param->{command} eq "getReleaseByTag" && defined($hardware)) {
 			#Debug " json response = ".Dumper($json_array);
 			
 			my @fwfiles;
-			my $hardware=AttrVal($name,"hardware","nano328");
 			foreach my $asset (@{$json_array->{assets}})
 			{
 				my %fileinfo;
@@ -6815,11 +6789,14 @@ sub SIGNALduino_githubParseHttpResponse($)
 				}
 			}
 			
-    	}
-    }
+    	} 
+    } elsif (!defined($hardware))  {
+    	SIGNALduino_Log3 $name, 5, "$name: SIGNALduino_githubParseHttpResponse hardware is not defined";
+    }                                                                                              # wenn
     # Damit ist die Abfrage zuende.
     # Evtl. einen InternalTimer neu schedulen
     FW_directNotify("#FHEMWEB:$FW_wname", "location.reload('true')", "");
+	return 0;
 }
 
 1;
