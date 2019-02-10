@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-02-03 12:00:00Z v3.3.2-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-02-10 18:00:00Z v3.3.2-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -26,7 +26,7 @@ use Scalar::Util qw(looks_like_number);
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.3-dev-ralf_03.02.",
+	SDUINO_VERSION            => "v3.3.3-dev-ralf_10.02.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -2360,7 +2360,7 @@ SIGNALduino_Initialize($)
                       ." initCommands"
                       ." flashCommand"
   					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,promini,radinoCC1101"
-					  ." updateChannelFW:stable,testing"
+					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
 					  ." minsecs"
@@ -2625,8 +2625,13 @@ SIGNALduino_Set($@)
 	{
 		SIGNALduino_Log3 $hash, 3, "$name: SIGNALduino_Set flash $args[0] try to fetch github assets for tag $args[0]";
 
+		my $channel=AttrVal($name,"updateChannelFW","stable");
+		my $account = "RFD-FHEM";
+		if ($channel ne "stable" && $channel ne "testing") {
+			$account = $channel;
+		}
 		my ($tags, undef) = split("__", $args[0]);
-		my $ghurl = "https://api.github.com/repos/RFD-FHEM/<REPONAME>/releases/tags/$tags";
+		my $ghurl = "https://api.github.com/repos/$account/<REPONAME>/releases/tags/$tags";
 		if ($hardware =~ /ESP/) {
 			$ghurl =~ s/<REPONAME>/SIGNALESP/ ;
 		} else {
@@ -2996,8 +3001,12 @@ SIGNALduino_Get($@)
   	} 
   	
   	my $channel=AttrVal($name,"updateChannelFW","stable");
+  	my $account = "RFD-FHEM";
+  	if ($channel ne "stable" && $channel ne "testing") {
+  	    $account = $channel;
+  	}
 	my $hardware=AttrVal($name,"hardware","nano");
-  	SIGNALduino_querygithubreleases($hash);
+  	SIGNALduino_querygithubreleases($hash, $account);
 	return "$a[1]: \n\nFetching $channel firmware versions for $hardware from github\n";
   }
   
@@ -6706,10 +6715,10 @@ sub SIGNALduino_FW_getProtocolList
 
 sub SIGNALduino_querygithubreleases
 {
-    my ($hash) = @_;
+    my ($hash, $account) = @_;
     my $name = $hash->{NAME};
     my $param = {
-                    url        => "https://api.github.com/repos/RFD-FHEM/SIGNALDuino/releases",
+                    url        => "https://api.github.com/repos/$account/SIGNALDuino/releases",
                     timeout    => 5,
                     hash       => $hash,                                                                                 # Muss gesetzt werden, damit die Callback funktion wieder $hash hat
                     method     => "GET",                                                                                 # Lesen von Inhalten
@@ -6728,6 +6737,12 @@ sub SIGNALduino_githubParseHttpResponse($$$)
     my $hash = $param->{hash};
     my $name = $hash->{NAME};
     my $hardware=AttrVal($name,"hardware",undef);
+    if ($hardware eq "nano") {
+       $hardware = "nano328";
+    }
+    elsif ($hardware eq "miniculCC1101") {
+       $hardware = "minicul";
+    }
     
     if($err ne "")                                                                                                         # wenn ein Fehler bei der HTTP Abfrage aufgetreten ist
     {
@@ -6757,7 +6772,6 @@ sub SIGNALduino_githubParseHttpResponse($$$)
 						$releaselist.=$item->{tag_name}."__".substr($item->{created_at},0,10)."," ;		
 						last;
 					}
-					
 				}
 			}
 			#Debug " releases = ".Data::Dumper->new([\@fwreleases],[qw(fwreleases)])->Indent(3)->Quotekeys(0)->Dump;
@@ -6785,10 +6799,8 @@ sub SIGNALduino_githubParseHttpResponse($$$)
 						SIGNALduino_Log3  $name, 3, "$name: Error while trying to download firmware: $set_return";    	
 					} 
 					last;
-					
 				}
 			}
-			
     	} 
     } elsif (!defined($hardware))  {
     	SIGNALduino_Log3 $name, 5, "$name: SIGNALduino_githubParseHttpResponse hardware is not defined";
