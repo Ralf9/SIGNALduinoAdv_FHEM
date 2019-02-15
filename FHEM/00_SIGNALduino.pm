@@ -148,7 +148,7 @@ my $clientsSIGNALduino = ":IT:"
 						."FS20:"
 						."CUL_EM:"
 						."Fernotron:"
-						."SD_Jaro:"
+						."SD_Rollo_Keeloq:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -180,7 +180,7 @@ my %matchListSIGNALduino = (
      "25:CUL_EM"    				=> "^E0.................", 
      "26:Fernotron"  			=> '^P82#.*',
      "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79)#.*',
-     "28:SD_Jaro"				=> '^P87#.*',
+     "28:SD_Rollo_Keeloq"		=> '^P(?:87|88)#.*',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -2150,7 +2150,7 @@ my %ProtocolListSIGNALduino  = (
 						# https://github.com/RFD-FHEM/RFFHEM/issues/380
 						# MS;P1=1524;P2=-413;P3=388;P4=-3970;P5=-815;P6=778;P7=-16024;D=34353535623562626262626235626262353562623535623562626235356235626262623562626262626262626262626262623535626235623535353535626262356262626262626267123232323232323232323232;CP=3;SP=4;R=226;O;m2;
 						# MS;P0=-15967;P1=1530;P2=-450;P3=368;P4=-3977;P5=-835;P6=754;D=34353562623535623562623562356262626235353562623562623562626235353562623562626262626262626262626262623535626235623535353535626262356262626262626260123232323232323232323232;CP=3;SP=4;R=229;O;
-						# sendMsg P87#AAAAAAAAAAAAB11101000000...00P
+						# sendMsg P87#000101100110110010010001101011100000000000000000011001011111000100000000P#R3
 		{
 			name					=> 'JAROLIFT',
 			comment				=> 'remote control JAROLIFT TDRC_16W / TDRCT_04W',
@@ -2162,11 +2162,11 @@ my %ProtocolListSIGNALduino  = (
 			sync				=> [1,-10],				# this is a end marker, but we use this as a start marker
 			pause				=> [-40],
 			clockabs			=> 400,						# ca 400us
-			reconstructBit		=> '1',
+			reconstructBit			=> '1',
 			developId			=> 'm',
 			format				=> 'twostate',
 			preamble			=> 'P87#',				# prepend to converted message	
-			clientmodule	=> 'SD_Jaro',
+			clientmodule	=> 'SD_Rollo_Keeloq',
 			#modulematch	=> '',
 			length_min		=> '72',					# 72
 			length_max		=> '85',					# 85
@@ -2184,10 +2184,11 @@ my %ProtocolListSIGNALduino  = (
 			zero				=> [2,-1],
 			sync				=> [1,-10],				# this is a end marker, but we use this as a start marker
 			clockabs			=> 400,						# ca 400us
-			developId			=> 'y',
+			reconstructBit			=> '1',
+			developId			=> 'm',
 			format				=> 'twostate',
-			preamble			=> 'u88#',				# prepend to converted message
-			#clientmodule	=> '',
+			preamble			=> 'P88#',				# prepend to converted message
+			clientmodule	=> 'SD_Rollo_Keeloq',
 			#modulematch	=> '',
 			length_min		=> '65',
 			length_max		=> '78',
@@ -2275,7 +2276,7 @@ my %ProtocolListSIGNALduino  = (
 			one			=> [-2,1],
 			sync			=> [-10,1],
 			clockabs		=> 400,
-			reconstructBit	=> '1',
+			reconstructBit		=> '1',
 			format			=> 'twostate',
 			preamble		=> 'P91#',			# prepend to converted message
 			length_min		=> '35',
