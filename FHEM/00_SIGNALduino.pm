@@ -169,7 +169,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|91|91.1|92)#.*',		# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|91.1|92)#.*',		# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -209,7 +209,7 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '40',
 			paddingbits     => '8',				 # pad up to 8 bits, default is 4
 			
-			versionProtocolList  => '03.02.19',
+			versionProtocolList  => '15.02.19',
 		},
 	"0.1"	=>	## other Sensors  (380 | 9650)
 						# CUL_TCM97001 Typ - AURIOL | Mebus
@@ -418,6 +418,8 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '24',   # ?
 		},   
 	"6"	=>	## Eurochron Protocol
+					# MS;P1=-7982;P2=262;P3=-1949;P4=-948;D=21232423232424242324242424242424242424232424232323242424242424232424242324;CP=2;SP=1;R=249;O;m2;
+					# MS;P0=254;P1=-7990;P2=-1935;P3=-950;D=01020302020303030203030303030303030303020302030203030303030303020303030203;CP=0;SP=1;R=248;O;m2;
 		{
 			name			=> 'weather',
 			comment			=> 'unknown sensor is under development',
@@ -641,11 +643,11 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '10',
 			length_max      => '20',
 		}, 	
-	"16" => # Rohrmotor24 und andere Funk Rolladen / Markisen Motoren
-			# ! same definition how ID 72 !
-			# https://forum.fhem.de/index.php/topic,49523.0.html							   
-            # MU;P0=-1608;P1=-785;P2=288;P3=650;P4=-419;P5=4676;D=1212121213434212134213434212121343434212121213421213434212134345021213434213434342121212121343421213421343421212134343421212121342121343421213432;CP=2;
-			# MU;P0=-1562;P1=-411;P2=297;P3=-773;P4=668;P5=4754;D=1232341234141234141234141414123414123232341232341412323414150234123234123232323232323234123414123414123414141412341412323234123234141232341415023412323412323232323232323412341412341412341414141234141232323412323414123234142;CP=2;
+	"16"	=>	## Rohrmotor24 und andere Funk Rolladen / Markisen Motoren
+						# ! same definition how ID 72 !
+						# https://forum.fhem.de/index.php/topic,49523.0.html
+						# MU;P0=-1608;P1=-785;P2=288;P3=650;P4=-419;P5=4676;D=1212121213434212134213434212121343434212121213421213434212134345021213434213434342121212121343421213421343421212134343421212121342121343421213432;CP=2;
+						# MU;P0=-1562;P1=-411;P2=297;P3=-773;P4=668;P5=4754;D=1232341234141234141234141414123414123232341232341412323414150234123234123232323232323234123414123414123414141412341412323234123234141232341415023412323412323232323232323412341412341412341414141234141232323412323414123234142;CP=2;
 		{
 			name			=> 'Dooya',
 			comment			=> 'Rohrmotor24 and other radio shutters / awnings motors',
@@ -661,9 +663,10 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',  				# not used now
 			length_min      => '39',
 			length_max      => '40',
-		}, 	
-    "17"    => 
-        {
+		},
+	"17"	=>	## arctech / intertechno
+						# need more Device Infos / User Message
+		{
 			name			=> 'arctech / intertechno',
 			id          	=> '17',
 			one				=> [1,-5,1,-1],  
@@ -723,10 +726,10 @@ my %ProtocolListSIGNALduino  = (
 			polarity        => 'invert',		    # invert bits
 			method          => \&SIGNALduino_OSV1   # Call to process this message
 		},
-	"19" => # minify Funksteckdose
-            # https://github.com/RFD-FHEM/RFFHEM/issues/114
-			# MU;P0=293;P1=-887;P2=-312;P6=-1900;P7=872;D=6727272010101720172720101720172010172727272720;CP=0;
-			# MU;P0=9078;P1=-308;P2=180;P3=-835;P4=881;P5=309;P6=-1316;D=0123414141535353415341415353415341535341414141415603;CP=5;
+	"19"	=>	## minify Funksteckdose
+						# https://github.com/RFD-FHEM/RFFHEM/issues/114
+						# MU;P0=293;P1=-887;P2=-312;P6=-1900;P7=872;D=6727272010101720172720101720172010172727272720;CP=0;
+						# MU;P0=9078;P1=-308;P2=180;P3=-835;P4=881;P5=309;P6=-1316;D=0123414141535353415341415353415341535341414141415603;CP=5;
 		{
 			name			=> 'minify',
 			comment			=> 'remote control RC202',
@@ -739,9 +742,9 @@ my %ProtocolListSIGNALduino  = (
 			preamble		=> 'u19#',				# prepend to converted message
 			#clientmodule    => '',   				# not used now
 			#modulematch     => '',  				# not used now
-			length_min      => '19',
-			length_max      => '23',				# not confirmed, length one more as MU Message
-		},
+			length_min		=> '19',
+			length_max		=> '23',					# not confirmed, length one more as MU Message
+			},
 	"20" => # Livolo         	
             # https://github.com/RFD-FHEM/RFFHEM/issues/29
          	# MU;P0=-195;P1=151;P2=475;P3=-333;D=010101010102010101010101013101013101010101013101010201010101010101010101010101010101010101020101010101010101010101010101010101010102010101010101013101013101;CP=1;
@@ -771,7 +774,7 @@ my %ProtocolListSIGNALduino  = (
 						# https://forum.fhem.de/index.php?topic=42373.0 | user have no RAWMSG
 						# static adress: Bit 1-28 | channel remote Bit 29-32 | repeats 31 | pause 20 ms
 						# Channelvalues dez
-						# 1 left 1x kurz | 2 left 2x kurz | 3 left 3x kurz | 5 right 1x kurz | 6 right 2x kurz | 7 right 3x kurz ... gedrückt
+						# 1 left 1x kurz | 2 left 2x kurz | 3 left 3x kurz | 5 right 1x kurz | 6 right 2x kurz | 7 right 3x kurz ... gedrueckt
 		{
 			name		=> 'Einhell Garagedoor',
 			comment         => 'remote ISC HS 434/6',
@@ -977,7 +980,32 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '19',
 			length_max      => '20',				
 		},
-	"32" => #FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
+	"32"	=>	## FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
+						# OLD
+						# https://github.com/RFD-FHEM/RFFHEM/issues/49
+						# MS;P0=-266;P1=160;P3=-690;P4=580;P5=-6628;D=15131313401340134013401313404040404040404040404040;CP=1;SP=5;O;
+						# NEW
+						# https://github.com/RFD-FHEM/RFFHEM/issues/315
+						# MU;P0=-6676;P1=578;P2=-278;P4=-680;P5=176;P6=-184;D=541654165412545412121212121212121212121250545454125412541254125454121212121212121212121212;CP=1;R=0;
+						# MU;P0=146;P1=245;P3=571;P4=-708;P5=-284;P7=-6689;D=14351435143514143535353535353535353535350704040435043504350435040435353535353535353535353507040404350435043504350404353535353535353535353535070404043504350435043504043535353535353535353535350704040435043504350435040435353535353535353535353507040404350435;CP=3;R=0;O;
+						# MU;P0=-6680;P1=162;P2=-298;P4=253;P5=-699;P6=555;D=45624562456245456262626262626262626262621015151562156215621562151562626262626262626262626210151515621562156215621515626262626262626262626262;CP=6;R=0;
+		{
+			name			=> 'freetec 6946',	
+			comment         => 'Doorbell FreeTec PE-6946',
+			id          	=> '32',
+			one				=> [4,-2],
+			zero			=> [1,-5],
+			start           => [1,-46],
+			clockabs		=> 150,
+			clockpos		=> ['zero',0],
+			format 			=> 'twostate',	  		
+			preamble		=> 'P32#',				# prepend to converted message
+			clientmodule	=> 'SD_BELL',
+			modulematch		=> '^P32#.*',
+			length_min      => '24',
+			length_max      => '24',				
+    	},
+	"32.1" => #FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
 			# https://github.com/RFD-FHEM/RFFHEM/issues/49
 			# MS;P0=-266;P1=160;P3=-690;P4=580;P5=-6628;D=15131313401340134013401313404040404040404040404040;CP=1;SP=5;O;
     	{   
@@ -989,30 +1017,9 @@ my %ProtocolListSIGNALduino  = (
 			sync			=> [1,-43],				
 			clockabs		=> 150,                 #ca 150us
 			format 			=> 'twostate',	  		
-			preamble		=> 'u32#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
-			length_min      => '24',
-			length_max      => '24',				
-    	},
-	"32.1" => #FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
-			# https://github.com/RFD-FHEM/RFFHEM/issues/315
-			# MU;P0=-6676;P1=578;P2=-278;P4=-680;P5=176;P6=-184;D=541654165412545412121212121212121212121250545454125412541254125454121212121212121212121212;CP=1;R=0;
-			# MU;P0=146;P1=245;P3=571;P4=-708;P5=-284;P7=-6689;D=14351435143514143535353535353535353535350704040435043504350435040435353535353535353535353507040404350435043504350404353535353535353535353535070404043504350435043504043535353535353535353535350704040435043504350435040435353535353535353535353507040404350435;CP=3;R=0;O;
-			# MU;P0=-6680;P1=162;P2=-298;P4=253;P5=-699;P6=555;D=45624562456245456262626262626262626262621015151562156215621562151562626262626262626262626210151515621562156215621515626262626262626262626262;CP=6;R=0;
-    	{   
-			name			=> 'freetec 6946',	
-			comment         => 'Doorbell FreeTec PE-6946',
-			id          	=> '32',
-			one				=> [4,-2],
-			zero			=> [1,-5],
-			start           => [1,-46],
-			clockabs		=> 150,
-			clockpos		=> ['zero',0],
-			format 			=> 'twostate',	  		
-			preamble		=> 'u32#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
+			preamble		=> 'P32#',				# prepend to converted message
+			clientmodule	=> 'SD_BELL',
+			modulematch		=> '^P32#.*',
 			length_min      => '24',
 			length_max      => '24',				
     	},
@@ -1036,9 +1043,9 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',     			# not used now
 			length_min      => '42',
 			length_max      => '44',
-    	},
-    "34" => # QUIGG GT-7000 Funk-Steckdosendimmer | transmitter DMV-7000 - receiver DMV-7009AS
-			# https://github.com/RFD-FHEM/RFFHEM/issues/195
+		},
+	"34"	=>	## QUIGG GT-7000 Funk-Steckdosendimmer | transmitter DMV-7000 - receiver DMV-7009AS
+			# https://github.com/RFD-FHEM/RFFHEM/issues/195 | https://forum.fhem.de/index.php/topic,38831.msg361341.html#msg361341
 			# MU;P0=-9808;P1=608;P2=-679;P3=1243;D=012323232323232323232323232323232323232323;CP=3;R=254;
             # MU;P0=-5476;P1=592;P2=-665;P3=1226;P4=-1309;D=012323232323232323232323234123234123234141;CP=3;R=1;
             # MU;P0=-3156;P1=589;P2=-668;P3=1247;P4=-1370;D=012323232323232323232323234123232323234123;CP=3;R=255;
@@ -1057,12 +1064,12 @@ my %ProtocolListSIGNALduino  = (
 			preamble 		=> 'P34#',
 			clientmodule 		=> 'SD_UT',
 			#modulematch 		=> '',
-			length_min 		=> '19',
+			length_min 		=> '20',
 			length_max 		=> '20',
 		},
-     "35" => # Homeeasy
+	"35"	=>	## Homeeasy
 			 # MS;P0=907;P1=-376;P2=266;P3=-1001;P6=-4860;D=2601010123230123012323230101012301230101010101230123012301;CP=2;SP=6;
-		{   
+		{
 			name		=> 'HE800',
 			comment		=> 'Homeeasy',	
 			id          	=> '35',
@@ -1078,7 +1085,7 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '28',
 			length_max      => '40',
 			postDemodulation => \&SIGNALduino_HE800,
-    	},
+		},
 	"36"	=>	## remote - cheap wireless dimmer
 						# https://forum.fhem.de/index.php/topic,38831.msg394238.html#msg394238
 						# MU;P0=499;P1=-1523;P2=-522;P3=10220;P4=-10047;D=01020202020202020134010102020101010201020202020102010202020202020201340101020201010102010202020201020102020202020202013401010202010101020102020202010201020202020202020134010102020101010201020202020102010202020202020201340101020201010102010;CP=0;O;
@@ -1100,8 +1107,8 @@ my %ProtocolListSIGNALduino  = (
 			#modulematch     => '',     			# not used now
 			length_min      => '24',
 			length_max      => '24',
-    	},
-    "37" =>	## Bresser 7009994
+		},
+	"37"	=>	## Bresser 7009994
 			# MU;P0=729;P1=-736;P2=483;P3=-251;P4=238;P5=-491;D=010101012323452323454523454545234523234545234523232345454545232345454545452323232345232340;CP=4;
 			# MU;P0=-790;P1=-255;P2=474;P4=226;P6=722;P7=-510;D=721060606060474747472121212147472121472147212121214747212147474721214747212147214721212147214060606060474747472121212140;CP=4;R=216;
 			# short pulse of 250 us followed by a 500 us gap is a 0 bit
@@ -1122,16 +1129,26 @@ my %ProtocolListSIGNALduino  = (
 			length_min      => '40',
 			length_max      => '41',
 	},
-    "38" => ## ID geloescht!. Lidl Wetterstation
-      	 {   
-			name			=> 'weather38',
-			comment			=> 'deleted. it can not be used!',
-			changed			=> '20181216 deleted. Old moved to ID 0.1',
-			deleted			=> '1',
-			id			=> '38',
-			format			=> 'twostate',  # not used now
-			developId		=> 'p',
-    	}, 
+	"38"	=>	## Rosenstein & Soehne / PEARL - NC-3911-675 / NC-3912-675 | refrigerator thermometer - 2 channels
+						# https://github.com/RFD-FHEM/RFFHEM/issues/504 | https://forum.fhem.de/index.php/topic,96827.msg901158.html#msg901158
+						# MU;P0=252;P1=-478;P2=497;P3=-237;P4=-960;P5=737;P6=-727;CP=0;D=01232323232323012301010123012323010101012323010101232323010123230101045656565601230123232323232301230101012301232301010101232301010123232301012323010104565656560123012323232323230123010101230123230101010123230101012323230101232301010456565656012301232323232323012301010123012323010101012323010101232323010123230101;
+		{
+			name         => 'NC-3911-675',
+			comment      => 'refrigerator thermometer',
+			changed      => '20190205 new, 20181216 old moved to ID 0.1',
+			id           => '38',
+			one          => [2,-1],
+			zero         => [1,-2],
+			start        => [3,-3,3,-3],
+			clockabs     => 250,
+			clockpos     => ['zero',0],
+			format       => 'twostate',
+			preamble     => 'u38#',
+			#clientmodule	=> '',
+			#modulematch	=> '^P38#.*',
+			length_min   => '36',
+			length_max   => '36',
+		},
 	"39"	=>	## X10 Protocol
          	# https://github.com/RFD-FHEM/RFFHEM/issues/65
          	# MU;P0=10530;P1=-2908;P2=533;P3=-598;P4=-1733;P5=767;D=0123242323232423242324232324232423242323232324232323242424242324242424232423242424232501232423232324232423242323242324232423232323242323232424242423242424242324232424242325012324232323242324232423232423242324232323232423232324242424232424242423242324242;CP=2;O;
@@ -1345,10 +1362,10 @@ my %ProtocolListSIGNALduino  = (
 			modulematch     => '^U48#.*',  					# not used now
 			length_min      => '47',
 			length_max      => '48',
-		}, 			
-	"49"    => ## quigg / Aldi gt_9000
-			   # https://github.com/RFD-FHEM/RFFHEM/issues/93
-               # MU;P0=-563;P1=479;P2=991;P3=-423;P4=361;P5=-1053;P6=3008;P7=-7110;D=2345454523452323454523452323452323452323454545456720151515201520201515201520201520201520201515151567201515152015202015152015202015202015202015151515672015151520152020151520152020152020152020151515156720151515201520201515201520201520201520201515151;CP=1;R=21;
+		},
+	"49"	=>	## QUIGG / ALDI GT-9000
+						# https://github.com/RFD-FHEM/RFFHEM/issues/93
+						# MU;P0=-563;P1=479;P2=991;P3=-423;P4=361;P5=-1053;P6=3008;P7=-7110;D=2345454523452323454523452323452323452323454545456720151515201520201515201520201520201520201515151567201515152015202015152015202015202015202015151515672015151520152020151520152020152020152020151515156720151515201520201515201520201520201520201515151;CP=1;R=21;
 		{
 			name		=> 'quigg_gt9000',	
 			id          	=> '49',
@@ -1363,7 +1380,7 @@ my %ProtocolListSIGNALduino  = (
 			modulematch     => '^U49#.*',
 			length_min      => '22',
 			length_max      => '28',
-		}, 
+		},
 	"50"	=>	## Opus XT300
 						# https://github.com/RFD-FHEM/RFFHEM/issues/99
 						# MU;P0=248;P1=-21400;P2=545;P3=-925;P4=1368;P5=-12308;D=01232323232323232343234323432343234343434343234323432343434343432323232323232323232343432323432345232323232323232343234323432343234343434343234323432343434343432323232323232323232343432323432345232323232323232343234323432343234343434343234323432343434343;CP=2;O;
@@ -1406,9 +1423,9 @@ my %ProtocolListSIGNALduino  = (
 						# https://forum.fhem.de/index.php/topic,63604.msg548256.html#msg548256
 						# MC;LL=-1045;LH=1153;SL=-494;SH=606;D=FFFED518;C=549;L=30;
 						#
-						# FFFED5 = Adresse, die per DIP einstellt wird, FFF ändert sich nie
+						# FFFED5 = Adresse, die per DIP einstellt wird, FFF aendert sich nie
 						# 1 = Kanal, per gesondertem DIP, bei mir bei beiden 1 (CH 1) oder 3 (CH 2)
-						# C = wechselt, 0, 4, 8, C - dann fängt es wieder mit 0 an und wiederholt sich bei jeder Bewegung
+						# C = wechselt, 0, 4, 8, C - dann faengt es wieder mit 0 an und wiederholt sich bei jeder Bewegung
 		{
 			name				=> 'Oregon Scientific PIR',
 			id				=> '52',
@@ -1473,7 +1490,7 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '24',
 			method          => \&SIGNALduino_MCRAW, # Call to process this message
 			polarity        => 'invert',			
-		}, 	 
+		},
 	"58"	=>	## TFA 30.3208.0
 				# MC;LL=-981;LH=964;SL=-480;SH=520;D=002BA37EBDBBA24F0015D1BF5EDDD127800AE8DFAF6EE893C;C=486;L=194;
 		{
@@ -1489,7 +1506,7 @@ my %ProtocolListSIGNALduino  = (
 			length_max      => '52',	# 136
 			method          => \&SIGNALduino_MCTFA, # Call to process this message
 			polarity        => 'invert',			
-		}, 	 
+		},
 	"59"	=>	## AK-HD-4 remote | 4 Buttons
                 # https://github.com/RFD-FHEM/RFFHEM/issues/133
                 # MU;P0=819;P1=-919;P2=234;P3=-320;P4=8602;P6=156;D=01230301230301230303012123012301230303030301230303412303012303012303030121230123012303030303012303034123030123030123030301212301230123030303030123030341230301230301230303012123012301230303030301230303412303012303012303030121230123012303030303012303034163;CP=0;O;
@@ -1554,7 +1571,7 @@ my %ProtocolListSIGNALduino  = (
 			id		=> '61',
 			one		=> [1,-2],
 			zero		=> [1,-1],
-			pause 		=> [-25],
+			pause		=> [-81],				# 400*81=32400*6=194400 - pause between repeats of send messages (clockabs*pause must be < 32768)
 			clockabs	=> 400,
 			clockpos	=> ['cp'],
 			format 		=> 'twostate',
@@ -1881,7 +1898,7 @@ my %ProtocolListSIGNALduino  = (
 			name			=> 'LED XM21',
 			comment			=> 'remote with 2-buttons for LED X-MAS light string',
 			id			=> '76',
-			developId		=> 'p',
+			developId		=> 'y',
 			one			=> [1.2,-2],			# 120,-200
 			zero			=> [],						# existiert nicht
 			start			=> [4.5,-2,4.5,-2,4.5,-2,4.5,-2],			# 450,-200 Starsequenz
@@ -1948,6 +1965,8 @@ my %ProtocolListSIGNALduino  = (
 						# MU;P0=-24096;P1=314;P2=-303;P3=615;P4=-603;P5=220;P6=-4672;D=0123456123412341414141412323234 16 123412341414141412323234 16 12341234141414141232323416123412341414141412323234161234123414141414123232341612341234141414141232323416123412341414141412323234161234123414141414123232341612341234141414141232323416123412341414;CP=1;R=26;O;
 						# MU;P0=-10692;P1=602;P2=-608;P3=311;P4=-305;P5=-4666;D=01234123232323234141412 35 341234123232323234141412 35 341234123232323234141412 35 34123412323232323414141235341234123232323234141412353412341232323232341414123534123412323232323414141235341234123232323234141412353412341232323232341414123534123412323232323414;CP=3;R=47;O;
 						# MU;P0=-7152;P1=872;P2=-593;P3=323;P4=-296;P5=622;P6=-4650;D=01234523232323234545452 36 345234523232323234545452 36 345234523232323234545452 36 34523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454545236345234523232323234545452363452345232323232345454523634523452323232323454;CP=3;R=26;O;
+						# https://forum.fhem.de/index.php/topic,58397.msg879878.html#msg879878
+						# MU;P0=-421;P1=344;P2=-699;P4=659;P6=-5203;P7=259;D=1612121040404040404040421216121210404040404040404212161212104040404040404042121612121040404040404040421216121210404040404040404272761212104040404040404042121612121040404040404040421216121210404040404040404212167272104040404040404042721612127040404040404;CP=4;R=0;O;
 		{
 			name			=> 'wireless doorbell',
 			comment			=> 'Heidemann | Heidemann HX | VTX-BELL',
@@ -1968,7 +1987,7 @@ my %ProtocolListSIGNALduino  = (
 						# https://github.com/RFD-FHEM/RFFHEM/issues/253
 						# MU;P1=-417;P2=385;P3=-815;P4=-12058;D=42121212121212121212121212121212121232321212121212121232321212121212121232323212323212321232121212321212123232121212321212121232323212121212121232121212121212121232323212121212123232321232121212121232123232323212321;CP=2;R=87;
 		{	
-			name			=> 'EM (Energy-Monitor)',
+			name			=> 'EM1000WZ',
 			comment         => 'EM (Energy-Monitor)',
 			id			=> '80',
 			knownFreqs      	=> '868.35',
@@ -2102,7 +2121,7 @@ my %ProtocolListSIGNALduino  = (
 			length_max		=> '68',
 		},
 	"86"	=>	### for remote controls:  Novy 840029, CAME TOP 432EV, OSCH & Neff Transmitter SF01 01319004
-						### CAME TOP 432EV 433,92 MHz für z.B. Drehtor Antrieb:
+						### CAME TOP 432EV 433,92 MHz fuer z.B. Drehtor Antrieb:
 						# https://forum.fhem.de/index.php/topic,63370.msg849400.html#msg849400
 						# https://github.com/RFD-FHEM/RFFHEM/issues/151
 						# MU;P0=711;P1=-15288;P4=132;P5=-712;P6=316;P7=-313;D=4565656705656567056567056 16 565656705656567056567056 16 56565670565656705656705616565656705656567056567056165656567056565670565670561656565670565656705656705616565656705656567056567056165656567056565670565670561656565670565656705656705616565656705656567056;CP=6;R=52;
@@ -2234,12 +2253,11 @@ my %ProtocolListSIGNALduino  = (
 			sync         => [1,-36],
 			clockabs     => 280,						# -1=auto	
 			format       => 'twostate',
-			preamble     => 'u90#',			
+			preamble     => 'P90#',			
 			length_min   => '33',
 			length_max   => '36',
-			#clientmodule	=> 'IT',
+			clientmodule => 'SD_UT',
 			#modulematch	=> '^P90#.*',
-			developId    => 'y',
 		},
 	"91"	=>	## Atlantic Security / Focus Security China Devices
 						# https://forum.fhem.de/index.php/topic,58397.msg876862.html#msg876862
@@ -2296,6 +2314,7 @@ my %ProtocolListSIGNALduino  = (
 			one			=> [2,-1],
 			start			=> [2,-24],
 			clockabs		=> 420,
+			clockpos		=> ['zero',1],
 			format			=> 'twostate',	#
 			preamble		=> 'P92#',			# prepend to converted message
 			length_min		=> '32',
@@ -2319,8 +2338,8 @@ my %ProtocolListSIGNALduino  = (
 			clockabs     => 385,						# -1=auto	
 			format       => 'twostate',
 			preamble     => 'u93#',
-			length_min   => '32',
-			length_max   => '36',
+			length_min   => '32',           # 2. MSG:	32 Bit, bleibt so
+			length_max   => '36',           # 1. MSG: 33 Bit, wird verlaengert auf 36 Bit
 			#clientmodule	=> 'SD_UT',
 			#modulematch	=> '^P93#.*',
 			developId    => 'y',
@@ -7257,7 +7276,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
     		<li>ELV WS-2000, La Crosse WS-7000 -> 14_CUL_WS</li>
 	</ul>
 	<br>
-	Es ist m&ouml;glich, mehr als ein Ger&auml;t anzuschließen, um beispielsweise besseren Empfang zu erhalten. FHEM wird doppelte Nachrichten herausfiltern.
+	Es ist m&ouml;glich, mehr als ein Ger&auml;t anzuschliessen, um beispielsweise besseren Empfang zu erhalten. FHEM wird doppelte Nachrichten herausfiltern.
 	Mehr dazu im dem <a href="#global">global</a> Abschnitt unter dem Attribut dupTimeout<br><br>
 	Hinweis: Dieses Modul erfordert das Device::SerialPort oder Win32::SerialPort
 	Modul. Es kann derzeit nur &uuml;ber USB angeschlossen werden.
@@ -7308,11 +7327,11 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 		<li><code>cc1101_freq</code> , legt sowohl die Empfangsfrequenz als auch die &Uuml;bertragungsfrequenz fest.<br>
 		Hinweis: Obwohl der CC1101 auf Frequenzen zwischen 315 und 915 MHz eingestellt werden kann, ist die Antennenschnittstelle und die Antenne auf genau eine Frequenz abgestimmt. Standard ist 433.920 MHz (oder 868.350 MHz). Wenn keine Frequenz angegeben wird, dann wird die Frequenz aus dem Attribut <code>cc1101_frequency</code> geholt.</li>
 		<a name="cc1101_bWidth"></a>
-		<li><code>cc1101_bWidth</code> , kann auf Werte zwischen 58 kHz und 812 kHz eingestellt werden. Große Werte sind st&ouml;ranf&auml;llig, erm&ouml;glichen jedoch den Empfang von ungenau kalibrierten Sendern. Es wirkt sich auch auf die &Uuml;bertragung aus. Standard ist 325 kHz.</li>
+		<li><code>cc1101_bWidth</code> , kann auf Werte zwischen 58 kHz und 812 kHz eingestellt werden. Grosse Werte sind st&ouml;ranf&auml;llig, erm&ouml;glichen jedoch den Empfang von ungenau kalibrierten Sendern. Es wirkt sich auch auf die &Uuml;bertragung aus. Standard ist 325 kHz.</li>
 		<a name="cc1101_patable"></a>
 		<li><code>cc1101_patable</code> , &Auml;nderung der PA-Tabelle (Leistungsverst&auml;rkung f&uuml;r HF-Senden)</li>
 		<a name="cc1101_rAmpl"></a>
-		<li><code>cc1101_rAmpl</code> , ist die Empf&auml;ngerverst&auml;rkung mit Werten zwischen 24 und 42 dB. Gr&ouml;ßere Werte erlauben den Empfang schwacher Signale. Der Standardwert ist 42.</li>
+		<li><code>cc1101_rAmpl</code> , ist die Empf&auml;ngerverst&auml;rkung mit Werten zwischen 24 und 42 dB. Gr&ouml;ssere Werte erlauben den Empfang schwacher Signale. Der Standardwert ist 42.</li>
 		<a name="cc1101_sens"></a>
 		<li><code>cc1101_sens</code> , ist die Entscheidungsgrenze zwischen den Ein- und Aus-Werten und betr&auml;gt 4, 8, 12 oder 16 dB. Kleinere Werte erlauben den Empfang von weniger klaren Signalen. Standard ist 4 dB.</li>
 		</ul>
@@ -7562,7 +7581,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="longids"></a>
 	<li>longids<br>
-	Durch Komma getrennte Liste von Device-Typen f&uuml;r Empfang von langen IDs mit dem SIGNALduino. Diese zus&auml;tzliche ID erlaubt es Wettersensoren, welche auf dem gleichen Kanal senden zu unterscheiden. Hierzu wird eine zuf&auml;llig generierte ID hinzugef&uuml;gt. Wenn Sie longids verwenden, dann wird in den meisten F&auml;llen nach einem Batteriewechsel ein neuer Sensor angelegt. Standardm&auml;ßig werden keine langen IDs verwendet.<br>
+	Durch Komma getrennte Liste von Device-Typen f&uuml;r Empfang von langen IDs mit dem SIGNALduino. Diese zus&auml;tzliche ID erlaubt es Wettersensoren, welche auf dem gleichen Kanal senden zu unterscheiden. Hierzu wird eine zuf&auml;llig generierte ID hinzugef&uuml;gt. Wenn Sie longids verwenden, dann wird in den meisten F&auml;llen nach einem Batteriewechsel ein neuer Sensor angelegt. Standardm&auml;ssig werden keine langen IDs verwendet.<br>
 	Folgende Module verwenden diese Funktionalit&auml;t: 14_Hideki, 41_OREGON, 14_CUL_TCM97001, 14_SD_WS07.<br>
 	Beispiele:<PRE>
     		# Keine langen IDs verwenden (Default Einstellung):
@@ -7633,7 +7652,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
    	    <a name="Display protocollist"></a>
 		<li>Display protocollist<br> 
 		Zeigt Ihnen die aktuell implementierten Protokolle des SIGNALduino an und an welches logische FHEM Modul Sie &uuml;bergeben werden.<br>
-		Außerdem wird mit checkbox Symbolen angezeigt ob ein Protokoll verarbeitet wird. Durch Klick auf das Symbol, wird im Hintergrund das Attribut whitlelistIDs angepasst. Die Attribute whitelistIDs und blacklistIDs beeinflussen den dargestellten Status.
+		Ausserdem wird mit checkbox Symbolen angezeigt ob ein Protokoll verarbeitet wird. Durch Klick auf das Symbol, wird im Hintergrund das Attribut whitlelistIDs angepasst. Die Attribute whitelistIDs und blacklistIDs beeinflussen den dargestellten Status.
 		Protokolle die in der Spalte <code>dev</code> markiert sind, befinden sich in Entwicklung. 
 		<ul>
 			<li>Wemm eine Zeile mit 'm' markiert ist, befindet sich das logische Modul, welches eine Schnittstelle bereitstellt in Entwicklung. Im Standard &uuml;bergeben diese Protokolle keine Daten an logische Module. Um die Kommunikation zu erm&ouml;glichenm muss der Protokolleintrag aktiviert werden.</li> 
