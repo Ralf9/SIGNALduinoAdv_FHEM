@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-02-10 18:00:00Z v3.3.2-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-02-16 11:00:00Z v3.3.2-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -26,7 +26,7 @@ use Scalar::Util qw(looks_like_number);
 
 
 use constant {
-	SDUINO_VERSION            => "v3.3.3-dev-ralf_10.02.",
+	SDUINO_VERSION            => "v3.3.3-dev-ralf_16.02.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -2541,8 +2541,7 @@ SIGNALduino_Set($@)
   
   return "\"set SIGNALduino\" needs at least one parameter" if(@a < 2);
 
-  #SIGNALduino_Log3 $name, 3, "SIGNALduino_Set called with params @a";
-
+  #Log3 $hash, 3, "SIGNALduino_Set called with params @a";
 
   my $hasCC1101 = 0;
   my $CC1101Frequency;
@@ -2554,25 +2553,25 @@ SIGNALduino_Set($@)
        $CC1101Frequency = $hash->{cc1101_frequency};
     }
   }
+  
   my %my_sets = %sets;
-  #SIGNALduino_Log3 $hash, 3, "SIGNALduino_Set addionals set commands: ".Dumper(%{$hash->{additionalSets}});
-  #SIGNALduino_Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
-  #SIGNALduino_Log3 $hash, 3, "SIGNALduino_Set global set commands: ".Dumper(%sets);
+  #Log3 $hash, 3, "SIGNALduino_Set addionals set commands: ".Dumper(%{$hash->{additionalSets}});
+  #Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
+  #Log3 $hash, 3, "SIGNALduino_Set global set commands: ".Dumper(%sets);
 
   %my_sets = ( %my_sets,  %{$hash->{additionalSets}} ) if ( defined($hash->{additionalSets}) );
   
-  
-    
   if (!defined($my_sets{$a[1]})) {
     my $arguments = ' ';
     foreach my $arg (sort keys %my_sets) {
       next if ($arg =~ m/cc1101/ && $hasCC1101 == 0);
+      next if ($my_sets{$arg} ne "" && $arg ne "flash" && IsDummy($hash->{NAME}));
       if ($arg =~ m/patable/) {
         next if (substr($arg, -3) ne $CC1101Frequency);
       }
       $arguments.= $arg . ($my_sets{$arg} ? (':' . $my_sets{$arg}) : '') . ' ';
     }
-    #SIGNALduino_Log3 $hash, 3, "set arg = $arguments";
+    #SIGNALduino_Log3 $hash->{NAME}, 3, $hash->{NAME} . ": set $a[1] arg = $arguments";
     return "Unknown argument $a[1], choose one of " . $arguments;
   }
 
@@ -2978,17 +2977,29 @@ SIGNALduino_Get($@)
   
   SIGNALduino_Log3 $name, 5, "\"get $type\" needs at least one parameter" if(@a < 2);
   return "\"get $type\" needs at least one parameter" if(@a < 2);
+  
+  my $hasCC1101 = 0;
+  if ($hash->{version} && $hash->{version} =~ m/cc1101/) {
+     $hasCC1101 = 1;
+  }
+  
   if(!defined($gets{$a[1]})) {
-    my @cList = map { $_ =~ m/^(file|raw|ccreg)$/ ? $_ : "$_:noArg" } sort keys %gets;
-    return "Unknown argument $a[1], choose one of " . join(" ", @cList);
+     my $arguments = ' ';
+     foreach my $arg (sort keys %gets) {
+        next if ($arg =~ m/^cc/ && $hasCC1101 == 0);
+        next if ($arg ne "raw" && $arg ne "zAvailableFirmware" && IsDummy($name));
+        if ($arg ne "raw" && $arg ne "ccreg") {
+           $arg .= ":noArg";
+        }
+        $arguments.= $arg . " ";
+     }
+     #my @cList = map { $_ =~ m/^(file|raw|ccreg)$/ ? $_ : "$_:noArg" } sort keys %gets;
+     #SIGNALduino_Log3 $name, 5, "name: $arguments";
+     return "Unknown argument $a[1], choose one of $arguments";
   }
 
   my $arg = ($a[2] ? $a[2] : "");
   return "no command to send, get aborted." if (length($gets{$a[1]}[0]) == 0 && length($arg) == 0);
-  
-  if (($a[1] eq "ccconf" || $a[1] eq "ccreg" || $a[1] eq "ccpatable") && $hash->{version} && $hash->{version} !~ m/cc1101/) {
-    return "This command is only available with a cc1101 receiver";
-  }
   
   my ($msg, $err);
 
@@ -3090,12 +3101,7 @@ SIGNALduino_Get($@)
   		SIGNALduino_Set($hash,$name,"sendMsg","P17#",substr($arg,2),"#R6");
   	    return "$a[0] $a[1] => $arg";
   	}
-  	
   }
-  elsif ($a[1] eq "protocolIDs")
-  {
-	return SIGNALduino_FW_getProtocolList($name);
-  } 
   
   #SIGNALduino_SimpleWrite($hash, $gets{$a[1]}[0] . $arg);
   SIGNALduino_AddSendQueue($hash, $gets{$a[1]}[0] . $arg);
@@ -4280,7 +4286,8 @@ SIGNALduino_Parse_MS($$$$%)
 				SIGNALduino_Log3 $name, 5, "$name: dispatching bits: @bit_msg with $i Paddingbits 0";
 			}
 			
-			my ($rcode,@retvalue) = SIGNALduino_callsub('postDemodulation',$ProtocolListSIGNALduino{$id}{postDemodulation},$name,@bit_msg);
+			my @retvalue;
+			($rcode,@retvalue) = SIGNALduino_callsub('postDemodulation',$ProtocolListSIGNALduino{$id}{postDemodulation},$name,@bit_msg);
 			next if ($rcode < 1 );
 			#Log3 $name, 5, "$name: postdemodulation value @retvalue";
 			
