@@ -4148,7 +4148,7 @@ SIGNALduino_Parse_MS($$$$%)
 	#Debug Dumper(\@msg_parts);
 
 	my $debug = AttrVal($iohash->{NAME},"debug",0);
-
+	my $dummy = IsDummy($iohash->{NAME});
 	
 	if (defined($clockidx) and defined($syncidx))
 	{
@@ -4175,7 +4175,7 @@ SIGNALduino_Parse_MS($$$$%)
 			# Check Clock if is it in range
 			if ($ProtocolListSIGNALduino{$id}{clockabs} > 0) {
 				if (!SIGNALduino_inTol($ProtocolListSIGNALduino{$id}{clockabs},$clockabs,$clockabs*0.30)) {
-					Debug "protocClock=$ProtocolListSIGNALduino{$id}{clockabs}, msgClock=$clockabs is not in tol=" . $clockabs*0.30 if ($debug);  
+					Log3 $name, 5, "$name: MS ID=$id protocClock=$ProtocolListSIGNALduino{$id}{clockabs}, msgClock=$clockabs is not in tol=" . $clockabs*0.30 if ($debug || $dummy);  
 					next;
 				} elsif ($debug) {
 					Debug "protocClock=$ProtocolListSIGNALduino{$id}{clockabs}, msgClock=$clockabs is in tol=" . $clockabs*0.30;
@@ -4208,6 +4208,7 @@ SIGNALduino_Parse_MS($$$$%)
 			#Check calculated min length
 			if (exists($ProtocolListSIGNALduino{$id}{length_min}) && $ProtocolListSIGNALduino{$id}{length_min} > $bit_length) {
 				Debug "bit_length=$bit_length to short" if ($debug);
+				Log3 $name, 5, "$name: MS ID=$id length_min=$ProtocolListSIGNALduino{$id}{length_min}, bit_length=$bit_length to short" if ($dummy);
 				next;
 			}
 			
@@ -4286,7 +4287,7 @@ SIGNALduino_Parse_MS($$$$%)
 			my ($rcode, $rtxt) = SIGNALduino_TestLength(undef,$id,scalar @bit_msg,"");
 			if (!$rcode)
 			{
-			  Debug "$name: decoded $rtxt" if ($debug);
+			  Log3 $name, 5, "$name: decoded $rtxt" if ($debug || $dummy);
 			  next;
 			}
 			
@@ -6322,14 +6323,17 @@ sub SIGNALduino_SomfyRTS()
 sub SIGNALduino_TestLength
 {
 	my ($name, $id, $message_length, $logMsg) = @_;
+	my $length;
 	
 	if (defined($ProtocolListSIGNALduino{$id}{length_min}) && $message_length < $ProtocolListSIGNALduino{$id}{length_min}) {
-		SIGNALduino_Log3 $name, 4, "$name: $logMsg: message with length=$message_length is to short" if ($logMsg ne "");
-		return (0, "message is to short");
+		$length = ", length_min=$ProtocolListSIGNALduino{$id}{length_min}, length=$message_length";
+		SIGNALduino_Log3 $name, 4, "$name: $logMsg: message is to short$length" if ($logMsg ne "");
+		return (0, "message is to short$length");
 	}
 	elsif (defined($ProtocolListSIGNALduino{$id}{length_max}) && $message_length > $ProtocolListSIGNALduino{$id}{length_max}) {
-		SIGNALduino_Log3 $name, 4, "$name: $logMsg: message with length=$message_length is to long" if ($logMsg ne "");
-		return (0, "message is to long");
+		$length = ", length_max=$ProtocolListSIGNALduino{$id}{length_max}, length=$message_length";
+		SIGNALduino_Log3 $name, 4, "$name: $logMsg: message is to long$length" if ($logMsg ne "");
+		return (0, "message is to long$length");
 	}
 	return (1,"");
 }
