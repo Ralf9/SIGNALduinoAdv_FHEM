@@ -1,17 +1,21 @@
 ################################################################################
+# signalduino_protocols.pm
+#
 # The file is part of the SIGNALduino project
 #
 # !!! useful hints !!!
 # --------------------
 # name        => ' '       # name of device or group of all devices
 # comment     => ' '       # exact description or example of devices
+# changed     => ' '       # date off the last bigger change, e.g. "20181229 new", "20181219 moved to ID 0.3"
 # id          => ' '       # number of the protocol definition, each number only once use (accepted no .)
-# knownFreqs	=> ' '       # known receiver frequency 433.92 | 868.35 (some sensor families or remote send on more frequencies)
+# knownFreqs  => ' '       # known receiver frequency 433.92 | 868.35 (some sensor families or remote send on more frequencies)
 #
 # Time for one, zero, start, sync, float and pause are calculated by clockabs * value = result in microseconds, positive value stands for high signal, negative value stands for low signal
 # clockrange  => [ , ]     # only MC signals | min , max of pulse / pause times in microseconds
 # clockabs    => ' '       # only MU + MS signals | value for calculation of pulse / pause times in microseconds
 # clockabs    => '-1'      # only MS signals | value pulse / pause times is automatically
+# clockpos    => [ , ]     # nur MU - enthaelt die Info wo die clock enthalten ist (cp, one oder zero). https://github.com/Ralf9/RFFHEM/issues/1
 # one         => [ , ]     # only MU + MS signals | value pair for a one bit, must be always a positive and negative factor of clockabs (accepted . | example 1.5)
 # zero        => [ , ]     # only MU + MS signals | value pair for a zero bit, must be always a positive and negative factor of clockabs (accepted . | example -1.5)
 # start       => [ , ]     # only MU - value pair or more for start message
@@ -38,12 +42,12 @@
 # postamble   => ' '       # appends a string to the demodulated signal
 #
 # clientmodule => ' '      # FHEM module for processing
-# filterfunc  => ' '       # SIGNALduino_filterSign | SIGNALduino_compPattern --> SIGNALduino internal filter function, it remove the sign from the pattern, and compress message and pattern
+# filterfunc  => \&        # only MU - SIGNALduino_filterSign | SIGNALduino_compPattern --> SIGNALduino internal filter function, it remove the sign from the pattern, and compress message and pattern
 #                          # SIGNALduino_filterMC --> SIGNALduino internal filter function, it will decode MU data via Manchester encoding
 # dispatchBin => 1,        # If set to 1, data will be dispatched in binary representation to other logcial modules.
 #                            If not set (default) or set to 0, data will be dispatched in hex mode to other logical modules.
-# postDemodulation => \&   # only MU - SIGNALduino internal sub for processing before dispatching to a logical module
-# method      => \&        # call to process this message
+# postDemodulation => \&   # only MU + MS - SIGNALduino internal sub for processing before dispatching to a logical module
+# method      => \&        # only MC - call to process this message
 # format      => ' '       # twostate | pwm | manchester --> modulation type of the signal, only manchester use SIGNALduino internal, other types only comment
 # modulematch => ' '       # RegEx on the exact message including preamble | if defined, it will be evaluated
 # polarity    => 'invert'  # only MC signals | invert bits of the signal
@@ -64,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_24.02.'
+		"version" => 'v3.4.0-dev_ralf_03.03.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -252,7 +256,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch     => '^i......',
 			length_min      => '24',
 			length_max      => '24',
-			postDemodulation => 'SIGNALduino_postDemo_bit2itv1',
+			postDemodulation => &main::SIGNALduino_postDemo_bit2itv1,
 			},
     "4"    => # need more Device Infos / User Message
         {
@@ -564,7 +568,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch     => '^i......',
 			length_min      => '32',
 			length_max      => '34',
-			postDemodulation => 'SIGNALduino_postDemo_bit2Arctec',
+			postDemodulation => \&main::SIGNALduino_postDemo_bit2Arctec,
 		},
 	 "17.1"	=> # intertechno --> MU anstatt sonst MS (ID 17)
 			# MU;P0=344;P1=-1230;P2=-200;D=01020201020101020102020102010102010201020102010201020201020102010201020101020102020102010201020102010201010200;CP=0;R=0;
@@ -588,7 +592,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch     => '^i......',
  			length_min      => '28',
 			length_max     	=> '34',
-			postDemodulation => 'SIGNALduino_postDemo_bit2Arctec',
+			postDemodulation => \&main::SIGNALduino_postDemo_bit2Arctec,
 		},
 	"18"	=>	## Oregon Scientific v1
 						# MC;LL=-2721;LH=3139;SL=-1246;SH=1677;D=1A51FF47;C=1463;L=32;R=12;
@@ -648,7 +652,7 @@ our %ProtocolListSIGNALduino  = (
 			#clientmodule    => '',   				# not used now
 			#modulematch     => '',  				# not used now
 			length_min      => '16',
-			filterfunc      => 'SIGNALduino_filterSign',
+			filterfunc      => \&main::SIGNALduino_filterSign,
 		},
 	"21"	=>	## Einhell Garagentor
 						# https://forum.fhem.de/index.php?topic=42373.0 | user have no RAWMSG
@@ -964,7 +968,7 @@ our %ProtocolListSIGNALduino  = (
 			#modulematch     => '',     			# not used now
 			length_min      => '28',
 			length_max      => '40',
-			postDemodulation => 'SIGNALduino_postDemo_HE800',
+			postDemodulation => \&main::SIGNALduino_postDemo_HE800,
 		},
 	"36"	=>	## remote - cheap wireless dimmer
 						# https://forum.fhem.de/index.php/topic,38831.msg394238.html#msg394238
@@ -1049,8 +1053,8 @@ our %ProtocolListSIGNALduino  = (
 			length_min => '32',
 			length_max => '44',
 			paddingbits     => '8',
-			postDemodulation => 'SIGNALduino_postDemo_lengtnPrefix',
-			filterfunc      => 'SIGNALduino_compPattern',
+			postDemodulation => \&main::SIGNALduino_postDemo_lengtnPrefix,
+			filterfunc      => \&main::SIGNALduino_compPattern,
 		},    
 	"40" => ## Romotec
 			# https://github.com/RFD-FHEM/RFFHEM/issues/71
@@ -1183,7 +1187,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch  => '^r[A-Fa-f0-9]{22}', 
 			length_min   => '84',
 			length_max   => '120',	
-			postDemodulation => 'SIGNALduino_postDemo_Revolt',
+			postDemodulation => \&main::SIGNALduino_postDemo_Revolt,
 		},    
 	"46"	=>	## Berner Garagentorantrieb GA401
 						# remote TEDSEN SKX1MD 433.92 MHz - 1 button | settings via 9 switch on battery compartment
@@ -1442,7 +1446,7 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule         => 'CUL_WS',   
 			length_min           => '38',       # 46, letztes Bit fehlt = 45, 10 Bit Preambel = 35 Bit Daten
 			length_max           => '82',
-			postDemodulation     => 'SIGNALduino_postDemo_WS2000',
+			postDemodulation     => \&main::SIGNALduino_postDemo_WS2000,
 		}, 
 
 	"61" =>	## ELV FS10
@@ -1505,7 +1509,7 @@ our %ProtocolListSIGNALduino  = (
 			#clientmodule => '', 
 			#modulematch => '', 
 			length_min   => '24',
-			filterfunc   => 'SIGNALduino_filterMC',
+			filterfunc   => \&main::SIGNALduino_filterMC,
 		},
 	"64" => ##  WH2 #############################################################################
 			# MU;P0=-32001;P1=457;P2=-1064;P3=1438;D=0123232323212121232123232321212121212121212323212121232321;CP=1;R=63;
@@ -1541,7 +1545,7 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule => 'IT',
 			length_min   => '57',
 			length_max   => '72',
-			postDemodulation => 'SIGNALduino_postDemo_HE_EU',
+			postDemodulation => \&main::SIGNALduino_postDemo_HE_EU,
 		},
 	"66"	=>	## TX2 Protocol (Remote Temp Transmitter & Remote Thermo Model 7035)
 						# https://github.com/RFD-FHEM/RFFHEM/issues/160
@@ -1560,7 +1564,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch  => '^TX......',
 			length_min   => '43',
 			length_max   => '44',
-			postDemodulation => 'SIGNALduino_postDemo_WS7035',
+			postDemodulation => \&main::SIGNALduino_postDemo_WS7035,
 		},
 	"67"	=>	## TX2 Protocol (Remote Datalink & Remote Thermo Model 7053, 7054)
 						# https://github.com/RFD-FHEM/RFFHEM/issues/162
@@ -1583,7 +1587,7 @@ our %ProtocolListSIGNALduino  = (
 				modulematch      => '^TX......',
 				length_min       => '32',
 				length_max       => '34',
-				postDemodulation => 'SIGNALduino_postDemo_WS7053',
+				postDemodulation => \&main::SIGNALduino_postDemo_WS7053,
 		},
 	"68"	=>	## Pollin PFR-130 ###########################################################################
 						# MS;P0=-3890;P1=386;P2=-2191;P3=-8184;D=1312121212121012121212121012121212101012101010121012121210121210101210101012;CP=1;SP=3;R=20;O;
@@ -1653,7 +1657,7 @@ our %ProtocolListSIGNALduino  = (
 			preamble     	=> 'T',
 			length_min     => '50',
 			length_max     => '58',
-			postDemodulation => 'SIGNALduino_postDemo_FHT80TF',
+			postDemodulation => \&main::SIGNALduino_postDemo_FHT80TF,
 		},
 	"71" => ## PV-8644 infactory Poolthermometer
 		# MU;P0=1735;P1=-1160;P2=591;P3=-876;D=0123012323010101230101232301230123010101010123012301012323232323232301232323232323232323012301012;CP=2;R=97;
@@ -1733,7 +1737,7 @@ our %ProtocolListSIGNALduino  = (
 			preamble	=> '810c04xx0909a001',
 			length_min	=> '59',
 			length_max	=> '67',
-			postDemodulation => 'SIGNALduino_postDemo_FHT80',
+			postDemodulation => \&main::SIGNALduino_postDemo_FHT80,
 		},
 	"74"	=>	## FS20 - 'Remote Control (868Mhz),  @HomeAutoUser
 						# MU;P0=-10420;P1=-92;P2=398;P3=-417;P5=596;P6=-592;D=1232323232323232323232323562323235656232323232356232356232623232323232323232323232323235623232323562356565623565623562023232323232323232323232356232323565623232323235623235623232323232323232323232323232323562323232356235656562356562356202323232323232323;CP=2;R=72;
@@ -1753,7 +1757,7 @@ our %ProtocolListSIGNALduino  = (
 			preamble		=> '810b04f70101a001',
 			length_min		=> '50',
 			length_max		=> '67',
-			postDemodulation => 'SIGNALduino_postDemo_FS20',
+			postDemodulation => \&main::SIGNALduino_postDemo_FS20,
 		},
 	"75"	=>	## Conrad RSL (Erweiterung v2) @litronics https://github.com/RFD-FHEM/SIGNALDuino/issues/69
 						# ! same definition how ID 5, but other length !
@@ -1889,7 +1893,7 @@ our %ProtocolListSIGNALduino  = (
 			preamble        => 'E',
 			length_min		=> '104',
 			length_max		=> '114',
-			postDemodulation => 'SIGNALduino_postDemo_EM',
+			postDemodulation => \&main::SIGNALduino_postDemo_EM,
 		},
 	"81" => ## Remote control SA-434-1 based on HT12E @ elektron-bbs
 			# MU;P0=-485;P1=188;P2=-6784;P3=508;P5=1010;P6=-974;P7=-17172;D=0123050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056305630563730505056305050563056305637305050563050505630563056373050505630505056;CP=3;R=0;

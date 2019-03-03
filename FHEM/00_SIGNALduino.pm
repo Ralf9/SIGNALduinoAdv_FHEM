@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-02-24 11:00:00Z v3.4.0-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-03-03 15:00:00Z v3.4.0-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -8,7 +8,7 @@
 # The purpos is to use it as addition to the SIGNALduino which runs on an arduno nano or arduino uno.
 # It routes Messages serval Modules which are already integrated in FHEM. But there are also modules which comes with it.
 # N. Butzek, S. Butzek, 2014-2015
-# S.Butzek,Ralf9 2016-2018
+# S.Butzek,Ralf9 2016-2019
 
 package main;
 my $missingModulSIGNALduino="";
@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.0-dev_ralf_24.02.",
+	SDUINO_VERSION            => "v3.4.0-dev_ralf_03.03.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -45,7 +45,7 @@ use constant {
 };
 
 my %ProtocolListSIGNALduino = %SD_Protocols::ProtocolListSIGNALduino;
-my %VersionProtocolList = %SD_Protocols::VersionProtocolList;
+my $VersionProtocolList = \%SD_Protocols::VersionProtocolList;
 
 sub SIGNALduino_Attr(@);
 #sub SIGNALduino_Clear($);           # wird nicht mehr benoetigt
@@ -329,8 +329,8 @@ SIGNALduino_Define($$)
   $hash->{LASTDMSG} = "nothing";
   $hash->{TIME}=time();
   $hash->{versionmodul} = SDUINO_VERSION;
-  if (defined($VersionProtocolList{version})) {
-	$hash->{versionprotoL} = $VersionProtocolList{version};
+  if (defined($VersionProtocolList->{version})) {
+	$hash->{versionprotoL} = $VersionProtocolList->{version};
   }
   
   Log3 $name, 3, "$name: Firmwareversion: ".$hash->{READINGS}{version}{VAL}  if ($hash->{READINGS}{version}{VAL});
@@ -1386,9 +1386,21 @@ SIGNALduino_Read($)
 		my $part = "";
 		my $partD;
 		my $dOverfl = 0;
+		#my $fFlag = 0;
 		
 		foreach my $msgPart (@msg_parts) {
 			next if ($msgPart eq "");
+			#my $msgHex="";
+			#for my $c (split //, $msgPart . ";") {
+			#	$msgHex .= sprintf ("%02x", ord($c)) . " ";
+			#}
+			#Log3 $name, 3, "$name/readhex: $msgHex";
+			#if (substr($msgPart,0,1) eq "D" && $fFlag == 0) {
+			#	$msgHex = sprintf ("%02x %02x", ord("F"), ord("6")) . " ";
+			#	Log3 $name, 3, "$name/readhex: $msgHex F64";
+			#	$fFlag == 1;
+			#}
+			
 			$m0 = substr($msgPart,0,1);
 			$mnr0 = ord($m0);
 			$m1 = substr($msgPart,1);
@@ -2279,15 +2291,12 @@ sub SIGNALduino_Parse_MU($$$$@)
 				my $method = $ProtocolListSIGNALduino{$id}{filterfunc};
 		   		if (!exists &$method)
 				{
-					SIGNALduino_Log3 $name, 5, "$name: Error: Unknown filtermethod=$method. Please define it in file $0";
+					SIGNALduino_Log3 $name, 5, "$name: Error: Unknown filterfunc, please check the definition";
 					next;
 				} else {					
-					SIGNALduino_Log3 $name, 5, "$name: for MU Protocol id $id, applying filterfunc $method";
+					SIGNALduino_Log3 $name, 5, "$name: for MU Protocol id $id, applying filterfunc" if ($debug);
 
-				    #no strict "refs";
-				    my $methodRef = \&{ $method };
-					(my $count_changes,$rawData,my %patternListRaw_tmp) = $methodRef->($name,$id,$rawData,%patternListRaw);
-				    #use strict "refs";
+					(my $count_changes,$rawData,my %patternListRaw_tmp) = $method->($name,$id,$rawData,%patternListRaw);
 
 					%patternList = map { $_ => round($patternListRaw_tmp{$_}/$clockabs,1) } keys %patternListRaw_tmp; 
 				}
@@ -3227,22 +3236,21 @@ sub SIGNALduino_callsub
 	my $name = shift;
 	my @args = @_;
 	
-	my $methodRef = \&{ $method };
-	if ( defined $methodRef && defined &$methodRef )   
+	if ( defined $method && defined &$method )
 	{
 		#my $subname = @{[eval {&$method}, $@ =~ /.*/]};
-		SIGNALduino_Log3 $name, 5, "$name: applying $method , value before : @args"; # method $subname";
+		SIGNALduino_Log3 $name, 5, "$name: applying $funcname , value before : @args"; # method $subname";
 		
-		my ($rcode, @returnvalues) = $methodRef->($name, @args) ;	
+		my ($rcode, @returnvalues) = $method->($name, @args) ;	
 			
 		if (@returnvalues && defined($returnvalues[0])) {
-			SIGNALduino_Log3 $name, 5, "$name: rcode=$rcode, modified after $method: @returnvalues";
+			SIGNALduino_Log3 $name, 5, "$name: rcode=$rcode, modified after $funcname: @returnvalues";
 		} else {
-	   		SIGNALduino_Log3 $name, 5, "$name: rcode=$rcode, after calling $method";
+	   		SIGNALduino_Log3 $name, 5, "$name: rcode=$rcode, after calling $funcname";
 	    } 
 	    return ($rcode, @returnvalues);
-	} elsif (defined $methodRef ) {
-		SIGNALduino_Log3 $name, 5, "$name: Error: Unknown method $funcname $method Please check definition";
+	} elsif (defined $method ) {
+		SIGNALduino_Log3 $name, 5, "$name: Error: Unknown method $funcname, please check definition";
 		return (0,undef);
 	}	
 	return (1,@args);			
@@ -4077,7 +4085,7 @@ sub	SIGNALduino_Hideki()
 		return (-1,"message is to long") if (defined($ProtocolListSIGNALduino{$id}{length_max}) && $message_length > $ProtocolListSIGNALduino{$id}{length_max} );
 
 		
-		my $hidekihex;
+		my $hidekihex = "";
 		my $idx;
 		
 		for ($idx=$message_start; $idx<$message_end; $idx=$idx+9)
@@ -4253,6 +4261,7 @@ sub SIGNALduino_filterMC($$$%)
 	
 	#SIGNALduino_Log3 $name, 5, "$name: filterbits: ".@bitData;
 	$rawData = join "", @bitData;
+	SIGNALduino_Log3 $name, 5, "$name applied filterfunc: SIGNALduino_filterMC, rawData=$rawData";
 	return (undef ,$rawData, %patternListRawFilter);
 	
 }
@@ -4317,6 +4326,7 @@ sub SIGNALduino_filterSign($$$%)
 			$buckets{$key}=abs($patternListRaw{$key});
 		}
 	}
+	SIGNALduino_Log3 $name, 5, "$name applied filterfunc: SIGNALduino_filterSign, count=$cnt";
 
 	return ($cnt,$rawData, %patternListRaw);
 	#print "rdata: ".$msg_parts{rawData}."\n";
@@ -4389,6 +4399,7 @@ sub SIGNALduino_compPattern($$$%)
 			$buckets{$key}=$patternListRaw{$key};
 		}
 	}
+	SIGNALduino_Log3 $name, 5, "$name applied filterfunc: SIGNALduino_compPattern, count=$cnt";
 
 	return ($cnt,$rawData, %patternListRaw);
 	#print "rdata: ".$msg_parts{rawData}."\n";
