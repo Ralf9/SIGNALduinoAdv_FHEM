@@ -151,7 +151,7 @@ my $clientsSIGNALduino = ":IT:"
 						."FS20:"
 						."CUL_EM:"
 						."Fernotron:"
-						."SD_Rollo_Keeloq:"
+						."SD_Keeloq:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -172,7 +172,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|91.1|92)#.*',		# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|91.1|92|93)#.*',		# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -183,7 +183,7 @@ my %matchListSIGNALduino = (
      "25:CUL_EM"    				=> "^E0.................", 
      "26:Fernotron"  			=> '^P82#.*',
      "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79)#.*',
-     "28:SD_Rollo_Keeloq"		=> '^P(?:87|88)#.*',
+     "28:SD_Keeloq"				=> '^P(?:87|88)#.*',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -243,6 +243,7 @@ SIGNALduino_Initialize($)
   $hash->{muIdList} = ();
   $hash->{mcIdList} = ();
   
+  #ours %attr{};
 }
 
 #
@@ -256,7 +257,6 @@ our $FW_ME;
 #
 our $FW_CSRF;
 our $FW_detail;
-
 
 sub
 SIGNALduino_FingerprintFn($$)
