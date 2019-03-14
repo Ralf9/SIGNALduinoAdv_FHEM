@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-03-03 15:00:00Z v3.4.0-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-03-13 15:00:00Z v3.4.0-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.0-dev_ralf_03.03.",
+	SDUINO_VERSION            => "v3.4.0-dev_ralf_13.03.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -152,6 +152,7 @@ my $clientsSIGNALduino = ":IT:"
 						."CUL_EM:"
 						."Fernotron:"
 						."SD_Keeloq:"
+						."SIGNALduino_TOOL:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -184,6 +185,7 @@ my %matchListSIGNALduino = (
      "26:Fernotron"  			=> '^P82#.*',
      "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79)#.*',
      "28:SD_Keeloq"				=> '^P(?:87|88)#.*',
+     "90:SIGNALduino_TOOL"		=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -331,6 +333,7 @@ SIGNALduino_Define($$)
   $hash->{versionmodul} = SDUINO_VERSION;
   if (defined($VersionProtocolList->{version})) {
 	$hash->{versionprotoL} = $VersionProtocolList->{version};
+	Log3 $name, 3, "$name: Protocolhashversion: " . $hash->{versionprotoL};
   }
   
   Log3 $name, 3, "$name: Firmwareversion: ".$hash->{READINGS}{version}{VAL}  if ($hash->{READINGS}{version}{VAL});
@@ -881,6 +884,20 @@ SIGNALduino_Get($@)
   
   if (IsDummy($name))
   {
+  	if ($arg =~ m/^id([0-9]+(\.[0-9])?)/) {		# wenn bei get raw "id<nr>" am Anfang steht, dann wird "nr" als temporaere whitelist verwendet
+		my $id;
+		my $pos = index($arg,"#");
+		if ($pos != -1) {
+			$id = substr($arg,2,$pos-2);
+			$arg = substr($arg,$pos+1);
+		}
+		else {
+			$id = substr($arg,2);
+		}
+		SIGNALduino_IdList("x:$name", $id);
+		$hash->{tmpWhiteList} = $id;
+	}
+	
   	if ($arg =~ /^M[CcSU];.*/)
   	{
 		$arg="\002$arg\003";  	## Add start end end marker if not already there
@@ -1964,6 +1981,9 @@ sub SIGNALduno_Dispatch($$$$$)
 		}
 		
 		$dmsg = lc($dmsg) if ($id eq '74');
+		if (IsDummy($name) && defined($hash->{rawListNr})) {	# wenn es das Internal rawListNr gibt, dann wird die Nr per dispatch an das Modul SIGNALduino_TOOL uebergeben
+			$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $dmsg;
+		}
 		SIGNALduino_Log3 $name, 4, "$name Dispatch: $dmsg, $rssi dispatch";
 		Dispatch($hash, $dmsg, \%addvals);  ## Dispatch to other Modules 
 		
@@ -2745,6 +2765,8 @@ SIGNALduino_Parse($$$$@)
 		return undef;
 	}
 	
+	delete($hash->{rawListNr}) if (defined($hash->{rawListNr}));
+	
 	if ( AttrVal($hash->{NAME},"verbose","0") > 4 && !$dispatched && !IsDummy($name))	# bei verbose 5 wird die $rmsg in $hash->{unknownmessages} hinzugefuegt
 	{
    	    my $notdisplist;
@@ -3091,6 +3113,7 @@ sub SIGNALduino_IdList($@)
 	my $wflag = 0;		# whitelist flag, 0=disabled
 	
 	delete ($hash->{IDsNoDispatch}) if (defined($hash->{IDsNoDispatch}));
+	delete ($hash->{tmpWhiteList}) if (defined($hash->{tmpWhiteList}));
 
 	if (!defined($aVal)) {
 		$aVal = AttrVal($name,"whitelist_IDs","");
