@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_03.03.'
+		"version" => 'v3.4.0-dev_ralf_14.03.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -133,7 +133,7 @@ our %ProtocolListSIGNALduino  = (
 			one			=> [1,-18],
 			zero			=> [1,-9],
 			sync			=> [1,-37],
-			clockabs		=> 310,
+			clockabs		=> -1,
 			format			=> 'twostate',		# not used now
 			preamble		=> 's',						# prepend to converted message
 			postamble		=> '00',					# Append to converted message
@@ -1029,8 +1029,8 @@ our %ProtocolListSIGNALduino  = (
 			clockabs     => 250,
 			clockpos     => ['zero',0],
 			format       => 'twostate',
-			preamble     => 'u38#',
-			#clientmodule	=> '',
+			preamble     => 'W38#',
+			clientmodule	=> 'SD_WS',
 			#modulematch	=> '^P38#.*',
 			length_min   => '36',
 			length_max   => '36',
@@ -1982,9 +1982,10 @@ our %ProtocolListSIGNALduino  = (
 			id						=> '84',
 			one						=> [3,-1],
 			zero					=> [1,-3],
-			start					=> [4,-4,4,-4,4,-4],
+			start					=> [4,-4,4,-4],
 			clockabs			=> 215, 
 			clockpos			=> ['zero',0],
+			reconstructBit		=> '1',
 			format				=> 'twostate',
 			preamble			=> 'W84#',						# prepend to converted message
 			postamble			=> '',								# append to converted message
