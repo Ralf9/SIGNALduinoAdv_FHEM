@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_14.03.'
+		"version" => 'v3.4.0-dev_ralf_31.03.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -196,7 +196,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs   		=> '560',
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'P1#',					# prepend to converted message	 	
-			postamble		=> '',					# Append to converted message	 	
+			#postamble		=> '',					# Append to converted message	 	
 			clientmodule    => 'SD_RSL',
 			modulematch     => '^P1#[A-Fa-f0-9]{8}',
 			length_min 		=> '20',   # 23
@@ -238,7 +238,8 @@ our %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '24'
 			},
-    "3.1"    => # MS;P0=-11440;P1=-1121;P2=-416;P5=309;P6=1017;D=150516251515162516251625162516251515151516251625151;CP=5;SP=0;R=66;
+    "3.1"    => # https://forum.fhem.de/index.php/topic,58397.msg757459.html#msg757459
+				# MS;P0=-11440;P1=-1121;P2=-416;P5=309;P6=1017;D=150516251515162516251625162516251515151516251625151;CP=5;SP=0;R=66;
 			    # MS;P1=309;P2=-1130;P3=1011;P4=-429;P5=-11466;D=15123412121234123412141214121412141212123412341234;CP=1;SP=5;R=38;  Gruppentaste, siehe Kommentar in sub SIGNALduino_bit2itv1
 			    # need more Device Infos / User Message
 		{
@@ -256,7 +257,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch     => '^i......',
 			length_min      => '24',
 			length_max      => '24',
-			postDemodulation => &main::SIGNALduino_postDemo_bit2itv1,
+			postDemodulation => \&main::SIGNALduino_postDemo_bit2itv1,
 			},
     "4"    => # need more Device Infos / User Message
         {
@@ -541,6 +542,7 @@ our %ProtocolListSIGNALduino  = (
 			start           => [17,-5],
 			clockabs		=> 280,
 			clockpos	=> ['zero',0],
+			reconstructBit	=> '1',
 			format 			=> 'twostate',	  		
 			preamble		=> 'P16#',				# prepend to converted message	
 			clientmodule    => 'Dooya',
@@ -922,7 +924,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs   		=> '500',
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'W33#',				# prepend to converted message	
-			postamble		=> '',					# Append to converted message	 	
+			#postamble		=> '',					# Append to converted message	 	
 			clientmodule    => 'SD_WS',
 			#modulematch     => '',     			# not used now
 			length_min      => '42',
@@ -963,7 +965,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs   		=> '280',		
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'ih',				# prepend to converted message	
-			postamble		=> '',					# Append to converted message	 	
+			#postamble		=> '',					# Append to converted message	 	
 			clientmodule    => 'IT',
 			#modulematch     => '',     			# not used now
 			length_min      => '28',
@@ -1189,30 +1191,37 @@ our %ProtocolListSIGNALduino  = (
 			length_max   => '120',	
 			postDemodulation => \&main::SIGNALduino_postDemo_Revolt,
 		},    
-	"46"	=>	## Berner Garagentorantrieb GA401
-						# remote TEDSEN SKX1MD 433.92 MHz - 1 button | settings via 9 switch on battery compartment
-						# compatible with doors: BERNER SKX1MD, ELKA SKX1MD, TEDSEN SKX1LC, TEDSEN SKX1
-						# https://github.com/RFD-FHEM/RFFHEM/issues/91
-						# door open
-						# MU;P0=-15829;P1=-3580;P2=1962;P3=-330;P4=245;P5=-2051;D=1234523232345234523232323234523234540023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323;CP=2;
-						# door close
-						# MU;P0=-1943;P1=1966;P2=-327;P3=247;P5=-15810;D=01230121212301230121212121230121230351230121212301230121212121230121230351230121212301230121212121230121230351230121212301230121212121230121230351230121212301230121212121230121230351230;CP=1;
+		"46"	=>	## Tedsen Fernbedienungen u.a. für Berner Garagentorantrieb GA401 und Geiger Antriebstechnik Rolladensteuerung
+							# https://github.com/RFD-FHEM/RFFHEM/issues/91
+							# remote TEDSEN SKX1MD 433.92 MHz - 1 button | settings via 9 switch on battery compartment
+							# compatible with doors: BERNER SKX1MD, ELKA SKX1MD, TEDSEN SKX1LC, TEDSEN SKX1 - 1 Button
+							# MU;P0=-15829;P1=-3580;P2=1962;P3=-330;P4=245;P5=-2051;D=1234523232345234523232323234523234540 0 2345 2323 2345 2345 2323 2323 2345 2323 454 023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323232323452323454023452323234523452323;CP=2;
+							# MU;P0=-1943;P1=1966;P2=-327;P3=247;P5=-15810;D=012301212123012301212121212301212303           5 1230 1212 1230 1230 1212 1212 1230 1212 303 5 1230 1212 1230 1230 1212 1212 1230 1212 303 51230121212301230121212121230121230351230121212301230121212121230121230351230;CP=1;
+							## GEIGER GF0001, 2 Button, DIP-Schalter: + 0 + - + + - 0 0
+							# https://forum.fhem.de/index.php/topic,39153.0.html
+							# rauf:   MU;P0=-32001;P1=2072;P2=-260;P3=326;P4=-2015;P5=-15769;D=01212123412123434121212123434123412351212123412123434121212123434123412351212123412123434121212123434123412351212123412123434121212123434123412351212123412123434121212123434123412351212123412123434121212123434123412351212123412123434121212123434123412351;CP=3;R=37;O;
+							# runter: MU;P0=-15694;P1=2009;P2=-261;P3=324;P4=-2016;D=01212123412123434121212123434123434301212123412123434121212123434123434301212123412123434121212123434123434301212123412123434121212123434123434301212123412123434121212123434123434301;CP=3;R=30;
+							# ?
+							# MU;P0=313;P1=1212;P2=-309;P4=-2024;P5=-16091;P6=2014;D=01204040562620404626204040404040462046204040562620404626204040404040462046204040562620404626204040404040462046204040562620404626204040404040462046204040;CP=0;R=236;
+							# MU;P0=-15770;P1=2075;P2=-264;P3=326;P4=-2016;P5=948;D=012121234121234341212121234341234343012125;CP=3;R=208;		{
 		{
-			name				=> 'Berner Garagedoor GA401',
-			comment				=> 'remote control TEDSEN SKX1MD',
+			name				=> 'SKXxxx, GF0x0x',
+			comment				=> 'remote controls Tedsen SKXxxx, GEIGER GF0x0x, Berner',
+			changed				=> '20190323 ID 78 added',
 			id					=> '46',
-			one					=> [1,-8],
-			zero					=> [8,-1],
-			start					=> [1,-63],
-			clockabs				=> 250,	# -1=auto	
-			clockpos				=> ['one',0],
+			one					=> [7,-1],
+			zero					=> [1,-7],
+			start					=> [-55],
+			clockabs				=> 290,
+			clockpos				=> ['zero',0],
+			reconstructBit			=> '1',
 			format					=> 'twostate',	# not used now
 			preamble				=> 'P46#',
 			clientmodule			=> 'SD_UT',
 			modulematch			=> '^P46#.*',
-			length_min			=> '16',
+			length_min			=> '14',       # ???
 			length_max			=> '18',
-			},
+		},
 	"47"	=>	## Maverick
 						# MC;LL=-507;LH=490;SL=-258;SH=239;D=AA9995599599A959996699A969;C=248;L=104;
 		{
@@ -1307,7 +1316,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs   		=> '500',
 			format     		=> 'twostate',  # not used now
 			preamble		=> 'W51#',		# prepend to converted message	 	
-			postamble		=> '',			# Append to converted message	 	
+			#postamble		=> '',			# Append to converted message	 	
 			clientmodule    => 'SD_WS',   
 			modulematch     => '^W51#.*',
 			length_min      => '40',
@@ -1470,7 +1479,7 @@ our %ProtocolListSIGNALduino  = (
 			clockpos	=> ['cp'],
 			format 		=> 'twostate',
 			preamble	=> 'P61#',      # prepend to converted message
-			postamble	=> '',         # Append to converted message
+			#postamble	=> '',         # Append to converted message
 			clientmodule	=> 'FS10',
 			#modulematch	=> '',
 			length_min	=> '38',	# eigentlich 41 oder 46 (Pruefsumme nicht bei allen)
@@ -1829,26 +1838,28 @@ our %ProtocolListSIGNALduino  = (
 			length_max		=> '44',
 			remove_zero		=> 1,					# Removes leading zeros from output
 		},
-	"78"	=>	## geiger blind motors
+	"78"	=>	## ID geloescht! geiger blind motors
 						# MU;P0=313;P1=1212;P2=-309;P4=-2024;P5=-16091;P6=2014;D=01204040562620404626204040404040462046204040562620404626204040404040462046204040562620404626204040404040462046204040562620404626204040404040462046204040;CP=0;R=236;
 						# https://forum.fhem.de/index.php/topic,39153.0.html
 		{
 			name			=> 'geiger',
-			comment			=> 'geiger blind motors',
+			comment			=> 'deleted. it can not be used!',
+			changed			=> '20190323 deleted. Old moved to ID 46',
 			id				=> '78',
-			developId		=> 'y',
-			zero			=> [1,-6.6], 		
-			one				=> [6.6,-1],   		 
-			start  			=> [-53],		
-			clockabs		=> 300,					 
-			clockpos		=> ['zero',0],
-			format 			=> 'twostate',	     
-			preamble		=> 'u78#',			# prepend to converted message	
-			clientmodule    => 'SIGNALduino_un',   	
+			deleted			=> '1',
+			developId		=> 'p',
+			#zero			=> [1,-6.6], 		
+			#one				=> [6.6,-1],   		 
+			#start  			=> [-53],		
+			#clockabs		=> 300,					 
+			#clockpos		=> ['zero',0],
+			format 			=> 'twostate',
+			#preamble		=> 'u78#',			# prepend to converted message	
+			#clientmodule    => 'SIGNALduino_un',   	
 			#modulematch	=> '^TX......', 
-			length_min      => '14',
-			length_max      => '18',
-			paddingbits     => '2'				 # pad 1 bit, default is 4
+			#length_min      => '14',
+			#length_max      => '18',
+			#paddingbits     => '2'				 # pad 1 bit, default is 4
 		},
 	"79"	=>	## Heidemann | Heidemann HX | VTX-BELL
 						# https://github.com/RFD-FHEM/SIGNALDuino/issues/84
@@ -1926,7 +1937,8 @@ our %ProtocolListSIGNALduino  = (
 			# https://github.com/RFD-FHEM/RFFHEM/issues/257
 		{
 			name           => 'Fernotron',
-			id             => '82',       # protocol number
+			id             => '82',
+			comment        => 'developModule. Fernotron is not in github.com/RFD-FHEM or svn',
 			changed        => '20180906 new',
 			developId      => 'm',
 			dispatchBin    => '1',
@@ -1988,7 +2000,7 @@ our %ProtocolListSIGNALduino  = (
 			reconstructBit		=> '1',
 			format				=> 'twostate',
 			preamble			=> 'W84#',						# prepend to converted message
-			postamble			=> '',								# append to converted message
+			#postamble			=> '',								# append to converted message
 			clientmodule	=> 'SD_WS',
 			length_min		=> '39',							# das letzte Bit fehlt meistens
 			length_max		=> '40',
@@ -2243,5 +2255,49 @@ our %ProtocolListSIGNALduino  = (
 			length_max   => '36',           # 1. MSG: 33 Bit, wird verlaengert auf 36 Bit
 			clientmodule	=> 'SD_UT',
 			#modulematch	=> '^P93#.*',
-		}
+		},
+		"94"	=>	# Atech wireless weather station (vermutlicher Name: WS-308)
+							# https://github.com/RFD-FHEM/RFFHEM/issues/547 @Kreidler1221
+							# wrong? MU;P0=-31266;P1=1537;P2=-294;P3=-7582;P4=-1999;P5=-223;D=012121212121212131414141412121412121414141414141414141412121412121414141414141212141212141412121412121414121015151512121212131414141412121412121414141414141414141412121412121414141414141212141212141412121412121414121;CP=1;
+							# MU;P0=-31266;P1=1538;P2=-285;P3=-7582;P4=-1995;D=012121212121212131414141412121412121414141414141414141412121412121414141414121214121214141414121214121214121012121212121212131414141412121412121414141414141414141412121412121414141414121214121214141414121214121214121;CP=1;
+							# MU;P0=-31268;P1=1538;P2=-285;P3=-7574;P4=-1997;D=012121212121212131414141412121412121414141414141414141412121412121414141412121414141212141212141212141414121012121212121212131414141412121412121414141414141414141412121412121414141412121414141212141212141212141414121;CP=1;
+			{
+				name				=> 'Atech',
+				comment				=> 'temperature sensor',
+				changed				=> '20190318 new',
+				id				=> '94',
+				one				=> [6,-1],
+				zero				=> [6,-8],
+				start				=> [6,-30],
+				clockabs			=> 250,
+				clockpos			=> ['cp'],
+				#developId			=> 'y',
+				format				=> 'twostate',
+				preamble			=> 'u94#',
+				#clientmodule		=> '',
+				#modulematch		=> '',
+				length_min			=> '36',
+				length_max			=> '54',
+			},
+		"95"	=>	# Techmar / Garden Lights Fernbedienung, 6148011 Remote control + 12V Outdoor receiver
+							# https://github.com/RFD-FHEM/RFFHEM/issues/558 @BlackcatSandy
+							# MU;P0=-644;P1=548;P2=-315;P3=-959;P4=-500;D=01010101010101012121212121213121010101210101012121212101212101010101012101210101012101010101212121212101010101010101012121212121213121010101210101012121212101212101010101012101210101012101010101212121212101010101010101012121212121213121010101210101012121;CP=1;R=58;O;
+			{
+				name				=> 'Techmar',
+				comment				=> 'Garden Lights remote control',
+				changed				=> '20190331 new',
+				id				=> '95',
+				one				=> [1,-0.6],	# 550,-330
+				zero				=> [1,-1.2],	# 550,-660
+				start				=> [1,-1.8],	# 550,-990
+				clockabs			=> 550,
+				clockpos			=> ['cp'],
+				#developId			=> 'y',
+				format				=> 'twostate',
+				preamble			=> 'P95#',
+				clientmodule		=> 'SD_UT',
+				#modulematch		=> '',
+				length_min			=> '50',
+				length_max			=> '50',
+			}
 );
