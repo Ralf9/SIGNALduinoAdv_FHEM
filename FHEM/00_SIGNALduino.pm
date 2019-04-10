@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-03-13 15:00:00Z v3.4.0-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-04-10 15:00:00Z v3.4.0-dev $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.0-dev_ralf_13.03.",
+	SDUINO_VERSION            => "v3.4.0-dev_ralf_10.04.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -173,7 +173,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|91.1|92|93)#.*',		# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|91.1|92|93|95)#.*',		# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -1966,10 +1966,12 @@ sub SIGNALduno_Dispatch($$$$$)
 		}
 		
 		$hash->{RAWMSG} = $rmsg;
-		my %addvals = (DMSG => $dmsg);
-		$addvals{ID} = $id if (index($dmsg,"#") == -1);
+		my %addvals = (
+			DMSG => $dmsg,
+			Protocol_ID => $id
+		);
 		if (AttrVal($name,"suppressDeviceRawmsg",0) == 0) {
-			$addvals{RAWMSG} = $rmsg
+			$addvals{RAWMSG} = $rmsg;
 		}
 		if(defined($rssi)) {
 			$hash->{RSSI} = $rssi;
@@ -4574,9 +4576,9 @@ sub SIGNALduino_FW_getProtocolList
 				elsif ($devFlag == 0 && $ProtocolListSIGNALduino{$id}{developId} eq "y" && $develop !~ m/y$id/) {
 					$checkAll = "SDnotCheck";
 				}
-				elsif ($devFlag == 0 && $ProtocolListSIGNALduino{$id}{developId} eq "m") {
-					$checkAll = "SDnotCheck";
-				}
+				#elsif ($ProtocolListSIGNALduino{$id}{developId} eq "m") {
+				#	$checkAll = "SDnotCheck";
+				#}
 			}
 		}
 		else {
@@ -4589,6 +4591,10 @@ sub SIGNALduino_FW_getProtocolList
 			if (substr($whitelist,0,1) eq "#") {	# whitelist nicht aktiv, dann entspricht select all dem $activeIdHash 
 				$checkAll = "SDcheck";
 			}
+		}
+		
+		if (exists($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "m") {
+			$checkAll = "SDnotCheck";
 		}
 		
 		if ($devFlag == 0 && $dispChanged < 0 && exists($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "p") {
