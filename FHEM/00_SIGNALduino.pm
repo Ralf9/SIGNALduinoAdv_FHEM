@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-04-10 15:00:00Z v3.4.0-dev $
+# $Id: 00_SIGNALduino.pm 10488 2019-05-25 18:00:00Z v3.4.0-dev-Ralf9 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.0-dev_ralf_10.04.",
+	SDUINO_VERSION            => "v3.4.0-dev_ralf_25.05.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -69,7 +69,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
 # "ITParms"  => ["ip",'.*'],
   "ping"     => ["P",'^OK$'],
   "config"   => ["CG",'^MS.*MU.*MC.*'],
-#  "protocolIDs"   => ["none",'none'],
+  "protocolIdToJson"   => ["none",'none'],
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
   "ccpatable" => ["C3E", '^C3E = .*'],
@@ -173,7 +173,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|91.1|92|93|95)#.*',		# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|92|93|95)#.*',		# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -236,6 +236,7 @@ SIGNALduino_Initialize($)
 					  ." development:0$dev"
 					  ." noMsgVerbose:0,1,2,3,4,5"
 					  ." maxMuMsgRepeat"
+					  ." userProtocol"
 		              ." $readingFnAttributes";
 
   $hash->{ShutdownFn}		= "SIGNALduino_Shutdown";
@@ -847,8 +848,8 @@ SIGNALduino_Get($@)
      my $arguments = ' ';
      foreach my $arg (sort keys %gets) {
         next if ($arg =~ m/^cc/ && $hasCC1101 == 0);
-        next if ($arg ne "raw" && $arg ne "zAvailableFirmware" && IsDummy($name));
-        if ($arg ne "raw" && $arg ne "ccreg") {
+        next if ($arg ne "raw" && $arg ne "protocolIdToJson" && $arg ne "zAvailableFirmware" && IsDummy($name));
+        if ($arg ne "raw" && $arg ne "ccreg" && $arg ne "protocolIdToJson") {
            $arg .= ":noArg";
         }
         $arguments.= $arg . " ";
@@ -880,6 +881,30 @@ SIGNALduino_Get($@)
 	my $hardware=AttrVal($name,"hardware","nano");
   	SIGNALduino_querygithubreleases($hash, $account);
 	return "$a[1]: \n\nFetching $channel firmware versions for $hardware from github\n";
+  }
+  elsif ($a[1] eq "protocolIdToJson")
+  {
+	my $ret;
+	my $fieldVal;
+	$arg = 0 if ($arg eq "");
+	if (exists($ProtocolListSIGNALduino{$arg})) {
+		my %idHash = %{$ProtocolListSIGNALduino{$arg}};
+		$ret = toJSON(\%idHash);
+		SIGNALduino_Log3 $name, 4, "$name: get protocolIdToJson: $ret";
+		$ret .= "\n\n";
+		foreach my $field (sort keys %idHash) {
+			$fieldVal = $ProtocolListSIGNALduino{$arg}{$field};
+			if (ref $fieldVal eq "ARRAY") {
+				$fieldVal = "[" . join(",", @$fieldVal) . "]";
+			}
+			$ret .= sprintf("%-15s => %s", $field, $fieldVal);
+			$ret .= "\n";
+		}
+	}
+	else {
+		$ret = "ID=$arg not exists!";
+	}
+	return "$a[1] ID=$arg: \n\n$ret\n";
   }
   
   if (IsDummy($name))
@@ -2874,6 +2899,35 @@ SIGNALduino_Attr(@)
 		} else {
 		  $hash->{MatchList} = \%matchListSIGNALduino;								## Set defaults
 		  SIGNALduino_Log3 $name, 2, $name .": $aVal: not a HASH using defaults" if( $aVal );
+		}
+	}
+	elsif ($aName eq "userProtocol")
+	{
+		if ($aVal !~ m/^\[.*\]$/) {
+			$aVal = "[" . $aVal . "]";
+		}
+		
+		if ($aVal =~ m/^\[\{.*\}\]$/) {
+			my $id;
+			if ($aVal !~ m/^\[.*\]$/) {
+				$aVal = "[" . $aVal . "]";
+			}
+			my @decoded = eval { @{decode_json($aVal)} };
+			if ($@) {
+				SIGNALduino_Log3 $name, 3, "$name Attr: userProtocol $@ can't decode JSON";
+			}
+			#SIGNALduino_Log3 $name, 3, "$name Attr: userProtocol Dumper" . Dumper(@decoded);	# nur zum Test
+			for my $nr (0 .. $#decoded) {
+				$id = $decoded[$nr]->{id};
+				$ProtocolListSIGNALduino{$id} = $decoded[$nr];
+				foreach my $field (keys %{$decoded[$nr]}) {
+					SIGNALduino_Log3 $name, 4, "$name Attr: userProtocol[$nr] Field=$field : " . $decoded[$nr]->{$field};	# nur zum Test
+					$ProtocolListSIGNALduino{$id}{$field} = $decoded[$nr]->{$field};
+				}
+			}
+		}
+		else {
+			SIGNALduino_Log3 $name, 3, "$name Attr: userProtocol syntax error";
 		}
 	}
 	elsif ($aName eq "verbose")
