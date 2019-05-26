@@ -2689,10 +2689,15 @@ SIGNALduino_Parse_MC($$$$@)
 			Debug "$name: extracted data $bitData (bin)\n" if ($debug); ## Convert Message from hex to bits
 		   	Log3 $name, 5, "$name: extracted data $bitData (bin)";
 			
+			if (!exists $ProtocolListSIGNALduino{$id}{method}) {
+				SIGNALduino_Log3 $name, 3, "$name ParseMc: Error ID=$id, no method defined, it must be defined in the protocol hash!";
+				next;
+			}
+			
 			my $method = $ProtocolListSIGNALduino{$id}{method};
-		    if (!exists &$method)
+		    if (!defined &$method)
 			{
-				Log3 $name, 5, "$name: Error: Unknown function=$method. Please define it in file $0";
+				Log3 $name, 3, "$name ParseMc: Error ID=$id, Unknown method. Please check it!";
 			} else {
 				$mcbitnum = length($bitData) if ($mcbitnum > length($bitData));
 				my ($rcode,$res) = $method->($name,$bitData,$id,$mcbitnum);
@@ -2727,7 +2732,6 @@ SIGNALduino_Parse_MC($$$$@)
 				} else {
 					$res="undef" if (!defined($res));
 					Log3 $name, 5, "$name: protocol does not match return from method: ($res)" ; 
-
 				}
 			}
 		}
