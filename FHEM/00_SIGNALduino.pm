@@ -268,8 +268,8 @@ SIGNALduino_FingerprintFn($$)
 
   # Store only the "relevant" part, as the Signalduino won't compute the checksum
   #$msg = substr($msg, 8) if($msg =~ m/^81/ && length($msg) > 8);
-
-  return ("", $msg);
+  $name = "" if (!IsDummy($name));
+  return ($name, $msg);
 }
 
 #####################################
@@ -1953,6 +1953,15 @@ sub SIGNALduno_Dispatch($$$$$)
 	
 	#SIGNALduino_Log3 $name, 5, "$name: Dispatch DMSG: $dmsg";
 	
+	if (IsDummy($name) && defined($hash->{rawListNr})) {	# wenn es das Internal rawListNr gibt, dann wird die Nr per dispatch an das Modul SIGNALduino_TOOL uebergeben
+		$rssi = "" if (!defined($rssi));
+		$dmsg = lc($dmsg) if ($id eq '74');
+		$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $dmsg;
+		SIGNALduino_Log3 $name, 4, "$name Dispatch: $dmsg, $rssi dispatch";
+		Dispatch($hash, $dmsg, undef);  ## Dispatch zum Modul SIGNALduino_TOOL
+		return;
+	}
+	
 	my $DMSGgleich = 1;
 	if ($dmsg eq $hash->{LASTDMSG}) {
 		SIGNALduino_Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich";
@@ -2007,10 +2016,7 @@ sub SIGNALduno_Dispatch($$$$$)
 			$rssi = "";
 		}
 		
-		$dmsg = lc($dmsg) if ($id eq '74');
-		if (IsDummy($name) && defined($hash->{rawListNr})) {	# wenn es das Internal rawListNr gibt, dann wird die Nr per dispatch an das Modul SIGNALduino_TOOL uebergeben
-			$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $dmsg;
-		}
+		$dmsg = lc($dmsg) if ($id eq '74' || $id eq '74.1');
 		SIGNALduino_Log3 $name, 4, "$name Dispatch: $dmsg, $rssi dispatch";
 		Dispatch($hash, $dmsg, \%addvals);  ## Dispatch to other Modules 
 		
