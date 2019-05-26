@@ -330,6 +330,7 @@ SIGNALduino_Define($$)
   
   $hash->{DMSG}="nothing";
   $hash->{LASTDMSG} = "nothing";
+  $hash->{LASTDMSGID} = "nothing";
   $hash->{TIME}=time();
   $hash->{versionmodul} = SDUINO_VERSION;
   if (defined($VersionProtocolList->{version})) {
@@ -1974,6 +1975,7 @@ sub SIGNALduno_Dispatch($$$$$)
 			SIGNALduino_Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich: disabled";
 		}
 		$hash->{LASTDMSG} = $dmsg;
+		$hash->{LASTDMSGID} = $id;
 	}
 
    if ($DMSGgleich) {
