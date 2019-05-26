@@ -4236,6 +4236,35 @@ sub SIGNALduino_OSPIR()
 		return return (-1," header not found");
 	}	
 }
+
+sub SIGNALduino_GROTHE()
+{
+	my ($name,$bitData,$id,$mcbitnum) = @_;
+	#my $debug = AttrVal($name,"debug",0);
+
+	my $bitLength;
+	$bitData = substr($bitData, 0, $mcbitnum);
+	my $preamble = "01000111";
+	my $pos = index($bitData, $preamble);
+	if ($pos < 0 || $pos > 5) {
+		return (-1,"Start pattern ($preamble) not found");
+	} else {
+		if ($pos == 1) {		# eine Null am Anfang zuviel
+			$bitData =~ s/^0//;		# eine Null am Anfang entfernen
+		}
+		$bitLength = length($bitData);
+		my ($rcode, $rtxt) = SIGNALduino_TestLength($name, $id, $bitLength, "GROTHE ID=$id");
+		if (!$rcode) {
+			return (-1," $rtxt");
+		}
+	}
+
+	my $hex=SIGNALduino_b2h($bitData);
+
+	SIGNALduino_Log3 $name, 4, "$name: GROTHE protocol Id=$id detected. $bitData ($bitLength)";	
+	return  (1,$hex); ## Return the bits unchanged in hex
+}
+
 sub SIGNALduino_MCRAW()
 {
 	my ($name,$bitData,$id,$mcbitnum) = @_;

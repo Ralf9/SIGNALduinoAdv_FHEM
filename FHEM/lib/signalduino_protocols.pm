@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_31.03.'
+		"version" => 'v3.4.0-dev_ralf_26.05.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -2299,5 +2299,25 @@ our %ProtocolListSIGNALduino  = (
 				#modulematch		=> '',
 				length_min			=> '50',
 				length_max			=> '50',
+			},
+		"96"	=>	# Funk-Gong | Taster Grothe Mistral SE 03.1 , Innenteil Grothe Mistral 200M(E)
+							# https://forum.fhem.de/index.php/topic,64251.msg940593.html?PHPSESSID=nufcvvjobdd8r7rgr0cq3qkrv0#msg940593 @coolheizer
+							# Button_1    MC;LL=-424;LH=438;SL=-215;SH=212;D=238823B1001F8;C=214;L=49;R=68;
+							# Button_2    MC;LL=-412;LH=458;SL=-187;SH=240;D=238129D9A78;C=216;L=41;R=241;
+			{
+				name				=> 'Grothe Mistral',
+				comment				=> 'wireless gong',
+				changed				=> '20190518 new',
+				id				=> '96',
+				knownFreqs			=> '868.35',
+				clockrange			=> [210,220],						# min , max
+				developId			=> 'y',
+				format			=> 'manchester',				# tristate can't be migrated from bin into hex!
+				#clientmodule		=> '',
+				#modulematch		=> '^u96#',
+				preamble			=> 'u96#',
+				length_min			=> '40',
+				length_max			=> '49',
+				method			=> \&main::SIGNALduino_GROTHE,		# Call to process this message
 			}
 );
