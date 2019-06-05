@@ -2444,7 +2444,7 @@ sub SIGNALduino_Parse_MU($$$$@)
 				$endPatternLookupHash{$pstr} = "1";
 			}
 			
-			if (scalar @{$ProtocolListSIGNALduino{$id}{zero}} >0)
+			if (defined($ProtocolListSIGNALduino{$id}{zero}) && scalar @{$ProtocolListSIGNALduino{$id}{zero}} >0)
 			{
 				if  (($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{zero}},\%patternList,\$rawData)) eq -1)
 				{
