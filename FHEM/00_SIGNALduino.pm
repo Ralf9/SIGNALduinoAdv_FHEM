@@ -919,6 +919,7 @@ SIGNALduino_Get($@)
 		}
 		else {
 			$id = substr($arg,2);
+			$arg = "";
 		}
 		SIGNALduino_IdList("x:$name", $id);
 		$hash->{tmpWhiteList} = $id;
@@ -979,9 +980,23 @@ SIGNALduino_Get($@)
 			$ret .= "file=             gets raw messages from file in the fhem directory\n";
 			return $ret;
 		}
-		else {
+		elsif ($arg ne "") {
+			my $ret;
 			SIGNALduino_Log3 $name, 4, "$name/msg get dispatch: $arg";
-			Dispatch($hash, $arg, undef);
+			$ret = Dispatch($hash, $arg, undef);
+			if (defined($ret) && $ret ne "") {
+				$ret = join(",", @$ret);
+				#my $dhash = $defs{$ret};
+				#SIGNALduino_Log3 $name, 4, "$name: " . Dumper($dhash->{READINGS});
+				#foreach my $key (keys %{ $dhash->{READINGS} }) {
+				#	SIGNALduino_Log3 $name, 4, "$name: key=$key";
+				#}
+				#$ret .= "\n" . ReadingsVal($ret, "state", "none");
+				return $ret;
+			}
+			else {
+				$ret = "none";
+			}
 		}
 		return "";
   	}
