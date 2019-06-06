@@ -337,7 +337,7 @@ our %ProtocolListSIGNALduino  = (
 			length_max		=> '40',
 		}, 
 	"8"    =>   ## TX3 (ITTX) Protocol
-				# MU;P0=-1046;P1=1339;P2=524;P3=-28696;D=010201010101010202010101010202010202020102010101020101010202020102010101010202310101010201020101010101020201010101020201020202010201010102010101020202010201010101020;CP=2;R=4;
+				# MU;P0=-392;P1=1285;P2=-1024;P3=506;P4=-27790;D=0121212123212321232323212323212123212321212321232123232121212121212321232123232121232121412121212321232123232321232321212321232121232123212323212121212121232123212323212123212141212121232123212323232123232121232123212123212321232321212121212123212321232;CP=3;R=0;O;
         {
 			name		=> 'TX3 Protocol',	
 			id          	=> '8',
@@ -915,21 +915,63 @@ our %ProtocolListSIGNALduino  = (
 						# sensor id=62, channel=1, temp=21.1, hum=76, bat=ok
 						# !! ToDo Tx-EZ6 neues Attribut ins Modul bauen um Trend + CRC auszuwerten !!
 		{
-			name			=> 'weather33',		
-			comment			=> 'S014, TFA 30.3200, TCM, Conrad S522, renkforce E0001PA, TX-EZ6',
+			name			=> 'weather33',
+			comment			=> 'S014, TFA 30.3200, TCM, Conrad S522, renkforce E0001PA, TX-EZ6 (CP=500)',
 			id			=> '33',
-			one			=> [1,-8],
-			zero			=> [1,-4],
-			sync			=> [1,-16],
+			one			=> [1,-8],		# 500, -4000
+			zero			=> [1,-4],	# 500, -2000
+			sync			=> [1,-16],	# 500, -8000
 			clockabs   		=> '500',
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'W33#',				# prepend to converted message	
-			#postamble		=> '',					# Append to converted message	 	
 			clientmodule    => 'SD_WS',
 			#modulematch     => '',     			# not used now
 			length_min      => '42',
 			length_max      => '44',
 		},
+	"33.1"	=>	## Thermo-/Hygrosensor TFA 30.3200
+							# https://github.com/RFD-FHEM/SIGNALDuino/issues/113
+							# SD_WS_33_TH_1   T: 18.8 H: 53   MS;P1=-7796;P2=745;P3=-1976;P4=-3929;D=21232323242324232324242323232323242424232323242324242323242324232324242323232323232424;CP=2;SP=1;R=30;O;m2;
+							# SD_WS_33_TH_2   T: 21.9 H: 49   MS;P1=-7762;P2=747;P3=-1976;P4=-3926;D=21232324232324242323242323232424242424232423232324242323232324232324242323232324242424;CP=2;SP=1;R=32;O;m1;
+							# SD_WS_33_TH_3   T: 19.7 H: 53   MS;P1=758;P2=-1964;P3=-3929;P4=-7758;D=14121213121313131213121212131212131313121213121213131212131213121213131212121212121212;CP=1;SP=4;R=48;O;m1;
+			{
+				name          => 'TFA 30.3200',
+				comment       => 'Thermo-/Hygrosensor TFA 30.3200 (CP=750)',
+				changed       => '20190415 new',
+				id            => '33.1',
+				one           => [1,-5.6],		# 736,-4121
+				zero          => [1,-2.8],		# 736,-2060
+				sync          => [1,-11],		# 736,-8096
+				clockabs      => 736,
+				format        => 'twostate',	# not used now
+				preamble      => 'W33#',
+				clientmodule  => 'SD_WS',
+				length_min    => '42',
+				length_max    => '44',
+			},
+	"33.2" => ## Tchibo Wetterstation
+							# https://forum.fhem.de/index.php/topic,58397.msg880339.html#msg880339 @Doublefant
+							# passt bei 33 und 33.2:
+							# SD_WS_33_TH_1   T: 5.1 H: 41   MS;P1=399;P2=-7743;P3=-2038;P4=-3992;D=12131314141414141313131413131314141414131313141314131414131314131314131313131314131314;CP=1;SP=2;R=230;O;m2;
+							# SD_WS_33_TH_1   T: 5.1 H: 41   MS;P1=399;P2=-7733;P3=-2043;P4=-3991;D=12131314141414141313131413131314141414131313141314131414131314131314131313131314131314;CP=1;SP=2;R=230;O;
+							# passt nur bei 33.2:
+							# SD_WS_33_TH_1   T: 5.1 H: 41   MS;P1=393;P2=-7752;P3=-2047;P4=-3993;D=12131314141414141313131413131314141414131313141314131414131314131314131313131314131314;CP=1;SP=2;R=230;O;m1;
+							# SD_WS_33_TH_1   T: 5.1 H: 41   MS;P1=396;P2=-7759;P3=-2045;P4=-4000;D=12131314141414141313131413131314141414131313141314131414131314131314131313131314131314;CP=1;SP=2;R=230;O;m0;
+			{
+				name          => 'Tchibo',
+				comment       => 'Tchibo weatherstation (CP=400)',
+				changed       => '20190415 new',
+				id            => '33.2',
+				one           => [1,-10],     # 400,-4000
+				zero          => [1,-5],      # 400,-2000
+				sync          => [1,-19],     # 400,-7600
+				clockabs      => 400,
+				format        => 'twostate',
+				preamble      => 'W33#',
+				clientmodule  => 'SD_WS',
+				length_min    => '42',
+				length_max    => '44',
+			},
 	"34"	=>	## QUIGG GT-7000 Funk-Steckdosendimmer | transmitter DMV-7000 - receiver DMV-7009AS
 			# https://github.com/RFD-FHEM/RFFHEM/issues/195 | https://forum.fhem.de/index.php/topic,38831.msg361341.html#msg361341
 			# MU;P0=-9808;P1=608;P2=-679;P3=1243;D=012323232323232323232323232323232323232323;CP=3;R=254;
@@ -1279,7 +1321,9 @@ our %ProtocolListSIGNALduino  = (
 	"50"	=>	## Opus XT300
 						# https://github.com/RFD-FHEM/RFFHEM/issues/99
 						# MU;P0=248;P1=-21400;P2=545;P3=-925;P4=1368;P5=-12308;D=01232323232323232343234323432343234343434343234323432343434343432323232323232323232343432323432345232323232323232343234323432343234343434343234323432343434343432323232323232323232343432323432345232323232323232343234323432343234343434343234323432343434343;CP=2;O;
-		{
+						# MU;P2=-962;P4=508;P5=1339;P6=-12350;D=46424242424242424252425242524252425252525252425242525242424252425242424242424242424252524252524240;CP=4;R=0;
+						# MU;P2=510;P3=-947;P5=1334;P6=-12248;D=26232323232323232353235323532323235353535353235323535323232353235323232323232323232353532353235320;CP=2;R=0;
+						{
 			name				=> 'Opus_XT300',
 			comment				=> 'sensor for ground humidity',
 			id				=> '50',
@@ -1288,6 +1332,7 @@ our %ProtocolListSIGNALduino  = (
 			zero			=> [3,-2],
 			one				=> [1,-2],
 		#	start			=> [1,-25],						# Wenn das startsignal empfangen wird, fehlt das 1 bit
+			reconstructBit	=> '1',
 			format 			=> 'twostate',	
 			preamble		=> 'W50#',						# prepend to converted message	
 			clientmodule    => 'SD_WS',
@@ -1749,7 +1794,7 @@ our %ProtocolListSIGNALduino  = (
 			postDemodulation => \&main::SIGNALduino_postDemo_FHT80,
 		},
 	"74"	=>	## FS20 - 'Remote Control (868Mhz),  @HomeAutoUser
-						# MU;P0=-10420;P1=-92;P2=398;P3=-417;P5=596;P6=-592;D=1232323232323232323232323562323235656232323232356232356232623232323232323232323232323235623232323562356565623565623562023232323232323232323232356232323565623232323235623235623232323232323232323232323232323562323232356235656562356562356202323232323232323;CP=2;R=72;
+						# MU;P0=-10420;P1=-92;P2=398;P3=-417;P5=596;P6=-592;D=1232323232323232323232323562323235656232323232356232356232323232323232323232323232323235623232323562356565623565623562023232323232323232323232356232323565623232323235623235623232323232323232323232323232323562323232356235656562356562356202323232323232323;CP=2;R=72;
 		{
 			name			=> 'FS20',
 			comment			=> 'Remote Control',
@@ -1766,6 +1811,27 @@ our %ProtocolListSIGNALduino  = (
 			preamble		=> '810b04f70101a001',
 			length_min		=> '50',
 			length_max		=> '67',
+			postDemodulation => \&main::SIGNALduino_postDemo_FS20,
+		},
+	"74.1"	=>	## FS20 - Remote Control (868Mhz) @HomeAutoUser
+								# dim100%   MS;P1=-356;P2=448;P3=653;P4=-551;P5=-10412;D=2521212121212121212121212134212121343421212121213421213421212121212121212121212121212121342121212134213434342134342134;CP=2;SP=5;R=72;O;!;4;
+		{
+			name             => 'FS20',
+			comment          => 'remote control (decode as MS)',
+			changed          => '20190424 new',
+			id               => '74.1',
+			knownFreqs       => '868.35',
+			one              => [1.5,-1.5],	# 600
+			zero             => [1,-1],	# 400
+			sync             => [-25],
+			clockabs         => 400,
+			#reconstructBit   => '1',
+			format           => 'twostate',	# not used now
+			clientmodule     => 'FS20',
+			preamble         => '810b04f70101a001',
+			paddingbits      => '1',      # disable padding
+			length_min       => '50',
+			length_max       => '67',
 			postDemodulation => \&main::SIGNALduino_postDemo_FS20,
 		},
 	"75"	=>	## Conrad RSL (Erweiterung v2) @litronics https://github.com/RFD-FHEM/SIGNALDuino/issues/69
@@ -1803,7 +1869,7 @@ our %ProtocolListSIGNALduino  = (
 			id			=> '76',
 			developId		=> 'y',
 			one			=> [1.2,-2],			# 120,-200
-			zero			=> [],						# existiert nicht
+			#zero			=> [],						# existiert nicht
 			start			=> [4.5,-2,4.5,-2,4.5,-2,4.5,-2],			# 450,-200 Starsequenz
 			clockabs		=> 100,
 			format			=> 'twostate',		# not used now
@@ -2266,29 +2332,32 @@ our %ProtocolListSIGNALduino  = (
 				comment				=> 'temperature sensor',
 				changed				=> '20190318 new',
 				id				=> '94',
-				one				=> [6,-1],
-				zero				=> [6,-8],
-				start				=> [6,-30],
-				clockabs			=> 250,
+				one				=> [5.3,-1],     # 1537, 290
+				zero				=> [5.3,-6.9],   # 1537, 2001
+				start				=> [5.3,-26.1],  # 1537, 7569
+				clockabs			=> 290,
 				clockpos			=> ['cp'],
-				#developId			=> 'y',
+				reconstructBit		=> '1',
 				format				=> 'twostate',
-				preamble			=> 'u94#',
-				#clientmodule		=> '',
+				preamble			=> 'W94#',
+				clientmodule		=> 'SD_WS',
 				#modulematch		=> '',
-				length_min			=> '36',
-				length_max			=> '54',
+				length_min			=> '24',         # minimal 24*0=24 Bit, kuerzeste bekannte aus Userlog: 36
+				length_max			=> '96',         # maximal 24*110=96 Bit, laengste bekannte aus Userlog:  60
 			},
 		"95"	=>	# Techmar / Garden Lights Fernbedienung, 6148011 Remote control + 12V Outdoor receiver
 							# https://github.com/RFD-FHEM/RFFHEM/issues/558 @BlackcatSandy
-							# MU;P0=-644;P1=548;P2=-315;P3=-959;P4=-500;D=01010101010101012121212121213121010101210101012121212101212101010101012101210101012101010101212121212101010101010101012121212121213121010101210101012121212101212101010101012101210101012101010101212121212101010101010101012121212121213121010101210101012121;CP=1;R=58;O;
+							# Group_1_on:  MU;P0=-972;P1=526;P2=-335;P3=-666;D=01213131312131313121212121312121313131313121312131313121313131312121212121312121313131313121313121212101213131312131313121212121312121313131313121312131313121313131312121212121312121313131313121313121212101213131312131313121212121312121313131313121312131;CP=1;R=44;O;
+							# Group_5_on:  MU;P0=-651;P1=530;P2=-345;P3=-969;D=01212121312101010121010101212121210121210101010101210121010101210101010121212121012121210101010121010101212101312101010121010101212121210121210101010101210121010101210101010121212121012121210101010121010101212121312101010121010101212121210121210101010101;CP=1;R=24;O;
+							# Group_8_off: MU;P0=538;P1=-329;P2=-653;P3=-964;D=01020301020202010202020101010102010102020202020102010202020102020202010101010101010201020202020202010202010301020202010202020101010102010102020202020102010202020102020202010101010101010201020202020202010201010301020202010202020101010102010102020202020102;CP=0;R=19;O;
+							# bei den Wiederholungen sind die letzten 2 Bit unterschiedlich
 			{
 				name				=> 'Techmar',
 				comment				=> 'Garden Lights remote control',
 				changed				=> '20190331 new',
 				id				=> '95',
-				one				=> [1,-0.6],	# 550,-330
-				zero				=> [1,-1.2],	# 550,-660
+				one				=> [1,-1.2],	# 550,-660
+				zero				=> [1,-0.6],	# 550,-330
 				start				=> [1,-1.8],	# 550,-990
 				clockabs			=> 550,
 				clockpos			=> ['cp'],
