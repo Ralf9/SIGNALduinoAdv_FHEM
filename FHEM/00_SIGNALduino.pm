@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-05-25 18:00:00Z v3.4.0-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 10488 2019-06-17 23:00:00Z v3.4.0-dev-Ralf9 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.0-dev_ralf_25.05.",
+	SDUINO_VERSION            => "v3.4.0-dev_ralf_17.06.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -219,7 +219,7 @@ SIGNALduino_Initialize($)
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,promini,radinoCC1101"
+  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
@@ -3425,8 +3425,8 @@ sub SIGNALduino_postDemo_bit2itv1
 	my ($name, @bit_msg) = @_;
 	my $msg = join("",@bit_msg);	
 
-#	$msg =~ s/0F/01/g;		# Convert 0F -> 01 (F) to be compatible with CUL
-	$msg =~ s/0F/11/g;		# Convert 0F -> 11 (1) float
+	$msg =~ s/0F/01/g;		# Convert 0F -> 01 (F) to be compatible with CUL
+	#$msg =~ s/0F/11/g;		# Convert 0F -> 11 (1) float
 	if (index($msg,'F') == -1) {
 		return (1,split("",$msg));
 	} else {
