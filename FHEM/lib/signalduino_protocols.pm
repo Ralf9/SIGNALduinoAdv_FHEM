@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_26.05.'
+		"version" => 'v3.4.0-dev_ralf_17.01.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -184,7 +184,7 @@ our %ProtocolListSIGNALduino  = (
 			length_min		=> '32',
 			length_max		=> '36',
 			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
-},
+		},
 	"1"	=>	## Conrad RSL
 		{
 			name			=> 'Conrad RSL v1',
@@ -224,7 +224,7 @@ our %ProtocolListSIGNALduino  = (
 					# need more Device Infos / User Message
 		{
 			name			=> 'itv1',
-			comment			=> 'remote for WOFI | Intertek',
+			comment			=> 'remote for ELRO|Kangtai|Intertek|REWE|WOFI',
 			id			=> '3',
 			one			=> [3,-1],
 			zero			=> [1,-3],
@@ -367,7 +367,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs     	=> 480,			# -1 = auto undef=noclock
 			clockpos		=> ['one',0],
 			reconstructBit	=> '1',
-			format 			=> 'pwm',	    # tristate can't be migrated from bin into hex!
+			format 			=> 'twostate',
 			preamble		=> 'P9#',		# prepend to converted message	
 			clientmodule    => 'SD_WS09',
 			#modulematch     => '^u9#.....',  # not used now
@@ -465,17 +465,19 @@ our %ProtocolListSIGNALduino  = (
 			id			=> '13.1',
 			one			=> [1,-1.8],
 			zero			=> [1,-3.5],
-			start			=> [-23.5,10,-1],
+			start			=> [10,-1],
+			pause			=> [-25],
 			clockabs		=> 800,
 			clockpos	=> ['cp'],
-			format 			=> 'twostate',	  		
+			format 			=> 'twostate',
 			preamble		=> 'P13.1#',				# prepend to converted message
-			clientmodule    => 'FLAMINGO',   				# not used now
+			clientmodule    => 'FLAMINGO', 
 			#modulematch     => 'P13#.*',  				# not used now
 			length_min      => '24',
 			length_max      => '24',
 		}, 		
 	"13.2"	=>	## LM-101LD Rauchm
+					# https://github.com/RFD-FHEM/RFFHEM/issues/233
 					# MS;P1=-2708;P2=796;P3=-1387;P4=-8477;P5=8136;P6=-904;D=2456212321212323232321212121212121212123212321212121;CP=2;SP=4;
 		{
 			name		=> 'LM-101LD',
@@ -485,7 +487,7 @@ our %ProtocolListSIGNALduino  = (
 			one		=> [1,-3.5],
 			sync		=> [1,-11,10,-1.2],
 			clockabs     	=> 790,
-			format 		=> 'twostate',	    # 
+			format 		=> 'twostate',
 			preamble	=> 'P13#',	# prepend to converted message	
 			clientmodule    => 'FLAMINGO',
 			#modulematch     => '', # not used now
@@ -512,7 +514,7 @@ our %ProtocolListSIGNALduino  = (
 			length_min			=> '20',
 			length_max			=> '20',
 		}, 			
-	"15"    => 			## TCM234759
+	"15"    => 			## TCM 234759
 		{
 			name			=> 'TCM 234759 Bell',	
 			comment         => 'wireless doorbell TCM 234759 Tchibo',
@@ -542,8 +544,7 @@ our %ProtocolListSIGNALduino  = (
 			start           => [17,-5],
 			clockabs		=> 280,
 			clockpos	=> ['zero',0],
-			reconstructBit	=> '1',
-			format 			=> 'twostate',	  		
+			format 			=> 'twostate',
 			preamble		=> 'P16#',				# prepend to converted message	
 			clientmodule    => 'Dooya',
 			#modulematch     => '',  				# not used now
@@ -553,7 +554,7 @@ our %ProtocolListSIGNALduino  = (
 	"17"	=>	## arctech / intertechno
 						# need more Device Infos / User Message
 		{
-			name			=> 'arctech / intertechno',
+			name			=> 'arctech / Intertechno',
 			id          	=> '17',
 			one				=> [1,-5,1,-1],  
 			zero			=> [1,-1,1,-5],  
@@ -569,7 +570,7 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule    => 'IT',
 			modulematch     => '^i......',
 			length_min      => '32',
-			length_max      => '34',
+			length_max      => '34',				# Don't know maximal lenth of a valid message
 			postDemodulation => \&main::SIGNALduino_postDemo_bit2Arctec,
 		},
 	 "17.1"	=> # intertechno --> MU anstatt sonst MS (ID 17)
@@ -579,7 +580,7 @@ our %ProtocolListSIGNALduino  = (
 			# MU;P0=355;P1=-189;P2=-1222;P3=-10252;P4=-2604;D=0102020101020102020102010102010202010201020102010201020101020102010201020102020102010102010201020102010201020102030401020102010202010102020101020102020102010102010202010201020102010201020101020102010201020102020102010102010201020102010201020102030401020;CP=0;R=0;
 			# https://www.sweetpi.de/blog/329/ein-ueberblick-ueber-433mhz-funksteckdosen-und-deren-protokolle
         {
-			name			=> 'intertechno',
+			name			=> 'Intertechno',
 			comment 		=> 'PIR-1000 | ITT-1500',
 			id          	=> '17.1',
  			one			=> [1,-5,1,-1],
@@ -593,7 +594,7 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule    => 'IT',
 			modulematch     => '^i......',
  			length_min      => '28',
-			length_max     	=> '34',
+			length_max     	=> '34',				# Don't know maximal lenth of a valid message
 			postDemodulation => \&main::SIGNALduino_postDemo_bit2Arctec,
 		},
 	"18"	=>	## Oregon Scientific v1
@@ -809,8 +810,8 @@ our %ProtocolListSIGNALduino  = (
            # MU;P0=250;P1=-492;P2=166;P3=-255;P4=491;P5=-8588;D=052121212121234121212121234521212121212341212121212345212121212123412121212123452121212121234121212121234;CP=0;
            # https://forum.fhem.de/index.php/topic,58397.960.html
 		{
-			name		=> 'HT12e remote',	
-			comment         => 'Remote control for example Westinghouse airfan with five Buttons (developModule SD_UT is only in github available)',
+			name		=> 'HT12e remote',
+			comment         => 'remote control for example Westinghouse airfan with 5 buttons',
 			id          	=> '29',
 			one				=> [-2,1],
 			zero			=> [-1,2],
@@ -830,7 +831,7 @@ our %ProtocolListSIGNALduino  = (
 			# MU;P0=307;P1=-10027;P2=-691;P3=-365;P4=635;D=0102034342034203420342034201020343420342034203420342010203434203420342034203420102034342034203420342034201020343420342034203420342010203434203420342034203420102034342034203420342034201;CP=0;
 		{
 			name			=> 'unitec47031',	
-			comment         => 'unitec remote door reed switch 47031 (developModule SD_UT module is only in github available)',
+			comment         => 'remote control unitec | door reed switch 47031',
 			id          	=> '30',
 			one			=> [-2,1],
 			zero			=> [-1,2],
@@ -856,7 +857,7 @@ our %ProtocolListSIGNALduino  = (
 			id			=> '31',
 			one			=> [-1,2],
 			zero			=> [-2,1],
-			start			=> => [-18,1],
+			start			=> [-18,1],
 			clockabs		=> 600,
 			clockpos		=> ['zero',1],
 			format 			=> 'twostate',	  		
@@ -876,8 +877,8 @@ our %ProtocolListSIGNALduino  = (
 						# MU;P0=146;P1=245;P3=571;P4=-708;P5=-284;P7=-6689;D=14351435143514143535353535353535353535350704040435043504350435040435353535353535353535353507040404350435043504350404353535353535353535353535070404043504350435043504043535353535353535353535350704040435043504350435040435353535353535353535353507040404350435;CP=3;R=0;O;
 						# MU;P0=-6680;P1=162;P2=-298;P4=253;P5=-699;P6=555;D=45624562456245456262626262626262626262621015151562156215621562151562626262626262626262626210151515621562156215621515626262626262626262626262;CP=6;R=0;
 		{
-			name			=> 'freetec 6946',	
-			comment         => 'Doorbell FreeTec PE-6946',
+			name			=> 'FreeTec PE-6946',	
+			comment         => 'wireless doorbell',
 			id          	=> '32',
 			one				=> [4,-2],
 			zero			=> [1,-5],
@@ -895,8 +896,8 @@ our %ProtocolListSIGNALduino  = (
 			# https://github.com/RFD-FHEM/RFFHEM/issues/49
 			# MS;P0=-266;P1=160;P3=-690;P4=580;P5=-6628;D=15131313401340134013401313404040404040404040404040;CP=1;SP=5;O;
     	{   
-			name			=> 'freetec 6946',
-			comment			=> 'Doorbell FreeTec PE-6946',
+			name			=> 'FreeTec PE-6946',
+			comment			=> 'wireless doorbell (MS decode)',
 			id			=> '32',
 			one			=> [4,-2],
 			zero			=> [1,-4],
@@ -979,13 +980,14 @@ our %ProtocolListSIGNALduino  = (
             # MU;P0=-3156;P1=589;P2=-668;P3=1247;P4=-1370;D=012323232323232323232323234123232323234123;CP=3;R=255;
             # MU;P0=-9800;P1=592;P2=-665;P3=1259;P4=-1332;D=012323232323232323232323232341234123232323;CP=3;R=1;
 		{   
-			name 			=> 'QUIGG_GT-7000',
-			comment         => 'remote QUIGG DMV-7000',
+			name 			=> 'QUIGG_GT-7000 | LIBRA',
+			comment         => 'remote control DMV-7000, TR-502MSV',
 			changed			=> '20181025 new',
 			id 			=> '34',
 			one			=> [-1,2],
 			zero            => [-2,1],
 			start			=> [1],
+			pause			=> [-15],   # 9900
 			clockabs   		=> '660',
 			clockpos		=> ['zero',1],
 			format			=> 'twostate', 
@@ -998,8 +1000,7 @@ our %ProtocolListSIGNALduino  = (
 	"35"	=>	## Homeeasy
 			 # MS;P0=907;P1=-376;P2=266;P3=-1001;P6=-4860;D=2601010123230123012323230101012301230101010101230123012301;CP=2;SP=6;
 		{
-			name		=> 'HE800',
-			comment		=> 'Homeeasy',	
+			name		=> 'HomeEasy HE800',
 			id          	=> '35',
 			one			=> [1,-4],
 			zero			=> [3.4,-1],
@@ -1064,7 +1065,7 @@ our %ProtocolListSIGNALduino  = (
 						# Id:A8, Ch:2, T: 5.4, MU;P0=-971;P1=733;P2=-731;P3=488;P4=-244;P5=248;P6=-480;P7=-368;D=01212121234563456345656563456345656563456575634563456345634345656345634343434345650121212123456345634565656345634565656345656563456345634563434565634563434343434565012121212345634563456565634563456565634565656345634563456343456563456343434343456501212121;CP=5;O;
 		{
 			name         => 'NC-3911',
-			comment      => 'refrigerator thermometer',
+			comment      => 'Refrigerator thermometer',
 			changed      => '20190205 new, 20181216 old moved to ID 0.1',
 			id           => '38',
 			one          => [2,-1],
@@ -1163,7 +1164,7 @@ our %ProtocolListSIGNALduino  = (
 			clockpos			=> ['one',0],
 			format				=> 'twostate',
 			preamble			=> 'P42#',
-			clientmodule	=> 'SD_Bell',
+			clientmodule	=> 'SD_BELL',
 			#modulematch		=> '^P42#.*',
 			length_min		=> '28',
 			length_max		=> '120',
@@ -1191,6 +1192,7 @@ our %ProtocolListSIGNALduino  = (
 		{
             		name 			=> 'BresserTemeo',
             		id 			=> '44',
+            		comment			=> 'temperature / humidity sensor',
             		clockabs		=> 2000,
             		clockpos		=> ['cp'],
             		zero 			=> [1,-1],
@@ -1206,6 +1208,7 @@ our %ProtocolListSIGNALduino  = (
 		{
             		name 			=> 'BresserTemeo',
             		id 			=> '44',
+            		comment			=> 'temperature / humidity sensor',
             		clockabs		=> 500,
             		zero 			=> [4,-4],
             		one			=> [4,-8],
@@ -1296,7 +1299,7 @@ our %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	
 			preamble		=> 'U48#',						# prepend to converted message	
 			#clientmodule    => '',   						# not used now
-			modulematch     => '^U48#.*',  					# not used now
+			modulematch     => '^U48#.*',
 			length_min      => '47',
 			length_max      => '48',
 		},
@@ -1304,14 +1307,15 @@ our %ProtocolListSIGNALduino  = (
 						# https://github.com/RFD-FHEM/RFFHEM/issues/93
 						# MU;P0=-563;P1=479;P2=991;P3=-423;P4=361;P5=-1053;P6=3008;P7=-7110;D=2345454523452323454523452323452323452323454545456720151515201520201515201520201520201520201515151567201515152015202015152015202015202015202015151515672015151520152020151520152020152020152020151515156720151515201520201515201520201520201520201515151;CP=1;R=21;
 		{
-			name		=> 'quigg_gt9000',	
-			id          	=> '49',
-			clockabs     	=> 400, 						
-			clockpos	=> ['zero',0],
-			one				=> [2,-1.2],
+			name			=> 'QUIGG_GT9000',
+			id          => '49',
+			comment			=> 'remote control',
+			clockabs     	=> 400,
+			clockpos		=> ['zero',0],
+			one			=> [2,-1.2],
 			zero			=> [1,-3],
 			start			=> [6,-15],
-			format 			=> 'twostate',	
+			format 			=> 'twostate',
 			preamble		=> 'U49#',						# prepend to converted message	
 			#clientmodule    => '',   						# not used now
 			modulematch     => '^U49#.*',
@@ -1386,8 +1390,7 @@ our %ProtocolListSIGNALduino  = (
 			length_max      => '30',
 			method          => \&main::SIGNALduino_OSPIR, # Call to process this message
 			polarity        => 'invert',			
-		}, 	
-    
+		},
 	"55"	=>	## QUIGG GT-1000
 		{
 			name			=> 'QUIGG_GT-1000',
@@ -1502,7 +1505,6 @@ our %ProtocolListSIGNALduino  = (
 			length_max           => '82',
 			postDemodulation     => \&main::SIGNALduino_postDemo_WS2000,
 		}, 
-
 	"61" =>	## ELV FS10
 		# tested transmitter:   FS10-S8, FS10-S4, FS10-ZE
 		# tested receiver:      FS10-ST, FS10-MS, WS3000-TV, PC-Wettersensor-Empfaenger
@@ -1572,11 +1574,12 @@ our %ProtocolListSIGNALduino  = (
 		{
 			name         => 'WH2',
 			id           => '64',
-			one          => [1,-2],   
-			zero         => [3,-2], 
+			comment      => 'temperature / humidity sensor',
+			one          => [1,-2],
+			zero         => [3,-2],
 			clockabs     => 490,
 			clockpos     => ['one',0],
-			clientmodule => 'SD_WS',  
+			clientmodule => 'SD_WS',
 			modulematch  => '^W64*',
 			preamble     => 'W64#',       # prepend to converted message
 			#postamble    => '',           # Append to converted message       
@@ -1587,8 +1590,7 @@ our %ProtocolListSIGNALduino  = (
 	"65" => ## Homeeasy
 			# MS;P1=231;P2=-1336;P4=-312;P5=-8920;D=15121214141412121212141414121212121414121214121214141212141212141212121414121414141212121214141214121212141412141212;CP=1;SP=5;
 		{
-			name         => 'HE_EU',
-			comment      => 'Homeeasy',
+			name         => 'HomeEasy HE_EU',
 			id           => '65',
 			one          => [1,-5.5],
 			zero         => [1,-1.2],
@@ -1981,7 +1983,7 @@ our %ProtocolListSIGNALduino  = (
 			# short 500 microSec / long 1000 microSec / bittime 1500 mikroSek / pilot 12 * bittime, from that 1/3 bitlength high
 		{
 			name             => 'SA-434-1',
-			comment          => 'Remote control SA-434-1 mini 923301 based on HT12E (developModule SD_UT is only in github available)',
+			comment          => 'Remote control SA-434-1 mini 923301 based on HT12E',
 			changed          => '20180906 new',
 			id               => '81',
 			one              => [-2,1],			# i.O.
@@ -2029,7 +2031,7 @@ our %ProtocolListSIGNALduino  = (
 			# Taste 3 MU;P0=564;P1=-392;P2=-713;P3=245;P4=-11247;D=0101010101023231023232323431010101010232310232323234310101010102323102323232343101010101023231023232323431010101010232310232323234310101010102323102323232343101010101023231023232323431010101010232310232323234310101010102323102323232343101010101023231023;CP=3;R=40;O;
 		{
 			name		=> 'RH787T',	
-			comment         => 'Remote control for example Westinghouse Delancey 7800140 (developModule SD_UT is only in github available)',
+			comment         => 'remote control for example Westinghouse Delancey 7800140',
 			changed			=> '20180908 new',
 			id          	=> '83',
 			one				=> [-2,1],
@@ -2054,8 +2056,8 @@ our %ProtocolListSIGNALduino  = (
 						# MU;P0=11916;P1=-852;P2=856;P3=610;P4=-240;P5=237;P6=-610;D=01212134563456563434565634565634343456565634565656565634345634565656563434563456343430;CP=5;R=254;
 						# MU;P0=-30004;P1=815;P2=-910;P3=599;P4=-263;P5=234;P6=-621;D=0121212345634565634345656345656343456345656345656565656343456345634563456343434565656;CP=5;R=5;
 		{
-			name					=> 'IAN 283582',
-			comment				=> 'Weatherstation Auriol IAN 283582 / Sempre 92596/65395',
+			name					=> 'IAN 283582 / TV-4848',
+			comment				=> 'Weatherstation Auriol IAN 283582 / Sempre 92596/65395 / TECVANCE',
 			changed					=> '20180930 new',
 			id						=> '84',
 			one						=> [3,-1],
