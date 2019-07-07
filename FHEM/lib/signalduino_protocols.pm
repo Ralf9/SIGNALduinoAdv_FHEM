@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_17.01.'
+		"version" => 'v3.4.0-dev_ralf_07.07.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -544,6 +544,7 @@ our %ProtocolListSIGNALduino  = (
 			start           => [17,-5],
 			clockabs		=> 280,
 			clockpos	=> ['zero',0],
+			reconstructBit	=> '1',			# bei der letzten Wiederholung ist das Paar am Ende unvollstaendig
 			format 			=> 'twostate',
 			preamble		=> 'P16#',				# prepend to converted message	
 			clientmodule    => 'Dooya',
@@ -1609,11 +1610,12 @@ our %ProtocolListSIGNALduino  = (
 		{
 			name         => 'WS7035',
 			id           => '66',
-			one          => [10,-52],
-			zero         => [27,-52],
-			start        => [-21,42,-21],
-			clockabs     => 122,
+			one          => [1,-5.2],
+			zero         => [2.7,-5.2],
+			start        => [-2.1,4.2,-2.1],
+			clockabs     => 1220,
 			clockpos     => ['one',0],
+			reconstructBit  => '1',
 			format       => 'pwm',  # not used now
 			preamble     => 'TX',
 			clientmodule => 'CUL_TX',
@@ -2055,9 +2057,12 @@ our %ProtocolListSIGNALduino  = (
 						# https://github.com/RFD-FHEM/RFFHEM/issues/223
 						# MU;P0=11916;P1=-852;P2=856;P3=610;P4=-240;P5=237;P6=-610;D=01212134563456563434565634565634343456565634565656565634345634565656563434563456343430;CP=5;R=254;
 						# MU;P0=-30004;P1=815;P2=-910;P3=599;P4=-263;P5=234;P6=-621;D=0121212345634565634345656345656343456345656345656565656343456345634563456343434565656;CP=5;R=5;
+						## TECVANCE TV-4848 (Amazon) @HomeAutoUser
+						# (L39) MU;P0=-218;P1=254;P2=-605;P4=616;P5=907;P6=-799;P7=-1536;D=012121212401212124012401212121240125656565612401240404040121212404012121240121212121212124012121212401212124012401212121247;CP=1;
+						# (L41) MU;P0=239;P1=-617;P2=612;P3=-245;P4=862;P5=-842;D=01230145454545012301232323230101012323010101230123010101010123010101012301230123232301012301230145454545012301232323230101012323010101230123010101010123010101012301230123232301012301230145454545012301232323230101012323010101230123010101010123010101012301;CP=0;R=89;O;
 		{
 			name					=> 'IAN 283582 / TV-4848',
-			comment				=> 'Weatherstation Auriol IAN 283582 / Sempre 92596/65395 / TECVANCE',
+			comment					=> 'Weatherstation Auriol IAN 283582 / Sempre 92596/65395 / TECVANCE',
 			changed					=> '20180930 new',
 			id						=> '84',
 			one						=> [3,-1],
@@ -2071,7 +2076,7 @@ our %ProtocolListSIGNALduino  = (
 			#postamble			=> '',								# append to converted message
 			clientmodule	=> 'SD_WS',
 			length_min		=> '39',							# das letzte Bit fehlt meistens
-			length_max		=> '40',
+			length_max		=> '41',
 		},
 	"85"	=>	## Funk Wetterstation TFA 35.1140.01 mit Temperatur-/Feuchte- und Windsensor TFA 30.3222.02 09/2018@Iron-R
 						# https://github.com/RFD-FHEM/RFFHEM/issues/266
@@ -2339,7 +2344,7 @@ our %ProtocolListSIGNALduino  = (
 				start				=> [5.3,-26.1],  # 1537, 7569
 				clockabs			=> 290,
 				clockpos			=> ['cp'],
-				reconstructBit		=> '1',
+				#reconstructBit		=> '1',		# funktioniert hier nicht da alle Paare gleich anfangen
 				format				=> 'twostate',
 				preamble			=> 'W94#',
 				clientmodule		=> 'SD_WS',
