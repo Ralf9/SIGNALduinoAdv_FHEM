@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_07.07.'
+		"version" => 'v3.4.0-dev_ralf_13.07.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -332,7 +332,7 @@ our %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	
 			preamble		=> 'P7#',		# prepend to converted message	
 			clientmodule	=> 'SD_WS07',
-			modulematch		=> '^P7#.{6}F.{2}$',
+			modulematch		=> '^P7#.{6}[AF].{2}',
 			length_min		=> '35',
 			length_max		=> '40',
 		}, 
