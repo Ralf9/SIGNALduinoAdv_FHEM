@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_13.07.'
+		"version" => 'v3.4.0-dev_ralf_03.01.20'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -186,6 +186,8 @@ our %ProtocolListSIGNALduino  = (
 			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
 		},
 	"1"	=>	## Conrad RSL
+							# on   MS;P1=1154;P2=-697;P3=559;P4=-1303;P5=-7173;D=351234341234341212341212123412343412341234341234343434343434343434;CP=3;SP=5;R=247;O;
+							# on   MS;P0=561;P1=-1291;P2=-7158;P3=1174;P4=-688;D=023401013401013434013434340134010134013401013401010101010101010101;CP=0;SP=2;R=248;m1;
 		{
 			name			=> 'Conrad RSL v1',
 			comment			=> 'remotes and switches',
@@ -224,7 +226,7 @@ our %ProtocolListSIGNALduino  = (
 					# need more Device Infos / User Message
 		{
 			name			=> 'itv1',
-			comment			=> 'remote for ELRO|Kangtai|Intertek|REWE|WOFI',
+			comment			=> 'remote for benon|ELRO|Kangtai|Intertek|REWE|WOFI / PIR JCHENG',
 			id			=> '3',
 			one			=> [3,-1],
 			zero			=> [1,-3],
@@ -301,29 +303,33 @@ our %ProtocolListSIGNALduino  = (
 			#modulematch	=> '',
 			length_min      => '24',   # ?
 			length_max      => '24',   # ?
-		},   
-	"6"	=>	## Eurochron Protocol
-					# MS;P1=-7982;P2=262;P3=-1949;P4=-948;D=21232423232424242324242424242424242424232424232323242424242424232424242324;CP=2;SP=1;R=249;O;m2;
-					# MS;P0=254;P1=-7990;P2=-1935;P3=-950;D=01020302020303030203030303030303030303020302030203030303030303020303030203;CP=0;SP=1;R=248;O;m2;
-		{
-			name			=> 'weather',
-			comment			=> 'unknown sensor is under development',
-			id			=> '6',
-			one			=> [1,-10],
-			zero			=> [1,-5],
-			sync			=> [1,-36],		# This special device has no sync
-			clockabs		=> 220,			# -1 = auto
-			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
-			preamble		=> 'u6#',			# Append to converted message	
-			#clientmodule	=> '',   	# not used now
-			#modulematch	=> '^u......',  # not used now
-			length_min		=> '24',
 		},
+		"6"	=>	## TCM 218943, Eurochron
+						# https://github.com/RFD-FHEM/RFFHEM/issues/692 @ Ralf9 2019-11-15
+						# T:22.9, H:24     MS;P0=-970;P1=254;P3=-1983;P4=-8045;D=14101310131010101310101010101010101010101313101010101010101313131010131013;CP=1;SP=4;
+						# T:22.7, H:23, tx MS;P0=-2054;P1=236;P2=-1032;P3=-7760;D=13121012101212121012121210121212121212121012101010121212121010101212121010;CP=1;SP=3;
+			{
+				name         => 'TCM 218943',
+				comment      => 'Weatherstation TCM 218943, Eurochron',
+				changed      => '20191113 new',
+				id           => '6',
+				one          => [1,-5],
+				zero         => [1,-10],
+				sync         => [1,-32],
+				clockabs     => 248,
+				format       => 'twostate',
+				preamble     => 's',  # prepend to converted message	 	
+				postamble    => '00', # append to converted message	 	
+				clientmodule => 'CUL_TCM97001',
+				length_min   => '36', # sync, postamble und paddingbits werden nicht mitgezaehlt
+				length_max   => '36', # sync, postamble und paddingbits werden nicht mitgezaehlt
+				paddingbits  => '8',  # pad up to 8 bits, default is 4
+			},
 	"7"    => ## weather sensors like EAS800z
 			  # MS;P1=-3882;P2=504;P3=-957;P4=-1949;D=21232424232323242423232323232323232424232323242423242424242323232324232424;CP=2;SP=1;R=249;m=2;
         {
 			name			=> 'weatherID7',	
-			comment			=> 'EAS800z, FreeTec NC-7344, HAMA TS34A',
+			comment			=> 'EAS800z, FreeTec NC-7344, HAMA TS34A, Auriol AFW 2 A1',
 			id			=> '7',
 			one			=> [1,-4],
 			zero			=> [1,-2],
@@ -567,11 +573,11 @@ our %ProtocolListSIGNALduino  = (
 			clockabs     	=> -1,			# -1 = auto
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
 			preamble		=> 'i',			# Append to converted message	
-			postamble		=> '00',		# Append to converted message	 	
+			#postamble		=> '00',		# Append to converted message	 	
 			clientmodule    => 'IT',
 			modulematch     => '^i......',
 			length_min      => '32',
-			length_max      => '34',				# Don't know maximal lenth of a valid message
+			length_max      => '36',				# Don't know maximal lenth of a valid message
 			postDemodulation => \&main::SIGNALduino_postDemo_bit2Arctec,
 		},
 	 "17.1"	=> # intertechno --> MU anstatt sonst MS (ID 17)
@@ -586,16 +592,16 @@ our %ProtocolListSIGNALduino  = (
 			id          	=> '17.1',
  			one			=> [1,-5,1,-1],
  			zero			=> [1,-1,1,-5],
- 			start			=> [1,-44,1,-11],
+ 			start			=> [-11],
 			clockabs    	=> 230,			# -1 = auto
 			clockpos	=> ['cp'],
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
 			preamble		=> 'i',			# Append to converted message	
-			postamble		=> '00',		# Append to converted message	 	
+			#postamble		=> '00',		# Append to converted message	 	
 			clientmodule    => 'IT',
 			modulematch     => '^i......',
  			length_min      => '28',
-			length_max     	=> '34',				# Don't know maximal lenth of a valid message
+			length_max     	=> '36',				# Don't know maximal lenth of a valid message
 			postDemodulation => \&main::SIGNALduino_postDemo_bit2Arctec,
 		},
 	"18"	=>	## Oregon Scientific v1
@@ -633,31 +639,28 @@ our %ProtocolListSIGNALduino  = (
 			length_min		=> '19',
 			length_max		=> '23',					# not confirmed, length one more as MU Message
 			},
-	"20" => # Livolo         	
-            # https://github.com/RFD-FHEM/RFFHEM/issues/29
-         	# MU;P0=-195;P1=151;P2=475;P3=-333;D=010101010102010101010101013101013101010101013101010201010101010101010101010101010101010101020101010101010101010101010101010101010102010101010101013101013101;CP=1;
-			#
-			# protocol sends 24 to 47 pulses per message.
-			# First pulse is the header and is 595 μs long. All subsequent pulses are either 170 μs (short pulse) or 340 μs (long pulse) long.
-			# Two subsequent short pulses correspond to bit 0, one long pulse corresponds to bit 1. There is no footer. The message is repeated for about 1 second.
-			#             _____________                 ___                 _______
-			# Start bit: |             |___|    bit 0: |   |___|    bit 1: |       |___|								   
-		{
-			name			=> 'Livolo',
-			comment			=> 'remote control / dimmmer / switch ...',
-			id			=> '20',
-			one			=> [3],
-			zero			=> [1],
-			start			=> [5],				
-			clockabs		=> 110,                  #can be 90-140
-			clockpos		=> ['zero',0],
-			format 			=> 'twostate',	  		
-			preamble		=> 'u20#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
-			length_min      => '16',
-			filterfunc      => \&main::SIGNALduino_filterSign,
-		},
+		"20"	=>	## Remote control with 4 buttons for diesel heating
+							# https://forum.fhem.de/index.php/topic,58397.msg999475.html#msg999475 @ fhem_user0815 2019-12-04
+							# RCnoName20_17E9 on     MS;P0=-740;P2=686;P3=-283;P5=229;P6=-7889;D=5650505023502323232323235023505023505050235050502323502323505050;CP=5;SP=6;R=67;O;m2;
+							# RCnoName20_17E9 off    MS;P1=-754;P2=213;P4=681;P5=-283;P6=-7869;D=2621212145214545454545452145212145212121212145214521212121452121;CP=2;SP=6;R=69;O;m2;
+							# RCnoName20_17E9 plus   MS;P1=-744;P2=221;P3=679;P4=-278;P5=-7860;D=2521212134213434343434342134212134212121213421212134343434212121;CP=2;SP=5;R=66;O;m2;
+							# RCnoName20_17E9 minus  MS;P0=233;P1=-7903;P3=-278;P5=-738;P6=679;D=0105050563056363636363630563050563050505050505630563050505630505;CP=0;SP=1;R=71;O;m1;
+			{
+				name         => 'RCnoName20',
+				comment      => 'Remote control with 4 buttons for diesel heating',
+				changed      => '20191218 new, old Livolo deleted',
+				id           => '20',
+				one          => [3,-1],  # 720,-240
+				zero         => [1,-3],  # 240,-720
+				sync         => [1,-33], # 240,-7920
+				clockabs     => 240,
+				format       => 'twostate',
+				preamble     => 'P20#',
+				clientmodule => 'SD_UT',
+				modulematch  => '^P20#.{8}',
+				length_min   => '31',
+				length_max   => '32',
+			},
 	"21"	=>	## Einhell Garagentor
 						# https://forum.fhem.de/index.php?topic=42373.0 | user have no RAWMSG
 						# static adress: Bit 1-28 | channel remote Bit 29-32 | repeats 31 | pause 20 ms
@@ -754,43 +757,56 @@ our %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '50',				# message has only 24 bit, but we get more than one message, calculation has to be corrected
 		},
-	"26"	=>	## some remote code send by flamingo style remote controls
-						# https://forum.fhem.de/index.php/topic,43292.msg352982.html#msg352982
-						# MU;P0=1086;P1=-433;P2=327;P3=-1194;P4=-2318;P5=2988;D=01012323010123010101230123012323232323010101232324010123230101230101012301230123232323230101012323240101232301012301010123012301232323232301010123232401012323010123010101230123012323232323010101232353;CP=2;
-		{
-			name		=> 'remote26',	
-			id          	=> '26',
-			one				=> [1,-3],
-			zero			=> [3,-1],
-#			sync			=> [1,-6],				# Message is not provided as MS, due to small fact
-			start 			=> [1,-6],				# Message is not provided as MS, due to small fact
-			clockabs		=> 380,                 #ca 380
-			clockpos		=> ['one',0],
-			format 			=> 'twostate',	  		
-			preamble		=> 'u26#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
-			length_min      => '24',
-			length_max      => '24',				# message has only 24 bit, but we get more than one message, calculation has to be corrected
-		},
-	"27"	=>	## some remote code, send by flamingo style remote controls
-						# https://forum.fhem.de/index.php/topic,43292.msg352982.html#msg352982
-						# MU;P0=963;P1=-559;P2=393;P3=-1134;P4=2990;P5=-7172;D=01012323010123010101230123012323232323010101232345010123230101230101012301230123232323230101012323450101232301012301010123012301232323232301010123234501012323010123010101230123012323232323010101232323;CP=2;
-		{
-			name		=> 'remote27',	
-			id          	=> '27',
-			one				=> [1,-2],
-			zero			=> [2,-1],
-			start			=> [6,-15],				# Message is not provided as MS, worakround is start
-			clockabs		=> 480,                 #ca 480
-			clockpos	=> ['one',0],
-			format 			=> 'twostate',	  		
-			preamble		=> 'u27#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
-			length_min      => '24',
-			length_max      => '24',				
-		},
+		"26"	=>	## xavax 00111939 Funksteckdosen Set
+							# https://github.com/RFD-FHEM/RFFHEM/issues/717 @codeartisan-de 2019-12-14
+							# xavax_DAAB2554 Ch1_on   MU;P0=412;P1=-534;P2=-1356;P3=-20601;P4=3360;P5=-3470;D=01020102010201020201010201010201020102010201020101020101010102020203010145020201020201020102010201020102020101020101020102010201020102010102010101010202020301014502020102020102010201020102010202010102010102010201020102010201010201010101020202030101450202;CP=0;R=0;O;
+							# xavax_DAAB2554 Ch1_off  MU;P0=-3504;P1=416;P2=-1356;P3=-535;P4=-20816;P5=3324;D=01212131212131213121312131213121213131213131213121312131213121313131212121213131314131350121213121213121312131213121312121313121313121312131213121312131313121212121313131413135012121312121312131213121312131212131312131312131213121312131213131312121212131;CP=1;R=50;O;
+							# xavax_DAAB2554 Ch2_on   MU;P0=5656;P1=-21857;P2=413;P3=-1354;P4=-536;P6=3350;P7=-3487;D=01232423232424232424232423242324232423242424232424232423232124246723232423232423242324232423242323242423242423242324232423242324242423242423242323212424672323242323242324232423242324232324242324242324232423242324232424242324242324232321242467232324232324;CP=2;R=0;O;
+							# xavax_DAAB2554 Ch2_off  MU;P0=3371;P1=-3479;P2=420;P3=-31868;P4=-541;P5=272;P6=-1343;P7=-20621;D=23245426242426242624262426242624242624262624262424272424012626242626242624262426242624262624242624242624262426242624262424262426262426242427242401262624262624262426242624262426262424262424262426242624262426242426242626242624242724240126262426262426242624;CP=2;R=45;O;
+			{
+				name          => 'xavax',
+				comment       => 'Remote control xavax 00111939',
+				changed       => '20191226 new',
+				id            => '26',
+				one           => [1,-3],            # 460,-1380
+				zero          => [1,-1],            # 460,-460
+				start         => [1,-1,1,-1,7,-7],  # 460,-460,460,-460,3220,-3220
+				clockpos      => ['cp'],
+				# end           => [1],     # 460 - end funktioniert nicht (wird erst nach pause angehangen), ein bit ans Ende haengen geht, dann aber pause 44 statt 45
+				pause         => [-44],             # -20700 mit end, 20240 mit bit 0 am Ende
+				clockabs      => 460,
+				format        => 'twostate',
+				preamble      => 'P26#',
+				clientmodule  => 'SD_UT',
+				modulematch   => '^P26#.{10}',
+				length_min    => '40',
+				length_max    => '40',
+			},
+		"27"	=>	## Temperatur-/Feuchtigkeitssensor EuroChron EFTH-800 (433 MHz)
+							# SD_WS_27_TH_2 - T: 15.5 H: 48 - MU;P0=-224;P1=258;P2=-487;P3=505;P4=-4884;P5=743;P6=-718;D=0121212301212303030301212123012123012123030123030121212121230121230121212121212121230301214565656561212123012121230121230303030121212301212301212303012303012121212123012123012121212121212123030121;CP=1;R=53;
+							# SD_WS_27_TH_3 - T:  3.8 H: 76 - MU;P0=-241;P1=251;P2=-470;P3=500;P4=-4868;P5=743;P6=-718;D=012121212303030123012301212123012121212301212303012121212121230303012303012123030303012123014565656561212301212121230303012301230121212301212121230121230301212121212123030301230301212303030301212301;CP=1;R=23;
+							# SD_WS_27_TH_3 - T:  5.3 H: 75 - MU;P0=-240;P1=253;P2=-487;P3=489;P4=-4860;P5=746;P6=-725;D=012121212303030123012301212123012121212303012301230121212121230303012301230303012303030301214565656561212301212121230303012301230121212301212121230301230123012121212123030301230123030301230303030121;CP=1;R=19;
+							# short pulse of 244 us followed by a 488 us gap is a 0 bit
+							# long pulse of 488 us followed by a 244 us gap is a 1 bit
+							# sync preamble of pulse, gap, 732 us each, repeated 4 times
+							# sensor sends two messages at intervals of about 57-58 seconds
+			{
+				name            => 'EFTH-800',
+				comment         => 'EuroChron weatherstation EFTH-800',
+				changed         => '20191227 new',
+				id              => '27',
+				one             => [2,-1],
+				zero            => [1,-2],
+				start           => [3,-3],
+				clockpos        => ['zero',0],
+				clockabs        => '244',
+				format          => 'twostate',
+				preamble        => 'W27#',
+				clientmodule    => 'SD_WS',
+				modulematch     => '^W27#.{12}',
+				length_min      => '48',	# 48 Bit + 1 Puls am Ende
+				length_max      => '48',
+			},
 	"28" => # some remote code, send by aldi IC Ledspots
 		{
 			name			=> 'IC Ledspot',	
@@ -854,19 +870,12 @@ our %ProtocolListSIGNALduino  = (
 						# MU;P0=-9588;P1=600;P2=-664;P3=1254;P4=-1325;D=01234141412341412341414123232323232323232;CP=1;R=0;
 		{
 			name			=> 'Pollin ISOTRONIC',
-			comment			=> 'remote control model 58608 with 12 buttons',
+			comment			=> 'deleted. it can not be used!',
+			changed			=> '20191215 deleted. Old moved to ID 34',
 			id			=> '31',
-			one			=> [-1,2],
-			zero			=> [-2,1],
-			start			=> [-18,1],
-			clockabs		=> 600,
-			clockpos		=> ['zero',1],
+			deleted			=> '1',
+			developId		=> 'p',
 			format 			=> 'twostate',	  		
-			preamble		=> 'u31#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
-			#modulematch     => '',  				# not used now
-			length_min      => '19',
-			length_max      => '20',				
 		},
 	"32"	=>	## FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
 						# OLD
@@ -975,27 +984,40 @@ our %ProtocolListSIGNALduino  = (
 				length_max    => '44',
 			},
 	"34"	=>	## QUIGG GT-7000 Funk-Steckdosendimmer | transmitter DMV-7000 - receiver DMV-7009AS
-			# https://github.com/RFD-FHEM/RFFHEM/issues/195 | https://forum.fhem.de/index.php/topic,38831.msg361341.html#msg361341
-			# MU;P0=-9808;P1=608;P2=-679;P3=1243;D=012323232323232323232323232323232323232323;CP=3;R=254;
-            # MU;P0=-5476;P1=592;P2=-665;P3=1226;P4=-1309;D=012323232323232323232323234123234123234141;CP=3;R=1;
-            # MU;P0=-3156;P1=589;P2=-668;P3=1247;P4=-1370;D=012323232323232323232323234123232323234123;CP=3;R=255;
-            # MU;P0=-9800;P1=592;P2=-665;P3=1259;P4=-1332;D=012323232323232323232323232341234123232323;CP=3;R=1;
+							# https://github.com/RFD-FHEM/RFFHEM/issues/195 | https://forum.fhem.de/index.php/topic,38831.msg361341.html#msg361341 @StefanW
+							# Ch1_on       MU;P0=-5284;P1=583;P2=-681;P3=1216;P4=-1319;D=012341412323232341412341412323234123232341;CP=1;R=16;
+							# Ch1_off      MU;P0=-9812;P1=589;P2=-671;P3=1261;P4=-1320;D=012341412323232341412341412323232323232323;CP=3;R=19;
+							# Ch2_on       MU;P0=-9832;P1=577;P2=-670;P3=1219;P4=-1331;D=012341412323232341412341414123234123234141;CP=1;R=16;
+							# Ch2_off      MU;P0=-8816;P1=594;P2=-662;P3=1263;P4=-1330;D=012341412323232341412341414123232323234123;CP=1;R=16;
+							# Ch3_on       MU;P0=-677;P1=581;P2=1250;P3=-1319;D=010231310202020231310231310231023102020202;CP=1;R=18;
+							# Ch3_off      MU;P0=-29120;P1=603;P2=-666;P3=1235;P4=-1307;D=012341412323232341412341412341232323232341;CP=1;R=16;
+							## LIBRA GmbH (LIDL) TR-502MSV
+							# no decode!   MU;P0=-12064;P1=71;P2=-669;P3=1351;P4=-1319;D=012323414141234123232323232323232323232323;
+							# Ch1_off      MU;P0=697;P1=-1352;P2=-679;P3=1343;D=01010101010231023232323232323232323232323;CP=0;R=27;
+							## Mandolyn Funksteckdosen Set
+							# https://github.com/RFD-FHEM/RFFHEM/issues/716 @codeartisan-de
+							## Pollin ISOTRONIC - 12 Tasten remote | model 58608 (war alt ID 31)
+							# remote basicadresse with 12bit -> changed if push reset behind battery cover
+							# https://github.com/RFD-FHEM/RFFHEM/issues/44 @kaihs
+							# P34#891EE   MU;P0=-9584;P1=592;P2=-665;P3=1223;P4=-1311;D=01234141412341412341414123232323412323234;CP=1;R=0;
+							# P34#891FE   MU;P0=-12724;P1=597;P2=-667;P3=1253;P4=-1331;D=01234141412341412341414123232323232323232;CP=1;R=0;
 		{   
-			name 			=> 'QUIGG_GT-7000 | LIBRA',
-			comment         => 'remote control DMV-7000, TR-502MSV',
+			name 			=> 'QUIGG | LIBRA | Mandolyn | Pollin ISOTRONIC',
+			comment         => 'remote control DMV-7000, TR-502MSV, 58608',
 			changed			=> '20181025 new',
 			id 			=> '34',
 			one			=> [-1,2],
 			zero            => [-2,1],
 			start			=> [1],
 			pause			=> [-15],   # 9900
-			clockabs   		=> '660',
+			clockabs   		=> '635',
 			clockpos		=> ['zero',1],
 			format			=> 'twostate', 
 			preamble 		=> 'P34#',
-			clientmodule 		=> 'SD_UT',
+			clientmodule 	=> 'SD_UT',
+			reconstructBit  => '1',
 			#modulematch 		=> '',
-			length_min 		=> '20',
+			length_min 		=> '19',
 			length_max 		=> '20',
 		},
 	"35"	=>	## Homeeasy
@@ -1107,7 +1129,7 @@ our %ProtocolListSIGNALduino  = (
 			# MU;P0=300;P1=-772;P2=674;P3=-397;P4=4756;P5=-1512;D=4501232301230123230101232301010123230101230103;CP=0;
 			# MU;P0=-132;P1=-388;P2=675;P4=271;P5=-762;D=012145212145452121454545212145452145214545454521454545452145454541;CP=4;
 		{
-			name => 'romotec',
+			name => 'Romotec',
 			comment	=> 'Tubular motor',
 			id => '40',
 			one => [3,-2],
@@ -1304,25 +1326,74 @@ our %ProtocolListSIGNALduino  = (
 			length_min      => '47',
 			length_max      => '48',
 		},
-	"49"	=>	## QUIGG / ALDI GT-9000
-						# https://github.com/RFD-FHEM/RFFHEM/issues/93
-						# MU;P0=-563;P1=479;P2=991;P3=-423;P4=361;P5=-1053;P6=3008;P7=-7110;D=2345454523452323454523452323452323452323454545456720151515201520201515201520201520201520201515151567201515152015202015152015202015202015202015151515672015151520152020151520152020152020152020151515156720151515201520201515201520201520201520201515151;CP=1;R=21;
-		{
-			name			=> 'QUIGG_GT9000',
-			id          => '49',
-			comment			=> 'remote control',
-			clockabs     	=> 400,
-			clockpos		=> ['zero',0],
-			one			=> [2,-1.2],
-			zero			=> [1,-3],
-			start			=> [6,-15],
-			format 			=> 'twostate',
-			preamble		=> 'U49#',						# prepend to converted message	
-			#clientmodule    => '',   						# not used now
-			modulematch     => '^U49#.*',
-			length_min      => '22',
-			length_max      => '28',
-		},
+		"49"	=>	## QUIGG GT-9000, EASY HOME RCT DS1 CR-A, uniTEC 48110 and other
+							# The remote sends 8 messages in 2 different formats.
+							# SIGNALduino decodes 4 messages from remote control as MS then ...
+							# https://github.com/RFD-FHEM/RFFHEM/issues/667 - Oct 19, 2019
+							# DMSG: 5A98B0   MS;P0=-437;P3=-1194;P4=1056;P6=297;P7=-2319;D=67634063404063406340636340406363634063404063636363;CP=6;SP=7;R=37;
+							# DMSG: 887F92   MS;P1=-2313;P2=1127;P3=-405;P4=379;P5=-1154;D=41234545452345454545232323232323232345452345452345;CP=4;SP=1;R=251;
+							# DMSG: E6D12E   MS;P0=1062;P1=-1176;P2=315;P3=-2283;P4=-433;D=23040404212104042104042104212121042121042104040421;CP=2;SP=3;R=26;
+			{
+				name            => 'GT-9000',
+				comment         => 'Remote control EASY HOME RCT DS1 CR-A',
+				changed         => '20191215 new',
+				id              => '49',
+				clockabs        => 383,
+				one             => [3,-1],  # 1150,-385 (timings from salae logic)
+				zero            => [1,-3],  # 385,-1150 (timings from salae logic)
+				sync            => [1,-6],  # 385,-2295 (timings from salae logic)
+				format          => 'twostate',
+				preamble        => 'P49#',
+				clientmodule    => 'SD_GT',
+				modulematch     => '^P49.*',
+				length_min      => '24',
+				length_max      => '24',
+			},
+		"49.1"	=>	## QUIGG GT-9000
+							# ... decodes 4 messages as MU
+							# https://github.com/RFD-FHEM/RFFHEM/issues/667 @Ralf9 from https://forum.fhem.de/index.php/topic,104506.msg985295.html
+							# DMSG: 8B2DB0   MU;P0=-563;P1=479;P2=991;P3=-423;P4=361;P5=-1053;P6=3008;P7=-7110;D=2345454523452323454523452323452323452323454545456720151515201520201515201520201520201520201515151567201515152015202015152015202015202015202015151515672015151520152020151520152020152020152020151515156720151515201520201515201520201520201520201515151;CP=1;R=21;
+							# DMSG: 887F90   MU;P0=-565;P1=489;P2=991;P3=-423;P4=359;P5=-1047;P6=3000;P7=-7118;D=2345454523454545452323232323232323454523454545456720151515201515151520202020202020201515201515151567201515152015151515202020202020202015152015151515672015151520151515152020202020202020151520151515156720151515201515151520202020202020201515201515151;CP=1;R=17;
+			{
+				name            => 'GT-9000',
+				comment         => 'Remote control is traded under different names',
+				changed         => '20191215 new',
+				id              => '49.1',
+				clockabs        => 500,
+				clockpos        => ['zero',0],
+				one             => [2,-1],  # 1025,-515  (timings from salae logic)
+				zero            => [1,-2],  # 515,-1030  (timings from salae logic)
+				start           => [6,-14],	# 3075,-7200 (timings from salae logic)
+				format          => 'twostate',
+				preamble        => 'P49#',
+				clientmodule    => 'SD_GT',
+				modulematch     => '^P49.*',
+				length_min      => '24',
+				length_max      => '24',
+			},
+		"49.2"	=>	## Tec Star Modell 2335191R
+							# SIGNALduino decodes 4 messages from remote control as MU then ... 49.1
+							# https://forum.fhem.de/index.php/topic,43292.msg352982.html#msg352982 - Nov 01, 2015
+							# message was receive with older firmware
+							# DMSG: CA627C   MU;P0=1092;P1=-429;P2=335;P3=-1184;P4=-2316;P5=2996;D=010123230123012323010123232301232301010101012323240101232301230123230101232323012323010101010123232401012323012301232301012323230123230101010101232355;CP=2;
+							# DMSG: C9AFAC   MU;P0=328;P1=-428;P3=1090;P4=-1190;P5=-2310;D=010131040431310431043131313131043104313104040531310404310404313104310431313131310431043131040405313104043104043131043104313131313104310431310404053131040431040431310431043131313131043104313104042;CP=0;
+			{
+				name            => 'GT-9000',
+				comment         => 'Remote control Tec Star Modell 2335191R',
+				changed         => '20191215 new',
+				id              => '49.2',
+				clockabs        => 383,
+				clockpos        => ['zero',0],
+				one             => [3,-1],
+				zero            => [1,-3],
+				start           => [1,-6],  # Message is not provided as MS
+				format          => 'twostate',
+				preamble        => 'P49#',
+				clientmodule    => 'SD_GT',
+				modulematch     => '^P49.*',
+				length_min      => '24',
+				length_max      => '24',
+			},
 	"50"	=>	## Opus XT300
 						# https://github.com/RFD-FHEM/RFFHEM/issues/99
 						# MU;P0=248;P1=-21400;P2=545;P3=-925;P4=1368;P5=-12308;D=01232323232323232343234323432343234343434343234323432343434343432323232323232323232343432323432345232323232323232343234323432343234343434343234323432343434343432323232323232323232343432323432345232323232323232343234323432343234343434343234323432343434343;CP=2;O;
@@ -1392,7 +1463,31 @@ our %ProtocolListSIGNALduino  = (
 			method          => \&main::SIGNALduino_OSPIR, # Call to process this message
 			polarity        => 'invert',			
 		},
-	"55"	=>	## QUIGG GT-1000
+	"53"	=>	## Lidl AURIOL AHFL 433 B2 IAN 314695
+							# https://github.com/RFD-FHEM/RFFHEM/issues/663 @Kreidler1221 05.10.2019
+							# IAN 314695 Id:07 Ch:1 T:24.2 H:59   MS;P1=611;P2=-2075;P3=-4160;P4=-9134;D=14121212121213131312121212121212121313131312121312121313131213131212131212131213121213;CP=1;SP=4;R=0;O;m2;
+							# IAN 314695 Id:07 Ch:1 T:22.3 H:61   MS;P1=608;P2=-2074;P3=-4138;P4=-9138;D=14121212121213131312121212121212121313121313131313121313131312131212131212131313121212;CP=1;SP=4;R=0;O;m1;
+							# IAN 314695 Id:07 Ch:2 T:18.4 H:70   MS;P0=606;P1=-2075;P2=-4136;P3=-9066;D=03010101010102020201010102010101010201020202010101020101010202010101020101020201010202;CP=0;SP=3;R=0;O;m2;
+			{
+				name          => 'AHFL 433 B2',
+				comment       => 'Auriol weatherstation IAN 314695',
+				changed       => '20191109 new',
+				id            => '53',
+				one           => [1,-7],
+				zero          => [1,-3.5],
+				sync          => [1,-15],
+				clockabs      => 600,
+				format        => 'twostate',		# not used now
+				preamble      => 'W53#',
+				clientmodule  => 'SD_WS',
+				modulematch   => '^W53#.*',
+				length_min    => '42',
+				length_max    => '44',
+			},
+
+		#"54"	=> can use
+
+		"55"	=>	## QUIGG GT-1000
 		{
 			name			=> 'QUIGG_GT-1000',
 			comment			=> 'remote control',
@@ -1522,9 +1617,9 @@ our %ProtocolListSIGNALduino  = (
 			id		=> '61',
 			one		=> [1,-2],
 			zero		=> [1,-1],
-			pause		=> [-81],				# 400*81=32400*6=194400 - pause between repeats of send messages (clockabs*pause must be < 32768)
 			clockabs	=> 400,
 			clockpos	=> ['cp'],
+			pause		=> [-81],				# 400*81=32400*6=194400 - pause between repeats of send messages (clockabs*pause must be < 32768)
 			format 		=> 'twostate',
 			preamble	=> 'P61#',      # prepend to converted message
 			#postamble	=> '',         # Append to converted message
@@ -1561,7 +1656,7 @@ our %ProtocolListSIGNALduino  = (
 			one          => [1],
 			zero         => [0],
 			clockabs     => 800, 
-			syncabs      => '6700',# Special field for filterMC function
+			syncabs      => '6700',  # Special field for filterMC function
 			preamble     => 'u63#', # prepend to converted message
 			#clientmodule => '', 
 			#modulematch => '', 
@@ -1574,8 +1669,8 @@ our %ProtocolListSIGNALduino  = (
 			# MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
 		{
 			name         => 'WH2',
-			id           => '64',
 			comment      => 'temperature / humidity sensor',
+			id           => '64',
 			one          => [1,-2],
 			zero         => [3,-2],
 			clockabs     => 490,
@@ -1609,6 +1704,7 @@ our %ProtocolListSIGNALduino  = (
 						# MU;P0=13312;P1=-2785;P2=4985;P3=1124;P4=-6442;P5=3181;P6=-31980;D=0121345434545454545434545454543454545434343454543434545434545454545454343434545434343434545621213454345454545454345454545434545454343434545434345454345454545454543434345454343434345456212134543454545454543454545454345454543434345454343454543454545454545;CP=3;R=73;O;
 		{
 			name         => 'WS7035',
+			comment      => 'temperature sensor',
 			id           => '66',
 			one          => [1,-5.2],
 			zero         => [2.7,-5.2],
@@ -1634,7 +1730,8 @@ our %ProtocolListSIGNALduino  = (
 						#      Bit 1             Bit 0
 						#    4630  1220       4630   3420   mikroSek - mit Oszi gemessene Zeiten
 		{
-				name             => 'WS7053',	
+				name             => 'WS7053',
+				comment          => 'temperature sensor',
 				id               => '67',
 				one              => [-38,10],     # -4636, 1220
 				zero             => [-38,28],     # -4636, 3416
@@ -1647,54 +1744,56 @@ our %ProtocolListSIGNALduino  = (
 				length_max       => '34',
 				postDemodulation => \&main::SIGNALduino_postDemo_WS7053,
 		},
-	"68"	=>	## Pollin PFR-130 ###########################################################################
-						# MS;P0=-3890;P1=386;P2=-2191;P3=-8184;D=1312121212121012121212121012121212101012101010121012121210121210101210101012;CP=1;SP=3;R=20;O;
-						# MS;P0=-2189;P1=371;P2=-3901;P3=-8158;D=1310101010101210101010101210101010121210121212101210101012101012121012121210;CP=1;SP=3;R=20;O;
-		{
-			name				=> 'Pollin PFR-130',
-			comment				=> 'temperature sensor with rain. !!!deprecated, will deleted soon!!!',
-			changed				=> '20181219 moved to ID 0.3, deprecated, will deleted soon!!!',
-			deleted				=> '1',
-			id				=> '68',
-			one				=> [1,-10],
-			zero				=> [1,-5],
-			sync				=> [1,-21],	
-			clockabs			=> 380,
-			preamble			=> 's',				# prepend to converted message
-			postamble			=> '00',			# Append to converted message
-			clientmodule	=> 'CUL_TCM97001',
-			length_min		=> '36',
-			length_max		=> '42',
-			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
-			developId		=> 'p',
-		}, 
+		"68"	=>	## Medion OR28V RF Vista Remote Control (Made in china by X10)
+							# sendet zwei verschiedene Codes pro Taste
+							# Taste ok    739E0  MS;P1=-1746;P2=513;P3=-571;P4=-4612;P5=2801;D=24512321212123232121212323212121212323232323;CP=2;SP=4;R=58;#;#;
+							# Taste ok    F31E0  MS;P1=-1712;P2=518;P3=-544;P4=-4586;P5=2807;D=24512121212123232121232323212121212323232323;CP=2;SP=4;R=58;m2;#;#;
+							# Taste Vol+  E00B0  MS;P1=-1620;P2=580;P3=-549;P4=-4561;P5=2812;D=24512121212323232323232323232123212123232323;CP=2;SP=4;R=69;O;m2;#;#;
+							# Taste Vol+  608B0  MS;P1=-1645;P2=574;P3=-535;P4=-4556;P5=2811;D=24512321212323232323212323232123212123232323;CP=2;SP=4;R=57;m2;#;#;
+			{
+				name         => 'OR28V',
+				comment      => 'Medion OR28V RF Vista Remote Control',
+				changed      => '20190723 new, old moved to ID 0.3',
+				id           => '68',
+				knownFreqs   => '433.92',
+				one          => [1,-3],
+				zero         => [1,-1],
+				sync         => [1,-8,5,-3],
+				clockabs     => 550,
+				format       => 'twostate',
+				preamble     => 'P68#',
+				clientmodule => 'SD_UT',
+				modulematch  => '^P68#.{5}',
+				length_min   => '20',
+				length_max   => '20',
+			},
 	"69"	=>	## Hoermann HSM2, HSM4, HS1-868-BS (868 MHz)
-						# https://github.com/RFD-FHEM/RFFHEM/issues/149
-						# MU;P0=-508;P1=1029;P2=503;P3=-1023;P4=12388;D=01010232323232310104010101010101010102323231010232310231023232323231023101023101010231010101010232323232310104010101010101010102323231010232310231023232323231023101023101010231010101010232323232310104010101010101010102323231010232310231023232323231023101;CP=2;R=37;O;
-						# Remote control HS1-868-BS (one button):
-						# https://github.com/RFD-FHEM/RFFHEM/issues/344
-						# MU;P0=-578;P1=1033;P2=506;P3=-1110;P4=13632;D=0101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310231010;CP=2;R=77;
-						# MU;P0=-547;P1=1067;P2=553;P3=-1066;P4=13449;D=0101010101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310;CP=2;R=71;
-						# https://forum.fhem.de/index.php/topic,71877.msg642879.html (HSM4, Taste 1-4)
-						# MU;P0=-332;P1=92;P2=-1028;P3=12269;P4=-510;P5=1014;P6=517;D=01234545454545454545462626254546262546254626262626254625454625454546254545454546262626262545434545454545454545462626254546262546254626262626254625454625454546254545454546262626262545434545454545454545462626254546262546254626262626254625454625454546254545;CP=6;R=37;O;
-						# MU;P0=509;P1=-10128;P2=1340;P3=-517;P4=1019;P5=-1019;P6=12372;D=01234343434343434343050505434305054305430505050505430543430543434305434343430543050505054343634343434343434343050505434305054305430505050505430543430543434305434343430543050505054343634343434343434343050505434305054305430505050505430543430543434305434343;CP=0;R=52;O;
-						# MU;P0=12376;P1=360;P2=-10284;P3=1016;P4=-507;P6=521;P7=-1012;D=01234343434343434343467676734346767346734676767676734673434673434346734343434676767346767343404343434343434343467676734346767346734676767676734673434673434346734343434676767346767343404343434343434343467676734346767346734676767676734673434673434346734343;CP=6;R=55;O;
-						# MU;P0=-3656;P1=12248;P2=-519;P3=1008;P4=506;P5=-1033;D=01232323232323232324545453232454532453245454545453245323245323232453232323245453245454532321232323232323232324545453232454532453245454545453245323245323232453232323245453245454532321232323232323232324545453232454532453245454545453245323245323232453232323;CP=4;R=48;O;
+							# https://github.com/RFD-FHEM/RFFHEM/issues/149
+							# HSM4 | button_1   MU;P0=-508;P1=1029;P2=503;P3=-1023;P4=12388;D=01010232323232310104010101010101010102323231010232310231023232323231023101023101010231010101010232323232310104010101010101010102323231010232310231023232323231023101023101010231010101010232323232310104010101010101010102323231010232310231023232323231023101;CP=2;R=37;O;
+							# Remote control HS1-868-BS (one button):
+							# https://github.com/RFD-FHEM/RFFHEM/issues/344
+							# HS1_868_BS | receive   MU;P0=-578;P1=1033;P2=506;P3=-1110;P4=13632;D=0101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310231010;CP=2;R=77;
+							# HS1_868_BS | receive   MU;P0=-547;P1=1067;P2=553;P3=-1066;P4=13449;D=0101010101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310231010232323101010101010101010232323101040101010101010101023232323102323101010231023102310;CP=2;R=71;
+							# https://forum.fhem.de/index.php/topic,71877.msg642879.html (HSM4, Taste 1-4)
+							# HSM4 | button_1   MU;P0=-332;P1=92;P2=-1028;P3=12269;P4=-510;P5=1014;P6=517;D=01234545454545454545462626254546262546254626262626254625454625454546254545454546262626262545434545454545454545462626254546262546254626262626254625454625454546254545454546262626262545434545454545454545462626254546262546254626262626254625454625454546254545;CP=6;R=37;O;
+							# HSM4 | button_2   MU;P0=509;P1=-10128;P2=1340;P3=-517;P4=1019;P5=-1019;P6=12372;D=01234343434343434343050505434305054305430505050505430543430543434305434343430543050505054343634343434343434343050505434305054305430505050505430543430543434305434343430543050505054343634343434343434343050505434305054305430505050505430543430543434305434343;CP=0;R=52;O;
+							# HSM4 | button_3   MU;P0=12376;P1=360;P2=-10284;P3=1016;P4=-507;P6=521;P7=-1012;D=01234343434343434343467676734346767346734676767676734673434673434346734343434676767346767343404343434343434343467676734346767346734676767676734673434673434346734343434676767346767343404343434343434343467676734346767346734676767676734673434673434346734343;CP=6;R=55;O;
+							# HSM4 | button_4   MU;P0=-3656;P1=12248;P2=-519;P3=1008;P4=506;P5=-1033;D=01232323232323232324545453232454532453245454545453245323245323232453232323245453245454532321232323232323232324545453232454532453245454545453245323245323232453232323245453245454532321232323232323232324545453232454532453245454545453245323245323232453232323;CP=4;R=48;O;
 		{
 			name            => 'Hoermann',
 			comment         => 'remote control HS1-868-BS, HSM4',
 			id              => '69',
-			knownFreqs      => '868',
-			zero            => [2,-1],
-			one             => [1,-2],
-			start           => [25,-1],  # 24
+			knownFreqs		=> '433.92 | 868.35',
+			zero			=> [2,-1],     # 1020,510
+			one				=> [1,-2],     # 510,1020
+			start			=> [25,-1],    # 12750,510
 			clockabs        => 510,
 			clockpos        => ['one',0],
 			format          => 'twostate',  # not used now
 			clientmodule    => 'SD_UT',
-			#modulematch     => '^U69*',
+			modulematch     => '^P69#.{11}',
 			preamble        => 'P69#',
-			length_min      => '40',
+			length_min      => '44',
 			length_max      => '44',
 		},
 	"70"	=>	## FHT80TF (Funk-Tuer-Fenster-Melder FHT 80TF und FHT 80TF-2)
@@ -1703,7 +1802,7 @@ our %ProtocolListSIGNALduino  = (
 	# open   MU;P0=-21652;P1=429;P2=-367;P4=634;P5=-555;D=012121212121212121212121245124545121245451212454545121245124545454512454545121245451212121212124512451245451245121212;CP=1;R=38;
 		{
 			name         	=> 'FHT80TF',
-			comment		=> 'Door/Window switch',
+			comment		=> 'door/window switch',
 			id           	=> '70',
 			knownFreqs      => '868.35',
 			one         	=> [1.5,-1.5],	# 600
@@ -1741,6 +1840,7 @@ our %ProtocolListSIGNALduino  = (
 			# MU;P0=-8848;P1=4804;P2=-1512;P3=336;P4=-757;P5=695;P6=-402;D=0123456345656345656345634343434345634565656343434345634343434343456345634563456345;CP=3;R=49;	
 		{
 			name			=> 'Siro shutter',
+			comment			=> 'message decode as MU',
 			id			=> '72',
 			dispatchequals	=>  'true',
 			one			=> [2,-1.2],    # 680, -400
@@ -1760,7 +1860,7 @@ our %ProtocolListSIGNALduino  = (
 			  # MS;P0=4803;P1=-1522;P2=333;P3=-769;P4=699;P5=-393;P6=-9190;D=2601234523454523454523452323232323452345454523232323452323232323234523232345454545;CP=2;SP=6;R=61;
 		{
 			name			=> 'Siro shutter',
-			comment			=> 'developModule. Siro is not in github',
+			comment			=> 'message decode as MS',
 			id			=> '72',
 			developId		=> 'm',
 			dispatchequals  =>  'true',
@@ -1781,10 +1881,9 @@ our %ProtocolListSIGNALduino  = (
 			# MU;P0=136;P1=-112;P2=631;P3=-392;P4=402;P5=-592;P6=-8952;D=0123434343434343434343434325434343254325252543432543434343434325434343434343434343254325252543254325434343434343434343434343252525432543464343434343434343434343432543434325432525254343254343434343432543434343434343434325432525254325432543434343434343434;CP=4;R=250;
 		{
 			name		=> 'FHT80',
-			comment 	=> 'Roomthermostat (only receive)',
+			comment 	=> 'roomthermostat (only receive)',
 			id		=> '73',
 			knownFreqs      => '868.35',
-			developId	=> 'y',
 			one		=> [1.5,-1.5], # 600
 			zero		=> [1,-1], # 400
 			pause		=> [-25],
@@ -1801,7 +1900,7 @@ our %ProtocolListSIGNALduino  = (
 						# MU;P0=-10420;P1=-92;P2=398;P3=-417;P5=596;P6=-592;D=1232323232323232323232323562323235656232323232356232356232323232323232323232323232323235623232323562356565623565623562023232323232323232323232356232323565623232323235623235623232323232323232323232323232323562323232356235656562356562356202323232323232323;CP=2;R=72;
 		{
 			name			=> 'FS20',
-			comment			=> 'Remote Control',
+			comment			=> 'remote control (decode as MU)',
 			id			=> '74',
 			knownFreqs      => '868.35',
 			one			=> [1.5,-1.5], # 600
@@ -1859,14 +1958,16 @@ our %ProtocolListSIGNALduino  = (
 			length_max 		=> '40',
 		},
 	"76"	=>	## Kabellose LED-Weihnachtskerzen XM21-0
-						# MU;P0=-205;P1=113;P3=406;D=010101010101010101010101010101010101010101010101010101010101030303030101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010103030303010101010101010101010100;CP=1;R=69;
-						# MU;P0=-198;P1=115;P4=424;D=0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010404040401010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101040404040;CP=1;R=60;O;
-						# MU;P0=114;P1=-197;P2=419;D=0121212121010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101012121212101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010;CP=0;R=54;O;
-						# ON -> P76#FFFFFFFFFFFFFFFF
-						# MU;P0=-189;P1=115;P4=422;D=0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101040404040101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010104040404010101010;CP=1;R=73;O;
-						# MU;P0=-203;P1=412;P2=114;D=01010101020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020101010102020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020200;CP=2;R=74;
-						# MU;P0=-210;P1=106;P3=413;D=0101010101010101010303030301010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101030303030100;CP=1;R=80;
-						# OFF -> P76#FFFFFFFFFFFFFFC
+							# ! min length not work - must CHECK !
+							# https://github.com/RFD-FHEM/RFFHEM/pull/437#issuecomment-448019192 @sidey79
+							# on -> P76#FFFFFFFFFFFFFFFF
+							# LED_XM21_0 | on    MU;P0=-205;P1=113;P3=406;D=010101010101010101010101010101010101010101010101010101010101030303030101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010103030303010101010101010101010100;CP=1;R=69;
+							# LED_XM21_0 | on    MU;P0=-198;P1=115;P4=424;D=0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010404040401010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101040404040;CP=1;R=60;O;
+							# LED_XM21_0 | on    MU;P0=114;P1=-197;P2=419;D=0121212121010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101012121212101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010;CP=0;R=54;O;
+							# off -> P76#FFFFFFFFFFFFFFC
+							# LED_XM21_0 | off   MU;P0=-189;P1=115;P4=422;D=0101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101040404040101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010104040404010101010;CP=1;R=73;O;
+							# LED_XM21_0 | off   MU;P0=-203;P1=412;P2=114;D=01010101020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020101010102020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020200;CP=2;R=74;
+							# LED_XM21_0 | off   MU;P0=-210;P1=106;P3=413;D=0101010101010101010303030301010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101030303030100;CP=1;R=80;
 		{
 			name			=> 'LED XM21',
 			comment			=> 'remote with 2-buttons for LED X-MAS light string',
@@ -1985,13 +2086,13 @@ our %ProtocolListSIGNALduino  = (
 			# short 500 microSec / long 1000 microSec / bittime 1500 mikroSek / pilot 12 * bittime, from that 1/3 bitlength high
 		{
 			name             => 'SA-434-1',
-			comment          => 'Remote control SA-434-1 mini 923301 based on HT12E',
+			comment          => 'remote control SA-434-1 mini 923301 based on HT12E',
 			changed          => '20180906 new',
 			id               => '81',
 			one              => [-2,1],			# i.O.
 			zero             => [-1,2],			# i.O.
 			start            => [-35,1],		# Message is not provided as MS, worakround is start
-			clockabs		 => 500,                 
+			clockabs		 => 500,
 			clockpos         => ['one',1],
 			format           => 'twostate',
 			preamble	     => 'P81#',			# prepend to converted message
@@ -2070,7 +2171,6 @@ our %ProtocolListSIGNALduino  = (
 			start					=> [4,-4,4,-4],
 			clockabs			=> 215, 
 			clockpos			=> ['zero',0],
-			reconstructBit		=> '1',
 			format				=> 'twostate',
 			preamble			=> 'W84#',						# prepend to converted message
 			#postamble			=> '',								# append to converted message
@@ -2207,7 +2307,7 @@ our %ProtocolListSIGNALduino  = (
 					# MU;P0=172;P1=-533;P2=401;P3=-296;P5=773;P6=-895;D=01230101230101012323010101230123010101010101230101230101012323010101230123010301230101010101012301012301010123230101012301230101010123010101010101012301565656562323232301010101010101230101230101012323010101230123010101012301010101010101230156565656232323;CP=0;R=23;O;
 		{
 			name         => 'TFA 30.3221.02',
-			comment      => 'Temperature / humidity sensor for weatherstation TFA 35.1140.01',
+			comment      => 'temperature / humidity sensor for weatherstation TFA 35.1140.01',
 			changed      => '20181209 new',
 			id           => '89',
 			one          => [2,-1],
@@ -2230,7 +2330,7 @@ our %ProtocolListSIGNALduino  = (
 						# MS;P1=268;P3=793;P4=-337;P6=-871;P7=-10159;D=17163416161616343434341616341634341616161634341616341634161616343416;CP=1;SP=7;R=24;O;m2;	//B	AUS
 		{
 			name         => 'mumbi | MANAX',
-			comment      => 'remote control mumbi FS300, MANAX MX-RCS250 (only receive)',
+			comment      => 'remote control mumbi RC-10, MANAX MX-RCS250',
 			changed      => '20181219 new',
 			id           => '90',
 			one          => [3,-1],
@@ -2255,8 +2355,8 @@ our %ProtocolListSIGNALduino  = (
 			id			=> '91',
 			changed			=> '20181228 new',
 			knownFreqs		=> '433.92 | 868.35',
-			zero			=> [-1,2],
 			one			=> [-2,1],
+			zero			=> [-1,2],
 			start			=> [-10,1],
 			clockabs		=> 400,
 			clockpos		=> ['zero',1],
@@ -2265,6 +2365,7 @@ our %ProtocolListSIGNALduino  = (
 			length_min		=> '36',
 			length_max		=> '36',
 			clientmodule	=> 'SD_UT',
+			reconstructBit		=> '1',
 		},
 	"91.1"	=>	## Atlantic Security / Focus Security China Devices
 						# https://forum.fhem.de/index.php/topic,58397.msg878008.html#msg878008
@@ -2276,8 +2377,8 @@ our %ProtocolListSIGNALduino  = (
 			changed			=> '20181230 new',
 			id			=> '91',
 			knownFreqs		=> '433.92 | 868.35',
-			zero			=> [-1,2],
 			one			=> [-2,1],
+			zero			=> [-1,2],
 			sync			=> [-10,1],
 			clockabs		=> 400,
 			reconstructBit		=> '1',
@@ -2336,7 +2437,7 @@ our %ProtocolListSIGNALduino  = (
 							# MU;P0=-31268;P1=1538;P2=-285;P3=-7574;P4=-1997;D=012121212121212131414141412121412121414141414141414141412121412121414141412121414141212141212141212141414121012121212121212131414141412121412121414141414141414141412121412121414141412121414141212141212141212141414121;CP=1;
 			{
 				name				=> 'Atech',
-				comment				=> 'temperature sensor',
+				comment				=> 'Temperature sensor',
 				changed				=> '20190318 new',
 				id				=> '94',
 				one				=> [5.3,-1],     # 1537, 290
@@ -2348,7 +2449,6 @@ our %ProtocolListSIGNALduino  = (
 				format				=> 'twostate',
 				preamble			=> 'W94#',
 				clientmodule		=> 'SD_WS',
-				#modulematch		=> '',
 				length_min			=> '24',         # minimal 24*0=24 Bit, kuerzeste bekannte aus Userlog: 36
 				length_max			=> '96',         # maximal 24*110=96 Bit, laengste bekannte aus Userlog:  60
 			},
@@ -2381,19 +2481,51 @@ our %ProtocolListSIGNALduino  = (
 							# Button_1    MC;LL=-424;LH=438;SL=-215;SH=212;D=238823B1001F8;C=214;L=49;R=68;
 							# Button_2    MC;LL=-412;LH=458;SL=-187;SH=240;D=238129D9A78;C=216;L=41;R=241;
 			{
-				name				=> 'Grothe Mistral',
-				comment				=> 'wireless gong',
-				changed				=> '20190518 new',
-				id				=> '96',
-				knownFreqs			=> '868.35',
-				clockrange			=> [210,220],						# min , max
-				developId			=> 'y',
-				format			=> 'manchester',				# tristate can't be migrated from bin into hex!
-				#clientmodule		=> '',
-				#modulematch		=> '^u96#',
-				preamble			=> 'u96#',
-				length_min			=> '40',
-				length_max			=> '49',
+				name            => 'Grothe Mistral SE',
+				comment         => 'Wireless doorbell Grothe Mistral SE 01.1 or 03.1',
+				changed         => '20190518 new',
+				id              => '96',
+				knownFreqs      => '868.35',
+				clockrange      => [170,260],
+				format          => 'manchester',
+				clientmodule    => 'SD_BELL',
+				modulematch     => '^P96#',
+				preamble        => 'P96#',
+				length_min      => '40',
+				length_max      => '49',
 				method			=> \&main::SIGNALduino_GROTHE,		# Call to process this message
 			}
+
+		########################################################################
+		#### ### old information from incomplete implemented protocols #### ####
+
+		# ""	=>	## Livolo
+							# https://github.com/RFD-FHEM/RFFHEM/issues/29
+							# MU;P0=-195;P1=151;P2=475;P3=-333;D=0101010101 02 01010101010101310101310101010101310101 02 01010101010101010101010101010101010101 02 01010101010101010101010101010101010101 02 010101010101013101013101;CP=1;
+							#
+							# protocol sends 24 to 47 pulses per message.
+							# First pulse is the header and is 595 μs long. All subsequent pulses are either 170 μs (short pulse) or 340 μs (long pulse) long.
+							# Two subsequent short pulses correspond to bit 0, one long pulse corresponds to bit 1. There is no footer. The message is repeated for about 1 second.
+							#
+							# Start bit: |             |___|    bit 0: |   |___|    bit 1: |       |___|
+			# {
+				# name          => 'Livolo',
+				# comment       => 'remote control / dimmmer / switch ...',
+				# id            => '',
+				# knownFreqs    => '',
+				# one           => [3],
+				# zero          => [1],
+				# start         => [5],
+				# clockabs      => 110,						#can be 90-140
+				# format        => 'twostate',
+				# preamble      => 'uXX#',				# prepend to converted message
+				# #clientmodule  => '',
+				# #modulematch   => '',
+				# length_min    => '16',
+				# #length_max   => '',						# missing
+				# filterfunc    => 'SIGNALduino_filterSign',
+			# },
+
+		########################################################################
+
 );
