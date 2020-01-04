@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.0-dev_ralf_07.07.",
+	SDUINO_VERSION            => "v3.4.1-dev_ralf_04.01.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -82,21 +82,20 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
 
 
 my %sets = (
-  "raw"       => '',
-  "flash"     => '',
+  "raw"       => 'textFieldNL',
+  "flash"     => 'textFieldNL',
   "reset"     => 'noArg',
   "close"     => 'noArg',
-  #"disablereceiver"     => "",
-  #"ITClock"  => 'slider,100,20,700',
   "enableMessagetype" => 'syncedMS,unsyncedMU,manchesterMC',
   "disableMessagetype" => 'syncedMS,unsyncedMU,manchesterMC',
-  "sendMsg"		=> "",
-  "cc1101_freq"    => '',
-  "cc1101_bWidth"  => '',
-  "cc1101_rAmpl"   => '',
-  "cc1101_sens"    => '',
+  "sendMsg"   => 'textFieldNL',
+  "cc1101_freq"    => 'textFieldNL',
+  "cc1101_bWidth"  => '58,68,81,102,116,135,162,203,232,270,325,406,464,541,650,812',
+  "cc1101_rAmpl"   => '24,27,30,33,36,38,40,42',
+  "cc1101_sens"    => '4,8,12,16',
   "cc1101_patable_433" => '-10_dBm,-5_dBm,0_dBm,5_dBm,7_dBm,10_dBm',
   "cc1101_patable_868" => '-10_dBm,-5_dBm,0_dBm,5_dBm,7_dBm,10_dBm',
+  "cc1101_reg"     => 'textFieldNL',
 );
 
 my %patable = (
@@ -121,6 +120,7 @@ my %patable = (
 );
 
 my @ampllist = (24, 27, 30, 33, 36, 38, 40, 42); # rAmpl(dB)
+my @modformat = ("2-FSK","GFSK","-","ASK/OOK","4-FSK","-","-","MSK"); # modulation format
 
 ## Supported Clients per default
 my $clientsSIGNALduino = ":IT:"
@@ -138,7 +138,7 @@ my $clientsSIGNALduino = ":IT:"
 						."Dooya:"
 						."SOMFY:"
 						."SD_BELL:"	## bells
-						."SD_UT:"	## BELL 201.2 TXA
+						."SD_UT:"			## universal - more devices with different protocols
 			        	."SD_WS_Maverick:"
 			        	."FLAMINGO:"
 			        	."CUL_WS:"
@@ -152,6 +152,7 @@ my $clientsSIGNALduino = ":IT:"
 						."CUL_EM:"
 						."Fernotron:"
 						."SD_Keeloq:"
+						."SD_GT:"
 						."SIGNALduino_TOOL:"
 			      		."SIGNALduino_un:"
 					; 
@@ -173,7 +174,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|29|30|34|46|69|76|81|83|86|90|91|92|93|95)#.*',		# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|26|29|30|34|46|68|69|76|81|83|86|90|91|91.1|92|93|95)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -183,8 +184,9 @@ my %matchListSIGNALduino = (
      "24:FS20"    				=> "^81..(04|0c)..0101a001", 
      "25:CUL_EM"    				=> "^E0.................", 
      "26:Fernotron"  			=> '^P82#.*',
-     "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79)#.*',
+     "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79|96)#.*',
      "28:SD_Keeloq"				=> '^P(?:87|88)#.*',
+     "29:SD_GT"						=> '^P49#[A-Fa-f0-9]+',
      "90:SIGNALduino_TOOL"		=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
@@ -215,7 +217,7 @@ SIGNALduino_Initialize($)
   $hash->{SetFn}   			= "SIGNALduino_Set";
   $hash->{AttrFn}  			= "SIGNALduino_Attr";
   $hash->{AttrList}			= 
-                       "Clients MatchList do_not_notify:1,0 dummy:1,0"
+                       "Clients MatchList do_not_notify:1,0 dummy:1"
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
@@ -453,18 +455,8 @@ SIGNALduino_Set($@)
   
   if($cmd eq "raw") {
     SIGNALduino_Log3 $name, 4, "set $name $cmd $arg";
-    if ($arg =~ m/^Wseq /) {
-       my @args = split(' ', $arg);
-       foreach my $argcmd (@args) {
-          if ($argcmd ne "Wseq") {
-             #Log3 $name, 4, "set $name raw Wseq: $argcmd";
-             SIGNALduino_AddSendQueue($hash,$argcmd);
-          }
-       }
-    } else {
-       #SIGNALduino_SimpleWrite($hash, $arg);
-       SIGNALduino_AddSendQueue($hash,$arg);
-    }
+    #SIGNALduino_SimpleWrite($hash, $arg);
+    SIGNALduino_AddSendQueue($hash,$arg);
   } elsif( $cmd eq "flash" ) {
     my @args = split(' ', $arg);
     my $log = "";
@@ -679,6 +671,22 @@ SIGNALduino_Set($@)
 	my $pa = "x" . $patable{$paFreq}{$arg};
 	SIGNALduino_Log3 $name, 3, "$name: Setting patable $paFreq $arg $pa";
 	SIGNALduino_AddSendQueue($hash,$pa);
+	SIGNALduino_WriteInit($hash);
+  } elsif( $cmd eq "reg" ) {
+	## check for four hex digits
+	my @nonHex = grep (!/^[0-9A-Fa-f]{4}$/,@a[0..$#a]) ;
+	return "ERROR: wrong parameter value @nonHex, only hexadecimal ​​four digits allowed" if (@nonHex);
+	
+	## check allowed register position
+	#my (@wrongRegisters) = grep { !exists($cc1101_register{substr($_,0,2)}) } @a[0..$#a] ;
+	#return "ERROR: unknown register position ".substr($wrongRegisters[0],0,2) if (@wrongRegisters);
+	
+	SIGNALduino_Log3 $name, 3, "$name: SetRegisters, cc1101_reg @a[0..$#a]";
+	my @tmpSendQueue=();
+	foreach my $argcmd (@a[0..$#a]) {
+		$argcmd = sprintf("W%02X%s",hex(substr($argcmd,0,2)) + 2,substr($argcmd,2,2));
+		SIGNALduino_AddSendQueue($hash,$argcmd);
+	}
 	SIGNALduino_WriteInit($hash);
   } elsif( $cmd eq "sendMsg" ) {
 	SIGNALduino_Log3 $name, 5, "$name: sendmsg msg=$arg";
@@ -1056,18 +1064,19 @@ sub SIGNALduino_parseResponse($$$)
   	{
 		my (undef,$str) = split('=', $msg);
 		my $var;
-		my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"1B"=>1,"1D"=>1 );
+		my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"1B"=>1,"1D"=>1 );
 		$msg = "";
 		foreach my $a (sort keys %r) {
 			$var = substr($str,(hex($a)-13)*2, 2);
 			$r{$a} = hex($var);
 		}
-		$msg = sprintf("freq:%.3fMHz bWidth:%dKHz rAmpl:%ddB sens:%ddB  (DataRate:%.2fBaud)",
-		26*(($r{"0D"}*256+$r{"0E"})*256+$r{"0F"})/65536,                #Freq
-		26000/(8 * (4+(($r{"10"}>>4)&3)) * (1 << (($r{"10"}>>6)&3))),   #Bw
-		$ampllist[$r{"1B"}&7],                                          #rAmpl
-		4+4*($r{"1D"}&3),                                               #Sens
-		((256+$r{"11"})*(2**($r{"10"} & 15 )))*26000000/(2**28)         #DataRate
+		$msg = sprintf("freq:%.3fMHz bWidth:%dKHz rAmpl:%ddB sens:%ddB (DataRate:%.2fBaud, Modulation:%s)",
+		26*(($r{"0D"}*256+$r{"0E"})*256+$r{"0F"})/65536,                #Freq       | Register 0x0D,0x0E,0x0F
+		26000/(8 * (4+(($r{"10"}>>4)&3)) * (1 << (($r{"10"}>>6)&3))),   #Bw         | Register 0x10
+		$ampllist[$r{"1B"}&7],                                          #rAmpl      | Register 0x1B
+		4+4*($r{"1D"}&3),                                               #Sens       | Register 0x1D
+		((256+$r{"11"})*(2**($r{"10"} & 15 )))*26000000/(2**28),         #DataRate   | Register 0x10,0x11
+		$modformat[$r{"12"}>>4]                                         #Modulation | Register 0x12
 		);
 	}
 	elsif($cmd eq "bWidth") {
@@ -1445,6 +1454,9 @@ SIGNALduino_Read($)
 		my $partD;
 		my $dOverfl = 0;
 		#my $fFlag = 0;
+		
+		#Log3 $name, 3, "rmsg=$rmsg";
+		$hash->{rmsgRaw} = $rmsg;
 		
 		foreach my $msgPart (@msg_parts) {
 			next if ($msgPart eq "");
@@ -1901,13 +1913,11 @@ sub SIGNALduino_Split_Message($$)
 		   Debug "$name: extracted  pattern @pattern \n" if ($debug);
 		}
 		elsif($_ =~ m/D=\d+/ or $_ =~ m/^D=[A-F0-9]+/) 		#### Message from array
-
 		{
 			$_ =~ s/D=//;  
 			$rawData = $_ ;
 			Debug "$name: extracted  data $rawData\n" if ($debug);
 			$ret{rawData} = $rawData;
-
 		}
 		elsif($_ =~ m/^SP=\d{1}/) 		#### Sync Pulse Index
 		{
@@ -1977,6 +1987,21 @@ sub SIGNALduno_Dispatch($$$$$)
 		Dispatch($hash, $dmsg, undef);  ## Dispatch zum Modul SIGNALduino_TOOL
 		return;
 	}
+	
+#	if ($id == 0.4) {
+#	   	my $rawmsglist;
+#   	    my @lines;
+#   	    if (defined($hash->{rawmsgList}))
+#   	    {
+#   	    	$rawmsglist=$hash->{rawmsgList};
+#			@lines = split (' ', $rawmsglist);   # or whatever
+#   	    }
+#   	    push(@lines,"$dmsg#$rmsg\n");
+#		shift(@lines)if (scalar @lines >10);
+#		$rawmsglist = join(' ',@lines);
+#
+#		$hash->{rawmsgList}=$rawmsglist;
+#	}
 	
 	my $DMSGgleich = 1;
 	if ($dmsg eq $hash->{LASTDMSG}) {
@@ -2283,6 +2308,9 @@ SIGNALduino_Parse_MS($$$$%)
 		return 1;
 		
 
+	} else {
+		Log3 $name, 3, "$name ParseMS Error! clockidx or syncidx isn't valid: $rmsg";
+		return 0
 	}
 }
 
@@ -2640,6 +2668,9 @@ sub SIGNALduino_Parse_MU($$$$@)
 		return 0 if (!$message_dispatched);
 		
 		return 1;
+	} else {
+		Log3 $name, 3, "$name ParseMU Error! clockidx isn't valid: $rmsg";
+		return 0
 	}
 }
 
@@ -2662,7 +2693,15 @@ SIGNALduino_Parse_MC($$$$@)
 		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
 	}
 	
-	return undef if (!$clock);
+	if (!$clock) {
+		Log3 $name, 3, "$name ParseMC Error! clock isn't num: $rmsg";
+		return undef;
+	}
+	if (!$mcbitnum) {
+		Log3 $name, 3, "$name ParseMC Error! mcbitnum isn't num: $rmsg";
+		return undef;
+	}
+	
 	#my $protocol=undef;
 	#my %patternListRaw = %msg_parts{patternList};
 	
@@ -2713,14 +2752,14 @@ SIGNALduino_Parse_MC($$$$@)
 		   	Log3 $name, 5, "$name: extracted data $bitData (bin)";
 			
 			if (!exists $ProtocolListSIGNALduino{$id}{method}) {
-				SIGNALduino_Log3 $name, 3, "$name ParseMc: Error ID=$id, no method defined, it must be defined in the protocol hash!";
+				SIGNALduino_Log3 $name, 3, "$name ParseMC: Error ID=$id, no method defined, it must be defined in the protocol hash!";
 				next;
 			}
 			
 			my $method = $ProtocolListSIGNALduino{$id}{method};
 		    if (!defined &$method)
 			{
-				Log3 $name, 3, "$name ParseMc: Error ID=$id, Unknown method. Please check it!";
+				Log3 $name, 3, "$name ParseMC: Error ID=$id, Unknown method. Please check it!";
 			} else {
 				$mcbitnum = length($bitData) if ($mcbitnum > length($bitData));
 				my ($rcode,$res) = $method->($name,$bitData,$id,$mcbitnum);
@@ -3413,10 +3452,11 @@ sub SIGNALduino_postDemo_bit2Arctec
 {
 	my ($name, @bit_msg) = @_;
 	my $msg = join("",@bit_msg);	
-	# Convert 0 -> 01   1 -> 10 to be compatible with IT Module
+	# Convert 0 -> 01   1 -> 10   F -> 00  to be compatible with IT Module
 	$msg =~ s/0/z/g;
 	$msg =~ s/1/10/g;
 	$msg =~ s/z/01/g;
+	$msg =~ s/F/00/g;
 	return (1,split("",$msg)); 
 }
 
@@ -4418,7 +4458,7 @@ sub SIGNALduino_filterMC($$$%)
 # =cut
 
 
-sub SIGNALduino_filterSign($$$%)
+sub SIGNALduino_filterSign($$$%)	# wurde von Livolo verwendet
 {
 	my ($name,$id,$rawData,%patternListRaw) = @_;
 	my $debug = AttrVal($name,"debug",0);
@@ -4805,7 +4845,7 @@ sub SIGNALduino_githubParseHttpResponse($$$)
 					
 					foreach my $asset (@{$item->{assets}})
 					{
-						#Log3 $name, 3, "$name queryReleases: hardware=$hardware name=$asset->{name}";
+						#Log3 $name, 5, "$name queryReleases: hardware=$hardware name=$asset->{name}";
 						next if ($asset->{name} !~ m/$hardware/i);
 						$releaselist.=$item->{tag_name}."__".substr($item->{created_at},0,10)."," ;		
 						last;
