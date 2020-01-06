@@ -2493,7 +2493,32 @@ our %ProtocolListSIGNALduino  = (
 				preamble        => 'P96#',
 				length_min      => '40',
 				length_max      => '49',
-				method			=> \&main::SIGNALduino_GROTHE,		# Call to process this message
+				method          => \&main::SIGNALduino_GROTHE,		# Call to process this message
+			},
+		"100"	=>	# Lacrosse
+			{
+				name            => 'Lacrosse',
+				changed         => '20200104',
+				id              => '100',
+				knownFreqs      => '868.3',
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'LaCrosse',
+				method        => \&main::SIGNALduino_LaCrosse,
+			},
+		"102"	=>	# Kopp
+			{
+				name            => 'KoppFreeControl',
+				changed         => '20200104',
+				id              => '102',
+				datarate        => '4785.5',
+				sync            => 'AA54',
+				modulation      => 'GFSK',
+				match           => '^0.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'Kopp',
+				method        => \&main::SIGNALduino_KoppFreeControl,
 			}
 
 		########################################################################
