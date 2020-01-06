@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.1-dev_ralf_04.01.",
+	SDUINO_VERSION            => "v3.4.1-dev_ralf_06.01.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -48,7 +48,6 @@ my %ProtocolListSIGNALduino = %SD_Protocols::ProtocolListSIGNALduino;
 my $VersionProtocolList = \%SD_Protocols::VersionProtocolList;
 
 sub SIGNALduino_Attr(@);
-#sub SIGNALduino_Clear($);           # wird nicht mehr benoetigt
 sub SIGNALduino_HandleWriteQueue($);
 sub SIGNALduino_Parse($$$$@);
 sub SIGNALduino_Read($);
@@ -65,18 +64,14 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "freeram"  => ["R", '^[0-9]+'],
   "raw"      => ["", '.*'],
   "uptime"   => ["t", '^[0-9]+' ],
-  "cmds"     => ["?", '.*Use one of[ 0-9A-Za-z]+[\r\n]*$' ],
-# "ITParms"  => ["ip",'.*'],
+  "cmds"     => ["?", '.*Use one of[\? 0-9A-Za-z]+[\r\n]*$' ],
   "ping"     => ["P",'^OK$'],
-  "config"   => ["CG",'^MS.*MU.*MC.*'],
-  "protocolIdToJson"   => ["none",'none'],
+  "config"   => ["CG",'(^MS.*MU.*MC.*)|(ccmode=)'],
+  "protocolIdToJson"   => ['none','none'],
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
   "ccpatable" => ["C3E", '^C3E = .*'],
-#  "ITClock"  => ["ic", '\d+'],
-#  "FAParms"  => ["fp", '.*' ],
-#  "TCParms"  => ["dp", '.*' ],
-#  "HXParms"  => ["hp", '.*' ]
+  "setBank"  => ["b", 'b=\d ccmode=\d.*'],
   "zAvailableFirmware" => ["none",'none'],
 );
 
@@ -88,6 +83,7 @@ my %sets = (
   "close"     => 'noArg',
   "enableMessagetype" => 'syncedMS,unsyncedMU,manchesterMC',
   "disableMessagetype" => 'syncedMS,unsyncedMU,manchesterMC',
+  "LaCrossePairForSec" => 'textFieldNL',
   "sendMsg"   => 'textFieldNL',
   "cc1101_freq"    => 'textFieldNL',
   "cc1101_bWidth"  => '58,68,81,102,116,135,162,203,232,270,325,406,464,541,650,812',
@@ -121,6 +117,10 @@ my %patable = (
 
 my @ampllist = (24, 27, 30, 33, 36, 38, 40, 42); # rAmpl(dB)
 my @modformat = ("2-FSK","GFSK","-","ASK/OOK","4-FSK","-","-","MSK"); # modulation format
+my @SYNC_MODE = ("No preamble/sync","15/16 sync","16/16 sync","30/32 sync", 
+                 "No preamble/sync, carrier-sense above threshold", "15/16 + carrier-sense above threshold", "16/16 + carrier-sense above threshold", "30/32 + carrier-sense above threshold");
+
+
 
 ## Supported Clients per default
 my $clientsSIGNALduino = ":IT:"
@@ -153,6 +153,8 @@ my $clientsSIGNALduino = ":IT:"
 						."Fernotron:"
 						."SD_Keeloq:"
 						."SD_GT:"
+						."LaCrosse:"
+						."KOPP_FC:"
 						."SIGNALduino_TOOL:"
 			      		."SIGNALduino_un:"
 					; 
@@ -186,7 +188,9 @@ my %matchListSIGNALduino = (
      "26:Fernotron"  			=> '^P82#.*',
      "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79|96)#.*',
      "28:SD_Keeloq"				=> '^P(?:87|88)#.*',
-     "29:SD_GT"						=> '^P49#[A-Fa-f0-9]+',
+     "29:SD_GT"					=> '^P49#[A-Fa-f0-9]+',
+     "30:LaCrosse"				=> '^(\\S+\\s+9 |OK\\sWS\\s)',
+     "31:KOPP_FC"				=> '^kr..................',
      "90:SIGNALduino_TOOL"		=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
@@ -247,6 +251,7 @@ SIGNALduino_Initialize($)
   $hash->{msIdList} = ();
   $hash->{muIdList} = ();
   $hash->{mcIdList} = ();
+  $hash->{mnIdList} = ();
   
   #ours %attr{};
 }
@@ -397,6 +402,13 @@ SIGNALduino_Shutdown($)
 
 #####################################
 #$hash,$name,"sendmsg","P17;R6#".substr($arg,2)
+
+sub
+SIGNALduino_RemoveLaCrossePair($)
+{
+  my $hash = shift;
+  delete($hash->{LaCrossePair});
+}
 
 sub
 SIGNALduino_Set($@)
@@ -688,6 +700,13 @@ SIGNALduino_Set($@)
 		SIGNALduino_AddSendQueue($hash,$argcmd);
 	}
 	SIGNALduino_WriteInit($hash);
+  } elsif( $cmd eq "LaCrossePairForSec" ) {
+
+    return "Usage: set $name LaCrossePairForSec <seconds_active> [ignore_battery]" if(!$arg || $a[0] !~ m/^\d+$/ || ($a[1] && $a[1] ne "ignore_battery") );
+    $hash->{LaCrossePair} = $a[1]?2:1;
+    InternalTimer(gettimeofday()+$a[0], "SIGNALduino_RemoveLaCrossePair", $hash, 0);
+
+  
   } elsif( $cmd eq "sendMsg" ) {
 	SIGNALduino_Log3 $name, 5, "$name: sendmsg msg=$arg";
 	
@@ -858,7 +877,7 @@ SIGNALduino_Get($@)
      foreach my $arg (sort keys %gets) {
         next if ($arg =~ m/^cc/ && $hasCC1101 == 0);
         next if ($arg ne "raw" && $arg ne "protocolIdToJson" && $arg ne "zAvailableFirmware" && IsDummy($name));
-        if ($arg ne "raw" && $arg ne "ccreg" && $arg ne "protocolIdToJson") {
+        if ($arg ne "raw" && $arg ne "ccreg" && $arg ne "setBank" && $arg ne "protocolIdToJson") {
            $arg .= ":noArg";
         }
         $arguments.= $arg . " ";
@@ -868,7 +887,10 @@ SIGNALduino_Get($@)
      return "Unknown argument $a[1], choose one of $arguments";
   }
 
-  my $arg = ($a[2] ? $a[2] : "");
+  my $arg = $a[2];
+  if ($arg ne "0") {
+     $arg = ($arg ? $arg : "");
+  }
   return "no command to send, get aborted." if (length($gets{$a[1]}[0]) == 0 && length($arg) == 0);
   
   my ($msg, $err);
@@ -933,7 +955,7 @@ SIGNALduino_Get($@)
 		$hash->{tmpWhiteList} = $id;
 	}
 	
-  	if ($arg =~ /^M[CcSU];.*/)
+  	if ($arg =~ /^M[CcSUN];.*/)
   	{
 		$arg="\002$arg\003";  	## Add start end end marker if not already there
 		SIGNALduino_Log3 $name, 5, "$name/msg adding start and endmarker to message";
@@ -1060,24 +1082,14 @@ sub SIGNALduino_parseResponse($$$)
 		$msg =~ s/  /\n/g;
 		$msg = "\n\n" . $msg
   	}
+  	elsif($cmd eq "readEEPROM64")
+  	{
+		$msg =~ s/  /\n/g;
+		$msg = "\n\n" . $msg
+  	}
   	elsif($cmd eq "ccconf")
   	{
-		my (undef,$str) = split('=', $msg);
-		my $var;
-		my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"1B"=>1,"1D"=>1 );
-		$msg = "";
-		foreach my $a (sort keys %r) {
-			$var = substr($str,(hex($a)-13)*2, 2);
-			$r{$a} = hex($var);
-		}
-		$msg = sprintf("freq:%.3fMHz bWidth:%dKHz rAmpl:%ddB sens:%ddB (DataRate:%.2fBaud, Modulation:%s)",
-		26*(($r{"0D"}*256+$r{"0E"})*256+$r{"0F"})/65536,                #Freq       | Register 0x0D,0x0E,0x0F
-		26000/(8 * (4+(($r{"10"}>>4)&3)) * (1 << (($r{"10"}>>6)&3))),   #Bw         | Register 0x10
-		$ampllist[$r{"1B"}&7],                                          #rAmpl      | Register 0x1B
-		4+4*($r{"1D"}&3),                                               #Sens       | Register 0x1D
-		((256+$r{"11"})*(2**($r{"10"} & 15 )))*26000000/(2**28),         #DataRate   | Register 0x10,0x11
-		$modformat[$r{"12"}>>4]                                         #Modulation | Register 0x12
-		);
+		$msg = Parse_ccconf($msg);
 	}
 	elsif($cmd eq "bWidth") {
 		my $val = hex(substr($msg,6));
@@ -1121,10 +1133,39 @@ sub SIGNALduino_parseResponse($$$)
 	#		$msg .= "$patable{$CC1101Frequency}{$dB}  $dB\n";
 	#	}
 	}
-	
+	elsif($cmd eq "setBank") {
+		my $msg_start = index($msg, 'ccconf=');
+		my $data = substr($msg,$msg_start,41);
+		$msg .= "\n\n" . Parse_ccconf($data);
+	}
   	return $msg;
 }
 
+sub Parse_ccconf($)
+{
+	my $msg = shift;
+	my (undef,$str) = split('=', $msg);
+	my $var;
+	my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"1B"=>1,"1D"=>1 );
+	$msg = "";
+	foreach my $a (sort keys %r) {
+		$var = substr($str,(hex($a)-13)*2, 2);
+		$r{$a} = hex($var);
+	}
+	my $mod_format = $modformat[($r{"12"}>>4)&7];
+	$msg = sprintf("freq:%.3fMHz bWidth:%dKHz rAmpl:%ddB sens:%ddB (DataRate:%.2fBaud, Modulation:%s)",
+	26*(($r{"0D"}*256+$r{"0E"})*256+$r{"0F"})/65536,                #Freq       | Register 0x0D,0x0E,0x0F
+	26000/(8 * (4+(($r{"10"}>>4)&3)) * (1 << (($r{"10"}>>6)&3))),   #Bw         | Register 0x10
+	$ampllist[$r{"1B"}&7],                                          #rAmpl      | Register 0x1B
+	4+4*($r{"1D"}&3),                                               #Sens       | Register 0x1D
+	((256+$r{"11"})*(2**($r{"10"} & 15 )))*26000000/(2**28),        #DataRate   | Register 0x10,0x11
+	$mod_format                                                     #Modulation | Register 0x12
+	);
+	if ($mod_format ne $modformat[3]) {
+		$msg .= " SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7];
+	}
+	return $msg;
+}
 
 #####################################
 sub
@@ -1377,6 +1418,9 @@ SIGNALduino_SendFromQueue($$)
     elsif ($msg eq "C99") {
        $hash->{getcmd}->{cmd} = 'ccregAll';
     }
+    elsif ($msg =~ m/^rN[A-Fa-f0-9]{4}/) {
+       $hash->{getcmd}->{cmd} = 'readEEPROM64';
+    }
   }
 
   ##############
@@ -1558,6 +1602,9 @@ SIGNALduino_Read($)
 		elsif ($hash->{getcmd}->{cmd} eq 'ccregAll') {
 			$regexp = '^ccreg 00:';
 		}
+		elsif ($hash->{getcmd}->{cmd} eq 'readEEPROM64') {
+			$regexp = '^EEPROM [0-9a-zA-Z]{4}: .*EEPROM [0-9a-zA-Z]{4}:';
+		}
 		elsif ($hash->{getcmd}->{cmd} eq 'bWidth') {
 			$regexp = '^C.* = .*';
 		}
@@ -1592,7 +1639,7 @@ SIGNALduino_Read($)
 			}
 			else {
 				$rmsg = SIGNALduino_parseResponse($hash,$hash->{getcmd}->{cmd},$rmsg);
-				if (defined($hash->{getcmd}) && $hash->{getcmd}->{cmd} ne 'ccregAll') {
+				if (defined($hash->{getcmd}) && $hash->{getcmd}->{cmd} ne 'ccregAll' && $hash->{getcmd}->{cmd} ne 'readEEPROM64') {
 					readingsSingleUpdate($hash, $hash->{getcmd}->{cmd}, $rmsg, 0);
 				}
 				if (defined($hash->{getcmd}->{asyncOut})) {
@@ -1962,7 +2009,6 @@ sub SIGNALduino_Split_Message($$)
 	$ret{pattern} = {%patternList}; 
 	return %ret;
 }
-
 
 
 # Function which dispatches a message if needed.
@@ -2803,6 +2849,52 @@ SIGNALduino_Parse_MC($$$$@)
 	return 1;
 }
 
+sub SIGNALduino_Parse_MN($$$$@)
+{
+	my ($hash, $iohash, $name, $rmsg,%msg_parts) = @_;
+	my $rawData=$msg_parts{rawData};
+	my $rssi=$msg_parts{rssi};
+	my $dmsg;
+	my $debug = AttrVal($iohash->{NAME},"debug",0);
+	if (defined($rssi)) {
+		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+	}
+	my $hlen = length($rawData);
+	my $matchflag;
+	my $match;
+	my $modulation;
+	my $id;
+	foreach $id (@{$hash->{mnIdList}}) {
+		$modulation = SIGNALduino_getProtoProp($id,"modulation","xFSK");
+		$match = SIGNALduino_getProtoProp($id,"match","");
+		$matchflag = 1;
+		if ($match eq "" || $rawData =~ m/$match/) {
+			Log3 $name, 4, "$name: Found $modulation Protocol id $id -> $ProtocolListSIGNALduino{$id}{name}";
+		}
+		else {
+			$matchflag = 0;
+		}
+		next if ($matchflag == 0);
+		
+		if (!exists $ProtocolListSIGNALduino{$id}{method}) {
+			SIGNALduino_Log3 $name, 3, "$name ParseMN: Error ID=$id, no method defined, it must be defined in the protocol hash!";
+			next;
+		}
+		my $method = $ProtocolListSIGNALduino{$id}{method};
+		if (!defined &$method)
+		{
+			Log3 $name, 3, "$name ParseMN: Error ID=$id, Unknown method. Please check it!";
+		} else {
+			my ($rcode,$res) = $method->($name,$rawData,$id);
+			if ($rcode != -1) {
+				$dmsg = $res;
+				Log3 $name, 4, "$name ParseMN: ID=$id dmsg=$dmsg";
+				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
+			}
+		}
+	}
+	return 1;
+}
 
 sub
 SIGNALduino_Parse($$$$@)
@@ -2852,6 +2944,10 @@ SIGNALduino_Parse($$$$@)
   	elsif (@{$hash->{mcIdList}} && $rmsg=~ m/^M[cC];.*;/) 
 	{
 		$dispatched=  SIGNALduino_Parse_MC($hash, $iohash, $name, $rmsg,%signal_parts);
+	}
+	elsif (@{$hash->{mnIdList}} && $rmsg=~ m/^MN;.*;/) 
+	{
+		$dispatched=  SIGNALduino_Parse_MN($hash, $iohash, $name, $rmsg,%signal_parts);
 	}
 	else {
 		Debug "$name: unknown Messageformat, aborting\n" if ($debug);
@@ -3227,6 +3323,7 @@ sub SIGNALduino_IdList($@)
 	my @msIdList = ();
 	my @muIdList = ();
 	my @mcIdList = ();
+	my @mnIdList = ();
 	my @skippedDevId = ();
 	my @skippedBlackId = ();
 	my @devModulId = ();
@@ -3323,7 +3420,11 @@ sub SIGNALduino_IdList($@)
 		if (exists ($ProtocolListSIGNALduino{$id}{format}) && $ProtocolListSIGNALduino{$id}{format} eq "manchester")
 		{
 			push (@mcIdList, $id);
-		} 
+		}
+		elsif (exists $ProtocolListSIGNALduino{$id}{modulation})
+		{
+			push (@mnIdList, $id);
+		}
 		elsif (exists $ProtocolListSIGNALduino{$id}{sync})
 		{
 			push (@msIdList, $id);
@@ -3344,6 +3445,7 @@ sub SIGNALduino_IdList($@)
 	SIGNALduino_Log3 $name, 3, "$name: IDlist MS @msIdList";
 	SIGNALduino_Log3 $name, 3, "$name: IDlist MU @muIdList";
 	SIGNALduino_Log3 $name, 3, "$name: IDlist MC @mcIdList";
+	SIGNALduino_Log3 $name, 3, "$name: IDlist MN @mnIdList";
 	SIGNALduino_Log3 $name, 3, "$name: IDlist blacklistId skipped = @skippedBlackId" if (scalar @skippedBlackId > 0);
 	SIGNALduino_Log3 $name, 3, "$name: IDlist development skipped = @skippedDevId" if (scalar @skippedDevId > 0);
 	if (scalar @devModulId > 0)
@@ -3355,6 +3457,7 @@ sub SIGNALduino_IdList($@)
 	$hash->{msIdList} = \@msIdList;
 	$hash->{muIdList} = \@muIdList;
 	$hash->{mcIdList} = \@mcIdList;
+	$hash->{mnIdList} = \@mnIdList;
 }
 
 sub SIGNALduino_getAttrDevelopment
@@ -4450,6 +4553,121 @@ sub SIGNALduino_filterMC($$$%)
 	
 }
 
+
+# xFSK method
+
+sub CalculateCRC($$)
+{
+	my ($dmsg,$len) = @_;
+	my $i;
+	my $j;
+	my $tmp;
+	my $val;
+	my $res = 0;
+	my @data = ();
+
+	for ($i=0; $i<5; $i++ ) {
+		push(@data,hex(substr($dmsg,$i*2,2)));
+	}
+	#Debug "data=@data\n";
+
+  for ($j = 0; $j < $len; $j++) {
+    $val = $data[$j];
+    for ($i = 0; $i < 8; $i++) {
+      $tmp = ($res ^ $val) & 0x80;
+      $res <<= 1;
+      $res = $res & 0xFF;
+      if ($tmp != 0) {
+        $res ^= 0x31;
+      }
+      $val <<= 1;
+    }
+  }
+  return ($res, $data[$len]);
+}
+
+sub SIGNALduino_LaCrosse()
+{
+	my ($name,$dmsg,$id) = @_;
+	
+       #
+       # Message Format:
+       #
+       # .- [0] -. .- [1] -. .- [2] -. .- [3] -. .- [4] -.
+       # |       | |       | |       | |       | |       |
+       # SSSS.DDDD DDN_.TTTT TTTT.TTTT WHHH.HHHH CCCC.CCCC
+       # |  | |     ||  |  | |  | |  | ||      | |       |
+       # |  | |     ||  |  | |  | |  | ||      | `--------- CRC
+       # |  | |     ||  |  | |  | |  | |`-------- Humidity
+       # |  | |     ||  |  | |  | |  | |
+       # |  | |     ||  |  | |  | |  | `---- weak battery
+       # |  | |     ||  |  | |  | |  |
+       # |  | |     ||  |  | |  | `----- Temperature T * 0.1
+       # |  | |     ||  |  | |  |
+       # |  | |     ||  |  | `---------- Temperature T * 1
+       # |  | |     ||  |  |
+       # |  | |     ||  `--------------- Temperature T * 10
+       # |  | |     | `--- new battery
+       # |  | `---------- ID
+       # `---- START
+       #
+       #
+
+	#my $hash = $defs{$name};
+	#$hash->{LaCrossePair} = 2;
+	
+	my ($calccrc,$crc) = CalculateCRC($dmsg,4);
+	
+	if ($calccrc !=$crc) {
+		Log3 $name, 4, "$name LaCrosse: Error! dmsg=$dmsg checksumCalc=$calccrc checksum=$crc";
+		return (-1,"checksum Error");
+	}
+	
+	my $addr = ((hex(substr($dmsg,0,2)) & 0x0F) << 2) | ((hex(substr($dmsg,2,2)) & 0xC0) >> 6);
+	my $temperature = ( ( ((hex(substr($dmsg,2,2)) & 0x0F) * 100) + (((hex(substr($dmsg,4,2)) & 0xF0) >> 4) * 10) + (hex(substr($dmsg,4,2)) & 0x0F) ) / 10) - 40;
+	return (-1,"temp err!") if ($temperature >= 60 || $temperature <= -40);
+
+	my $humidity = hex(substr($dmsg,6,2));
+	my $batInserted = ((hex(substr($dmsg,2,2)) & 0x20) << 2);
+
+	Log3 $name, 4, "$name LaCrosse: ID=$id, addr=$addr temp=$temperature, hum=" . ($humidity & 0x7F) . " bat=" . ($humidity & 0x80)  . " batInserted=$batInserted";
+	
+	# build string for 36_LaCrosse.pm
+	# Todo: gibt es Sensoren mit 2 Kanaelen?
+	my $dmsgMod = "OK 9 $addr ";
+	$dmsgMod .= (1 | $batInserted);
+
+	$temperature = (($temperature* 10 + 1000) & 0xFFFF);
+	$dmsgMod .= " " . (($temperature >> 8) & 0xFF)  . " " . ($temperature & 0xFF) . " $humidity";
+	return (1,$dmsgMod);
+}
+
+sub SIGNALduino_KoppFreeControl()
+{
+	my ($name,$dmsg,$id) = @_;
+	my $anz = hex(substr($dmsg,0,2)) + 1;
+	my $blkck = 0xAA;
+	my $chk;
+	my $d;
+
+	for (my $i = 0; $i < $anz; $i++) {
+		$d = hex(substr($dmsg,$i*2,2));
+		$blkck ^= $d;
+	}
+	$chk = hex(substr($dmsg,$anz*2,2));
+	
+	if ($blkck != $chk) {
+		Log3 $name, 4, "$name KoppFreeControl: Error! dmsg=$dmsg checksumCalc=$blkck checksum=$chk";
+		return (-1,"checksum Error");
+	}
+	else {
+		Log3 $name, 4, "$name KoppFreeControl: dmsg=$dmsg anz=$anz checksum=$blkck ok";
+		return (1, "kr" . substr($dmsg,0,$anz*2));
+	}
+}
+
+
+
 # - - - - - - - - - - - -
 #=item SIGNALduino_filterSign()
 #This functons, will act as a filter function. It will remove the sign from the pattern, and compress message and pattern
@@ -4651,7 +4869,7 @@ sub SIGNALduino_FW_getProtocolList
 	$devText = "development version - " if ($devFlag == 1);
 	
 	my %activeIdHash;
-	@activeIdHash{@{$hash->{msIdList}}, @{$hash->{muIdList}}, @{$hash->{mcIdList}}} = (undef);
+	@activeIdHash{@{$hash->{msIdList}}, @{$hash->{muIdList}}, @{$hash->{mcIdList}}, @{$hash->{mnIdList}}} = (undef);
 	#SIGNALduino_Log3 $name,4, "$name IdList: $mIdList";
 	
 	my %IDsNoDispatch;
@@ -4712,6 +4930,10 @@ sub SIGNALduino_FW_getProtocolList
 		{
 			$msgtype = "MC";
 		}
+		elsif (exists $ProtocolListSIGNALduino{$id}{modulation})
+		{
+			$msgtype = "MN";
+		}
 		elsif (exists $ProtocolListSIGNALduino{$id}{sync})
 		{
 			$msgtype = "MS";
@@ -4769,7 +4991,17 @@ sub SIGNALduino_FW_getProtocolList
 				$comment .= " (dispatch is only with a active whitelist possible)";
 			}
 			$knownFreqs = SIGNALduino_getProtoProp($id,"knownFreqs","");
-			if (length($knownFreqs) > 2) {
+			if ($msgtype eq "MN") {		# xFSK
+				my $modulation = SIGNALduino_getProtoProp($id,"modulation","");
+				my $datarate = SIGNALduino_getProtoProp($id,"datarate","");
+				my $sync = SIGNALduino_getProtoProp($id,"sync","");
+				$comment .= " (modulation=" . SIGNALduino_getProtoProp($id,"modulation","") . ", datarate=" . SIGNALduino_getProtoProp($id,"datarate","") . ", sync=" . SIGNALduino_getProtoProp($id,"sync","");
+				if (length($knownFreqs) > 2) {
+					$comment .= ", " . $knownFreqs . "MHz";
+				}
+				$comment .= ")";
+			}
+			elsif (length($knownFreqs) > 2) {
 				$comment .= " (" . $knownFreqs . "MHz)";
 			}
 		}
