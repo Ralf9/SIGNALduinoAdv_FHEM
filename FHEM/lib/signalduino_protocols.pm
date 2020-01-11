@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.0-dev_ralf_03.01.20'
+		"version" => 'v3.4.1-dev_ralf_11.01.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -184,6 +184,27 @@ our %ProtocolListSIGNALduino  = (
 			length_min		=> '32',
 			length_max		=> '36',
 			paddingbits		=> '8',				 # pad up to 8 bits, default is 4
+		},
+	"0.5"	=>	## various weather sensors (475 | 8000)
+						# ABS700 | Id:79 T: 3.3 Bat:low     MS;P1=-7949;P2=492;P3=-1978;P4=-3970;D=21232423232424242423232323232324242423232323232424;CP=2;SP=1;R=245;O;
+						# ABS700 | Id:69 T: 9.3 Bat:low     MS;P1=-7948;P2=471;P3=-1997;P4=-3964;D=21232423232324232423232323242323242423232323232424;CP=2;SP=1;R=246;O;m2;
+		{
+			name			=> 'weather (v6)',
+			comment			=> 'temperature / humidity or other sensors | ABS700',
+			changed			=> '20200110 new',
+			id			=> '0.5',
+			one			=> [1,-8],
+			zero			=> [1,-4],
+			sync			=> [1,-16],
+			clockabs		=> 475,
+			format			=> 'twostate',	# not used now
+			preamble		=> 's',					# prepend to converted message
+			postamble		=> '00',				# Append to converted message
+			clientmodule	=> 'CUL_TCM97001',
+			#modulematch	=> '^s[A-Fa-f0-9]+',
+			length_min		=> '24',
+			length_max		=> '24',
+			paddingbits		=> '8',					# pad up to 8 bits, default is 4
 		},
 	"1"	=>	## Conrad RSL
 							# on   MS;P1=1154;P2=-697;P3=559;P4=-1303;P5=-7173;D=351234341234341212341212123412343412341234341234343434343434343434;CP=3;SP=5;R=247;O;
@@ -2498,7 +2519,7 @@ our %ProtocolListSIGNALduino  = (
 		"100"	=>	# Lacrosse
 			{
 				name            => 'Lacrosse',
-				changed         => '20200104',
+				changed         => '20200104 new',
 				id              => '100',
 				knownFreqs      => '868.3',
 				datarate        => '17257.69',
@@ -2511,8 +2532,9 @@ our %ProtocolListSIGNALduino  = (
 		"102"	=>	# Kopp
 			{
 				name            => 'KoppFreeControl',
-				changed         => '20200104',
+				changed         => '20200104 new',
 				id              => '102',
+				knownFreqs      => '868.3',
 				datarate        => '4785.5',
 				sync            => 'AA54',
 				modulation      => 'GFSK',
