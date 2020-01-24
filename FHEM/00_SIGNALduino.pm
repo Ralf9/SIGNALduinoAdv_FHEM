@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.1-dev_ralf_06.01.",
+	SDUINO_VERSION            => "v3.4.4-dev_ralf_24.01.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -36,6 +36,7 @@ use constant {
 	SDUINO_KEEPALIVE_MAXRETRY => 3,
 	SDUINO_WRITEQUEUE_NEXT    => 0.3,
 	SDUINO_WRITEQUEUE_TIMEOUT => 2,
+	SDUINO_recAwNotMatch_Max  => 10,
 	
 	SDUINO_DISPATCH_VERBOSE     => 5,      # default 5
 	SDUINO_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
@@ -71,7 +72,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
   "ccpatable" => ["C3E", '^C3E = .*'],
-  "setBank"  => ["b", 'b=\d ccmode=\d.*'],
+  "setBank"  => ["b", 'b=\d.* ccmode=\d.*'],
   "zAvailableFirmware" => ["none",'none'],
 );
 
@@ -1089,7 +1090,12 @@ sub SIGNALduino_parseResponse($$$)
   	}
   	elsif($cmd eq "ccconf")
   	{
-		$msg = Parse_ccconf($msg);
+		my $cconfFSK;
+		my $modFlag;
+		($msg, $cconfFSK,$modFlag) = SIGNALduino_parseCcconf($msg);
+		if ($modFlag) {
+			$msg .= "\n\n" . $cconfFSK;
+		}
 	}
 	elsif($cmd eq "bWidth") {
 		my $val = hex(substr($msg,6));
@@ -1134,26 +1140,33 @@ sub SIGNALduino_parseResponse($$$)
 	#	}
 	}
 	elsif($cmd eq "setBank") {
-		my $msg_start = index($msg, 'ccconf=');
-		my $data = substr($msg,$msg_start,41);
-		$msg .= "\n\n" . Parse_ccconf($data);
+		$msg = SIGNALduino_parseCcBankInfo($hash, $msg);
 	}
   	return $msg;
 }
 
-sub Parse_ccconf($)
+sub SIGNALduino_parseCcconf($)
 {
 	my $msg = shift;
 	my (undef,$str) = split('=', $msg);
 	my $var;
 	my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"1B"=>1,"1D"=>1 );
-	$msg = "";
+	my $ccconfFSK="";
+	my $modFlag = 0;
 	foreach my $a (sort keys %r) {
 		$var = substr($str,(hex($a)-13)*2, 2);
 		$r{$a} = hex($var);
 	}
 	my $mod_format = $modformat[($r{"12"}>>4)&7];
-	$msg = sprintf("freq:%.3fMHz bWidth:%dKHz rAmpl:%ddB sens:%ddB (DataRate:%.2fBaud, Modulation:%s)",
+	$ccconfFSK = "Modulation:$mod_format (SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7] . ")";
+	if ($mod_format ne $modformat[3]) {
+		$mod_format = "";
+		$modFlag = 1;
+	}
+	else {
+		$mod_format = ",Modulation:$mod_format";
+	}
+	my $ccconf = sprintf("freq:%.3fMHz bWidth:%dKHz rAmpl:%ddB sens:%ddB (DataRate:%.2fBaud%s)",
 	26*(($r{"0D"}*256+$r{"0E"})*256+$r{"0F"})/65536,                #Freq       | Register 0x0D,0x0E,0x0F
 	26000/(8 * (4+(($r{"10"}>>4)&3)) * (1 << (($r{"10"}>>6)&3))),   #Bw         | Register 0x10
 	$ampllist[$r{"1B"}&7],                                          #rAmpl      | Register 0x1B
@@ -1161,9 +1174,48 @@ sub Parse_ccconf($)
 	((256+$r{"11"})*(2**($r{"10"} & 15 )))*26000000/(2**28),        #DataRate   | Register 0x10,0x11
 	$mod_format                                                     #Modulation | Register 0x12
 	);
-	if ($mod_format ne $modformat[3]) {
-		$msg .= " SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7];
+
+	return ($ccconf,$ccconfFSK,$modFlag);
+}
+
+sub SIGNALduino_parseCcBankInfo($$)
+{
+	my $hash = shift;
+	my $msg = shift;
+	my $ccconf = "";
+	my $ccconfFSK = "";
+	my $retccconfFSK;
+	my $modFlag = 0;
+	my %parts;
+	
+	my @msg_parts = split(/ /,$msg);		## Split message parts by " "
+	foreach (@msg_parts)
+	{
+		my ($m, $mv) = split(/=/,$_);
+		if ($m eq "ccconf") {
+			($ccconf,$retccconfFSK,$modFlag) = SIGNALduino_parseCcconf("=".$mv);
+		}
+		else {
+			$parts{$m} = $mv;
+		}
 	}
+	$ccconf = "b=" . $parts{b} . " $ccconf [boffs=" . $parts{boffs} . "]";
+	$hash->{ccconf} = $ccconf;
+	$ccconfFSK = "ccmode=" . $parts{ccmode};
+	if ($parts{N}) {
+		$ccconfFSK .= " N=" . $parts{N};
+	}
+	$ccconfFSK .= " sync=" . $parts{sync} . " $retccconfFSK";
+	
+	if ($modFlag or $parts{ccmode} > 0) {
+		$hash->{ccconfFSK} = $ccconfFSK;
+	}
+	else {
+		delete($hash->{ccconfFSK});
+	}
+	$msg = $ccconf . "\n\n" . $ccconfFSK;
+	
+	#Log3 $hash, 4, "parseCcBankInfo:" . Dumper(\%parts);
 	return $msg;
 }
 
@@ -1283,7 +1335,12 @@ sub SIGNALduino_CheckCmdResp($)
 	my $ver;
 	
 	if ($hash->{version}) {
+	  if ($hash->{DevState} eq 'waitBankInfo') {
+	    $ver = "SIGNALduino";
+	  }
+	  else {
 		$ver = $hash->{version};
+	  }
 		if ($ver !~ m/SIGNAL(duino|ESP)/) {
 			$msg = "$name: Not an SIGNALduino device, setting attribute dummy=1 got for V:  $ver";
 			SIGNALduino_Log3 $name, 1, $msg;
@@ -1299,7 +1356,41 @@ sub SIGNALduino_CheckCmdResp($)
 			SIGNALduino_CloseDevice($hash);
 		}
 		else {
+		  my $initflag = 0;
+		  if ($hash->{DevState} ne 'waitBankInfo') {
 			readingsSingleUpdate($hash, "state", "opened", 1);
+			if ($ver =~ m/\(b.*\)/) {
+				Log3 $name, 4, "$name/init: firmwareversion with ccBankSupport found";
+				delete($hash->{ccconf});
+				delete($hash->{ccconfFSK});
+				SIGNALduino_SimpleWrite($hash, "b?");
+				$hash->{DevState} = 'waitBankInfo';
+				$hash->{getcmd}->{cmd} = "setBank";
+				RemoveInternalTimer($hash);
+				InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduino_CheckCmdResp", $hash, 0);
+			}
+			else {
+				$initflag = 1;
+				delete($hash->{getcmd});
+			}
+		  }
+		  else {
+			if ($hash->{ccconf}) {
+				my $bankinfo = $hash->{ccconf};
+				if ($bankinfo =~ m/b=.*ccmode=.*ccconf.*/) {
+					$initflag = 1;
+					SIGNALduino_Log3 $name, 4, "$name/init: Write ccBankInfo: ($bankinfo) to Internal ccconf";
+					my $tmp = SIGNALduino_parseCcBankInfo($hash,$bankinfo);
+					delete($hash->{getcmd});
+				}
+		    }
+		    else {
+				SIGNALduino_Log3 $name, 3, "$name/init Error! get ccBankInfo, no answer";
+				delete($hash->{getcmd});
+				$initflag = 1;
+		    }
+		  }
+		  if ($initflag) {
 			SIGNALduino_Log3 $name, 2, "$name: initialized. " . SDUINO_VERSION;
 			$hash->{DevState} = 'initialized';
 			delete($hash->{initResetFlag}) if defined($hash->{initResetFlag});
@@ -1311,6 +1402,7 @@ sub SIGNALduino_CheckCmdResp($)
 			$hash->{keepalive}{ok}    = 0;
 			$hash->{keepalive}{retry} = 0;
 			InternalTimer(gettimeofday() + SDUINO_KEEPALIVE_TIMEOUT, "SIGNALduino_KeepAlive", $hash, 0);
+		  }
 		}
 	}
 	else {
@@ -1595,6 +1687,7 @@ SIGNALduino_Read($)
 
 	if ( $rmsg && !SIGNALduino_Parse($hash, $hash, $name, $rmsg) && defined($hash->{getcmd}) && defined($hash->{getcmd}->{cmd}))
 	{
+		#Log3 $name, 4, "$name/msg READ: getcmd=$hash->{getcmd}->{cmd}";
 		my $regexp;
 		if ($hash->{getcmd}->{cmd} eq 'sendraw') {
 			$regexp = '^S(R|C|M);';
@@ -1609,9 +1702,14 @@ SIGNALduino_Read($)
 			$regexp = '^C.* = .*';
 		}
 		else {
-			$regexp = $gets{$hash->{getcmd}->{cmd}}[1];
+			if (exists($gets{$hash->{getcmd}->{cmd}})) {
+				$regexp = $gets{$hash->{getcmd}->{cmd}}[1];
+			}
 		}
 		if(!defined($regexp) || $rmsg =~ m/$regexp/) {
+			if ($hash->{recAwNotMatch}) {
+				delete($hash->{recAwNotMatch});
+			}
 			if (defined($hash->{keepalive})) {
 				$hash->{keepalive}{ok}    = 1;
 				$hash->{keepalive}{retry} = 0;
@@ -1625,12 +1723,19 @@ SIGNALduino_Read($)
 					SIGNALduino_Log3 $name, 4, "$name/read: cut chars at begin. msgstart = $msg_start msg = $rmsg";
 				}
 				$hash->{version} = $rmsg;
-				if (defined($hash->{DevState}) && $hash->{DevState} eq 'waitInit') {
-					RemoveInternalTimer($hash);
-					SIGNALduino_CheckCmdResp($hash);
-				}
 			}
-			if ($hash->{getcmd}->{cmd} eq 'sendraw') {
+			
+			if (defined($hash->{DevState}) && $hash->{DevState} eq 'waitInit' && $hash->{getcmd}->{cmd} eq 'version') {
+				RemoveInternalTimer($hash);
+				SIGNALduino_CheckCmdResp($hash);
+			}
+			elsif ($hash->{getcmd}->{cmd} eq 'setBank' && defined($hash->{DevState}) && $hash->{DevState} eq 'waitBankInfo') {
+				#SIGNALduino_Log3 $name, 3, "$name/msg READsetbank: regexp=$regexp cmd=$hash->{getcmd}->{cmd} msg=$rmsg";
+				$hash->{ccconf} = $rmsg;
+				RemoveInternalTimer($hash);
+				SIGNALduino_CheckCmdResp($hash);
+			}
+			elsif ($hash->{getcmd}->{cmd} eq 'sendraw') {
 				# zu testen der sendeQueue, kann wenn es funktioniert auf verbose 5
 				SIGNALduino_Log3 $name, 4, "$name/read sendraw answer: $rmsg";
 				delete($hash->{getcmd});
@@ -1649,7 +1754,18 @@ SIGNALduino_Read($)
 				delete($hash->{getcmd});
 			}
 		} else {
-			SIGNALduino_Log3 $name, 4, "$name/msg READ: Received answer ($rmsg) for ". $hash->{getcmd}->{cmd}." does not match $regexp"; 
+			if ($hash->{recAwNotMatch}) {
+				$hash->{recAwNotMatch}++;
+			}
+			else {
+				$hash->{recAwNotMatch} = 1;
+			}
+			SIGNALduino_Log3 $name, 4, "$name/msg READ: ". $hash->{recAwNotMatch} .". Received answer ($rmsg) for ". $hash->{getcmd}->{cmd}." does not match $regexp";
+			if ($hash->{recAwNotMatch} > SDUINO_recAwNotMatch_Max) {
+				SIGNALduino_Log3 $name, 4, "$name/msg READ: too much (". SDUINO_recAwNotMatch_Max .")! Received answer ($rmsg) for ". $hash->{getcmd}->{cmd}." does not match $regexp";
+				delete($hash->{recAwNotMatch});
+				delete($hash->{getcmd});
+			}
 		}
 	}
   }
@@ -2009,6 +2125,7 @@ sub SIGNALduino_Split_Message($$)
 	$ret{pattern} = {%patternList}; 
 	return %ret;
 }
+
 
 
 # Function which dispatches a message if needed.
@@ -4633,7 +4750,7 @@ sub SIGNALduino_LaCrosse()
 	Log3 $name, 4, "$name LaCrosse: ID=$id, addr=$addr temp=$temperature, hum=" . ($humidity & 0x7F) . " bat=" . ($humidity & 0x80)  . " batInserted=$batInserted";
 	
 	# build string for 36_LaCrosse.pm
-	# Todo: gibt es Sensoren mit 2 Kanaelen?
+	# Todo: es gibt Sensoren mit 2 Kanaelen?
 	my $dmsgMod = "OK 9 $addr ";
 	$dmsgMod .= (1 | $batInserted);
 
