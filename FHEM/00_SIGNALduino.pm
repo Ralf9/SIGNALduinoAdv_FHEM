@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.4-dev_ralf_24.01.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_24.01.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -52,7 +52,6 @@ sub SIGNALduino_Attr(@);
 sub SIGNALduino_HandleWriteQueue($);
 sub SIGNALduino_Parse($$$$@);
 sub SIGNALduino_Read($);
-#sub SIGNALduino_ReadAnswer($$$$);  # wird nicht mehr benoetigt
 sub SIGNALduino_Ready($);
 sub SIGNALduino_Write($$$);
 sub SIGNALduino_SimpleWrite(@);
@@ -156,6 +155,7 @@ my $clientsSIGNALduino = ":IT:"
 						."SD_GT:"
 						."LaCrosse:"
 						."KOPP_FC:"
+						."PCA301:"
 						."SIGNALduino_TOOL:"
 			      		."SIGNALduino_un:"
 					; 
@@ -192,6 +192,7 @@ my %matchListSIGNALduino = (
      "29:SD_GT"					=> '^P49#[A-Fa-f0-9]+',
      "30:LaCrosse"				=> '^(\\S+\\s+9 |OK\\sWS\\s)',
      "31:KOPP_FC"				=> '^kr..................',
+     "32:PCA301"				=> '^\\S+\\s+24',
      "90:SIGNALduino_TOOL"		=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
@@ -2127,7 +2128,6 @@ sub SIGNALduino_Split_Message($$)
 }
 
 
-
 # Function which dispatches a message if needed.
 sub SIGNALduno_Dispatch($$$$$)
 {
@@ -2971,36 +2971,47 @@ sub SIGNALduino_Parse_MN($$$$@)
 	my ($hash, $iohash, $name, $rmsg,%msg_parts) = @_;
 	my $rawData=$msg_parts{rawData};
 	my $rssi=$msg_parts{rssi};
+	my $N=$msg_parts{N};
 	my $dmsg;
 	my $debug = AttrVal($iohash->{NAME},"debug",0);
 	if (defined($rssi)) {
 		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
 	}
 	my $hlen = length($rawData);
-	my $matchflag;
 	my $match;
 	my $modulation;
 	my $id;
 	foreach $id (@{$hash->{mnIdList}}) {
 		$modulation = SIGNALduino_getProtoProp($id,"modulation","xFSK");
 		$match = SIGNALduino_getProtoProp($id,"match","");
-		$matchflag = 1;
-		if ($match eq "" || $rawData =~ m/$match/) {
-			Log3 $name, 4, "$name: Found $modulation Protocol id $id -> $ProtocolListSIGNALduino{$id}{name}";
+		
+		if (!defined($N)) {		# die empfangenen FSK Nachrichten enthalten keine N Nr
+			next if (SIGNALduino_getProtoProp($id,"defaultNoN","") ne "1");	# Abbruch
 		}
 		else {
-			$matchflag = 0;
+			next if ($N ne SIGNALduino_getProtoProp($id,"N",""));	# Abbruch wenn N Nr nicht uebereinstimmt
 		}
-		next if ($matchflag == 0);
+			
+		if ($match eq "" || $rawData =~ m/$match/) {
+			Log3 $name, 4, "$name Parse_MN: Found $modulation Protocol id $id -> $ProtocolListSIGNALduino{$id}{name}";
+		}
+		else {
+			next;
+		}
+		
+		if (defined(($ProtocolListSIGNALduino{$id}{length_min})) && $hlen < $ProtocolListSIGNALduino{$id}{length_min}) {
+			Log3 $name, 4, "$name ParseMN: Error! ID=$id msg=$rawData ($hlen) too short, min=" . $ProtocolListSIGNALduino{$id}{length_min};
+			next;
+		}
 		
 		if (!exists $ProtocolListSIGNALduino{$id}{method}) {
-			SIGNALduino_Log3 $name, 3, "$name ParseMN: Error ID=$id, no method defined, it must be defined in the protocol hash!";
+			Log3 $name, 3, "$name ParseMN: Error! ID=$id, no method defined, it must be defined in the protocol hash!";
 			next;
 		}
 		my $method = $ProtocolListSIGNALduino{$id}{method};
 		if (!defined &$method)
 		{
-			Log3 $name, 3, "$name ParseMN: Error ID=$id, Unknown method. Please check it!";
+			Log3 $name, 3, "$name ParseMN: Error! ID=$id, Unknown method. Please check it!";
 		} else {
 			my ($rcode,$res) = $method->($name,$rawData,$id);
 			if ($rcode != -1) {
@@ -4670,10 +4681,33 @@ sub SIGNALduino_filterMC($$$%)
 	
 }
 
+sub SIGNALduino_CalculateCRC16($$$)
+{
+	my ($dmsg,$poly,$crc16) = @_;
+	my $len = length($dmsg);
+	my $i;
+	my $byte;
+	
+	for ($i=0; $i<$len; $i+=2) {
+		$byte = hex(substr($dmsg,$i,2)) * 0x100;	# in 16 Bit wandeln
+		for (0..7)	# 8 Bits pro Byte
+		{
+			#if (($byte & 0x8000) ^ ($crc16 & 0x8000)) {
+			if (($byte ^ $crc16) & 0x8000) {
+				$crc16 <<= 1;
+				$crc16 ^= $poly;
+			} else {
+				$crc16 <<= 1;
+			}
+			$crc16 &= 0xFFFF;
+			$byte <<= 1;
+			$byte &= 0xFFFF;
+		}
+	}
+	return $crc16;
+}
 
-# xFSK method
-
-sub CalculateCRC($$)
+sub SIGNALduino_CalculateCRC($$)
 {
 	my ($dmsg,$len) = @_;
 	my $i;
@@ -4702,6 +4736,8 @@ sub CalculateCRC($$)
   }
   return ($res, $data[$len]);
 }
+
+# xFSK method
 
 sub SIGNALduino_LaCrosse()
 {
@@ -4733,10 +4769,10 @@ sub SIGNALduino_LaCrosse()
 	#my $hash = $defs{$name};
 	#$hash->{LaCrossePair} = 2;
 	
-	my ($calccrc,$crc) = CalculateCRC($dmsg,4);
+	my ($calccrc,$crc) = SIGNALduino_CalculateCRC($dmsg,4);
 	
 	if ($calccrc !=$crc) {
-		Log3 $name, 4, "$name LaCrosse: Error! dmsg=$dmsg checksumCalc=$calccrc checksum=$crc";
+		Log3 $name, 4, "$name LaCrosse_convert: Error! dmsg=$dmsg checksumCalc=$calccrc checksum=$crc";
 		return (-1,"checksum Error");
 	}
 	
@@ -4747,7 +4783,7 @@ sub SIGNALduino_LaCrosse()
 	my $humidity = hex(substr($dmsg,6,2));
 	my $batInserted = ((hex(substr($dmsg,2,2)) & 0x20) << 2);
 
-	Log3 $name, 4, "$name LaCrosse: ID=$id, addr=$addr temp=$temperature, hum=" . ($humidity & 0x7F) . " bat=" . ($humidity & 0x80)  . " batInserted=$batInserted";
+	Log3 $name, 4, "$name LaCrosse_convert: ID=$id, addr=$addr temp=$temperature, hum=" . ($humidity & 0x7F) . " bat=" . ($humidity & 0x80)  . " batInserted=$batInserted";
 	
 	# build string for 36_LaCrosse.pm
 	# Todo: es gibt Sensoren mit 2 Kanaelen?
@@ -4757,6 +4793,36 @@ sub SIGNALduino_LaCrosse()
 	$temperature = (($temperature* 10 + 1000) & 0xFFFF);
 	$dmsgMod .= " " . (($temperature >> 8) & 0xFF)  . " " . ($temperature & 0xFF) . " $humidity";
 	return (1,$dmsgMod);
+}
+
+sub SIGNALduino_PCA301()
+{
+	my ($name,$rmsg,$id) = @_;
+	my $dmsg;
+	
+	my $checksum = substr($rmsg,20,4);
+	my $dmsg = substr($rmsg,0,20);
+	my $chk16 = SIGNALduino_CalculateCRC16($dmsg,0x8005,0x0000);
+	Log3 $name, 5, "$name PCA301_convert: checksumCalc=$chk16 checksum=" . hex($checksum);
+	if ($chk16 == hex($checksum)) {
+		my $channel = hex(substr($rmsg,0,2));
+		my $command = hex(substr($rmsg,2,2));
+		my $addr1 = hex(substr($rmsg,4,2));
+		my $addr2 = hex(substr($rmsg,6,2));
+		my $addr3 = hex(substr($rmsg,8,2));
+		my $plugstate = substr($rmsg,11,1);
+		my $power1 = hex(substr($rmsg,12,2));
+		my $power2 = hex(substr($rmsg,14,2));
+		my $consumption1 = hex(substr($rmsg,16,2));
+		my $consumption2 = hex(substr($rmsg,18,2));
+		$dmsg = "OK 24 $channel $command $addr1 $addr2 $addr3 $plugstate $power1 $power2 $consumption1 $consumption2 $checksum";
+		Log3 $name, 4, "$name PCA301_convert: translated native RF telegram PCA301 $dmsg";
+	}
+	else {
+		Log3 $name, 4, "$name PCA301_convert: wrong checksum $checksum";
+		return (-1,"checksum Error");
+	}
+	return (1,$dmsg);
 }
 
 sub SIGNALduino_KoppFreeControl()
@@ -5115,6 +5181,9 @@ sub SIGNALduino_FW_getProtocolList
 				$comment .= " (modulation=" . SIGNALduino_getProtoProp($id,"modulation","") . ", datarate=" . SIGNALduino_getProtoProp($id,"datarate","") . ", sync=" . SIGNALduino_getProtoProp($id,"sync","");
 				if (length($knownFreqs) > 2) {
 					$comment .= ", " . $knownFreqs . "MHz";
+				}
+				if (exists($ProtocolListSIGNALduino{$id}{N})) {
+					$comment .= ", N=" . $ProtocolListSIGNALduino{$id}{N};
 				}
 				$comment .= ")";
 			}
