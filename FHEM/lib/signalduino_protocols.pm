@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.1-dev_ralf_11.01.'
+		"version" => 'v3.4.5-dev_ralf_24.01.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -2522,6 +2522,8 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20200104 new',
 				id              => '100',
 				knownFreqs      => '868.3',
+				N               => 1,
+				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
@@ -2529,12 +2531,28 @@ our %ProtocolListSIGNALduino  = (
 				clientmodule    => 'LaCrosse',
 				method        => \&main::SIGNALduino_LaCrosse,
 			},
+		"101"	=>	# PCA 301
+			{
+				name            => 'PCA 301',
+				changed         => '20200124 new',
+				id              => '101',
+				knownFreqs      => '868.950',
+				N               => 3,
+				datarate        => '6620.41',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				#match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'PCA301',
+				length_min      => '24',
+				method        => \&main::SIGNALduino_PCA301,
+			},
 		"102"	=>	# Kopp
 			{
 				name            => 'KoppFreeControl',
 				changed         => '20200104 new',
 				id              => '102',
 				knownFreqs      => '868.3',
+				N               => 4,
 				datarate        => '4785.5',
 				sync            => 'AA54',
 				modulation      => 'GFSK',
