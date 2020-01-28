@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_24.01.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_27.01.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -120,7 +120,55 @@ my @modformat = ("2-FSK","GFSK","-","ASK/OOK","4-FSK","-","-","MSK"); # modulati
 my @SYNC_MODE = ("No preamble/sync","15/16 sync","16/16 sync","30/32 sync", 
                  "No preamble/sync, carrier-sense above threshold", "15/16 + carrier-sense above threshold", "16/16 + carrier-sense above threshold", "30/32 + carrier-sense above threshold");
 
-
+my %cc1101_register = (		# for get ccreg 99
+ 	"00" => ['IOCFG2  ', '0D', '29' ],
+	"01" => ['IOCFG1  ', '2E' ],
+	"02" => ['IOCFG0  ', '2D', '3F' ],
+	"03" => ['FIFOTHR ', '07' ],
+	"04" => ['SYNC1   ', 'D3' ],
+	"05" => ['SYNC0   ', '91' ],
+	"06" => ['PKTLEN  ', '3D', '0F' ],
+	"07" => ['PKTCTRL1', '04' ],
+	"08" => ['PKTCTRL0', '32', '45' ],
+	"09" => ['ADDR    ', '00' ],
+	"0A" => ['CHANNR  ', '00' ],
+	"0B" => ['FSCTRL1 ', '06', '0F' ],
+	"0C" => ['FSCTRL0 ', '00' ],
+	"0D" => ['FREQ2   ', '10', '1E' ],
+	"0E" => ['FREQ1   ', 'B0', 'C4' ],
+	"0F" => ['FREQ0   ', '71', 'EC' ],
+	"10" => ['MDMCFG4 ', '57', '8C' ],
+	"11" => ['MDMCFG3 ', 'C4', '22' ],
+	"12" => ['MDMCFG2 ', '30', '02' ],
+	"13" => ['MDMCFG1 ', '23', '22' ],
+	"14" => ['MDMCFG0 ', 'B9', 'F8' ],
+	"15" => ['DEVIATN ', '00', '47' ],
+	"16" => ['MCSM2   ', '07', '07' ],
+	"17" => ['MCSM1   ', '00', '30' ],
+	"18" => ['MCSM0   ', '18', '04' ],
+	"19" => ['FOCCFG  ', '14', '36' ],
+	"1A" => ['BSCFG   ', '6C' ],
+	"1B" => ['AGCCTRL2', '07', '03' ],
+	"1C" => ['AGCCTRL1', '00', '40' ],
+	"1D" => ['AGCCTRL0', '90', '91' ],
+	"1E" => ['WOREVT1 ', '87' ],
+	"1F" => ['WOREVT0 ', '6B' ],
+	"20" => ['WORCTRL ', 'F8' ],
+	"21" => ['FREND1  ', '56' ],
+	"22" => ['FREND0  ', '11', '16' ],
+	"23" => ['FSCAL3  ', 'E9', 'A9' ],
+	"24" => ['FSCAL2  ', '2A', '0A' ],
+	"25" => ['FSCAL1  ', '00', '20' ],
+	"26" => ['FSCAL0  ', '1F', '0D' ],
+	"27" => ['RCCTRL1 ', '41' ],
+	"28" => ['RCCTRL0 ', '00' ],
+	"29" => ['FSTEST  ' ],
+	"2A" => ['PTEST   ' ],
+	"2B" => ['AGCTEST ' ],
+	"2C" => ['TEST2   ' ],
+	"2D" => ['TEST1   ' ],
+	"2E" => ['TEST0   ' ]
+);
 
 ## Supported Clients per default
 my $clientsSIGNALduino = ":IT:"
@@ -1081,8 +1129,7 @@ sub SIGNALduino_parseResponse($$$)
   	}
   	elsif($cmd eq "ccregAll")
   	{
-		$msg =~ s/  /\n/g;
-		$msg = "\n\n" . $msg
+		$msg = SIGNALduino_ccregAll($msg);
   	}
   	elsif($cmd eq "readEEPROM64")
   	{
@@ -1144,6 +1191,38 @@ sub SIGNALduino_parseResponse($$$)
 		$msg = SIGNALduino_parseCcBankInfo($hash, $msg);
 	}
   	return $msg;
+}
+
+sub SIGNALduino_ccregAll($)
+{
+		my $msg = shift;
+		my $msgtmp = $msg;
+		
+		$msg =~ s/  /\n/g;
+		$msg = "\n\n" . $msg;
+		
+		$msgtmp =~ s/\s\sccreg/\nccreg/g;
+		$msgtmp =~ s/ccreg\s\d0:\s//g;
+		
+		my @ccreg = split(/\s/,$msgtmp);
+		
+		$msg.= "\n\n";
+		$msg.= "cc1101 reg detail - addr, name, value, (OOK default),[reset]\n";
+		
+		my $reg_idx = 0;
+		foreach my $key (sort keys %cc1101_register) {
+			$msg.= "0x".$key." ".$cc1101_register{$key}[0]. " - 0x".$ccreg[$reg_idx];
+			if (defined($cc1101_register{$key}[1]) && ($ccreg[$reg_idx] ne $cc1101_register{$key}[1])) {
+				$msg.= " (" . $cc1101_register{$key}[1] . ")";
+			}
+			if (defined($cc1101_register{$key}[2]) && ($ccreg[$reg_idx] ne $cc1101_register{$key}[2])) {
+				$msg.= " [" . $cc1101_register{$key}[2] . "]";
+			}
+			$msg.= "\n";
+			$reg_idx++;
+		}
+		
+	return $msg;
 }
 
 sub SIGNALduino_parseCcconf($)
