@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_27.01.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_25.02.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -71,7 +71,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
   "ccpatable" => ["C3E", '^C3E = .*'],
-  "setBank"  => ["b", 'b=\d.* ccmode=\d.*'],
+  "setBank"  => ["b", '(b=\d.* ccmode=\d.*)|(^switch .*)'],
   "zAvailableFirmware" => ["none",'none'],
 );
 
@@ -323,6 +323,9 @@ SIGNALduino_FingerprintFn($$)
 {
   my ($name, $msg) = @_;
 
+  if (substr($msg,0,2) eq "OK") {
+    return;
+  }
   # Store only the "relevant" part, as the Signalduino won't compute the checksum
   #$msg = substr($msg, 8) if($msg =~ m/^81/ && length($msg) > 8);
   $name = "" if (!IsDummy($name));
@@ -866,7 +869,7 @@ SIGNALduino_Set($@)
 			    if (!exists($patternHash{$p}))
 				{
 					$patternHash{$p}=$cnt;
-					$pattern.="P".$patternHash{$p}."=".$p*$clock.";";
+					$pattern.="P".$patternHash{$p}."=". int($p*$clock) .";";
 					$cnt++;
 				}
 		    	$signalHash{$item}.=$patternHash{$p};
@@ -1268,7 +1271,16 @@ sub SIGNALduino_parseCcBankInfo($$)
 	my $modFlag = 0;
 	my %parts;
 	
-	my @msg_parts = split(/ /,$msg);		## Split message parts by " "
+	if ($msg =~ m/^switch/) {
+		return $msg;
+	}
+	
+  my $rmsg = "\n";
+  my @msg_radio_parts = split(/  /,$msg);	# Split message parts by "  "
+  foreach my $radiomsg (@msg_radio_parts)
+  {
+	%parts = ();
+	my @msg_parts = split(/ /,$radiomsg);		# Split message parts by " "
 	foreach (@msg_parts)
 	{
 		my ($m, $mv) = split(/=/,$_);
@@ -1280,23 +1292,32 @@ sub SIGNALduino_parseCcBankInfo($$)
 		}
 	}
 	$ccconf = "b=" . $parts{b} . " $ccconf [boffs=" . $parts{boffs} . "]";
-	$hash->{ccconf} = $ccconf;
+	my $radionr = "";
+	my $radiomsg = "";
+	if (exists($parts{r})) {
+		$radionr = lc($parts{r}) . "_";
+		$radiomsg = $parts{r} . ": ";
+	}
+	my $radioconf = $radionr . "ccconf";
+	$hash->{$radioconf} = $ccconf;
 	$ccconfFSK = "ccmode=" . $parts{ccmode};
-	if ($parts{N}) {
-		$ccconfFSK .= " N=" . $parts{N};
+	if (exists($parts{N})) {
+		$ccconfFSK = "N=" . $parts{N} . " " . $ccconfFSK
 	}
 	$ccconfFSK .= " sync=" . $parts{sync} . " $retccconfFSK";
 	
+	$radioconf = $radionr . "ccconfFSK";
 	if ($modFlag or $parts{ccmode} > 0) {
-		$hash->{ccconfFSK} = $ccconfFSK;
+		$hash->{$radioconf} = $ccconfFSK;
 	}
 	else {
-		delete($hash->{ccconfFSK});
+		delete($hash->{$radioconf});
 	}
-	$msg = $ccconf . "\n\n" . $ccconfFSK;
+	$rmsg .= $radiomsg . $ccconf . "\n\n" . $ccconfFSK . "\n\n";
 	
 	#Log3 $hash, 4, "parseCcBankInfo:" . Dumper(\%parts);
-	return $msg;
+  }
+	return $rmsg;
 }
 
 #####################################
@@ -1439,11 +1460,17 @@ sub SIGNALduino_CheckCmdResp($)
 		  my $initflag = 0;
 		  if ($hash->{DevState} ne 'waitBankInfo') {
 			readingsSingleUpdate($hash, "state", "opened", 1);
-			if ($ver =~ m/\(b.*\)/) {
-				Log3 $name, 4, "$name/init: firmwareversion with ccBankSupport found";
+			if ($ver =~ m/\((b.*)|(R: .*)\)/) {
+				if ($ver =~ m/\((b.*)\)/) {
+					Log3 $name, 4, "$name/init: firmwareversion with ccBankSupport found";
+					SIGNALduino_SimpleWrite($hash, "b?");
+				}
+				else {
+					Log3 $name, 4, "$name/init: firmwareversion with ccBankSupport and multi cc1101 found";
+					SIGNALduino_SimpleWrite($hash, "br");
+				}
 				delete($hash->{ccconf});
 				delete($hash->{ccconfFSK});
-				SIGNALduino_SimpleWrite($hash, "b?");
 				$hash->{DevState} = 'waitBankInfo';
 				$hash->{getcmd}->{cmd} = "setBank";
 				RemoveInternalTimer($hash);
@@ -1457,6 +1484,7 @@ sub SIGNALduino_CheckCmdResp($)
 		  else {
 			if ($hash->{ccconf}) {
 				my $bankinfo = $hash->{ccconf};
+				delete($hash->{ccconf});
 				if ($bankinfo =~ m/b=.*ccmode=.*ccconf.*/) {
 					$initflag = 1;
 					SIGNALduino_Log3 $name, 4, "$name/init: Write ccBankInfo: ($bankinfo) to Internal ccconf";
@@ -2131,6 +2159,7 @@ sub SIGNALduino_Split_Message($$)
 	my $rawData;
 	my $clockabs;
 	my $mcbitnum;
+	my $nativenr;
 	my $rssi;
 	
 	my @msg_parts = SIGNALduino_splitMsg($rmsg,';');			## Split message parts by ";"
@@ -2173,17 +2202,22 @@ sub SIGNALduino_Split_Message($$)
 		elsif($_ =~ m/^CP=\d{1}/) 		#### Clock Pulse Index
 		{
 			(undef, $clockidx) = split(/=/,$_);
-			Debug "$name: extracted  clockidx $clockidx\n" if ($debug);;
+			Debug "$name: extracted  clockidx $clockidx\n" if ($debug);
 			#return undef if (!defined($patternList{$clockidx}));
 			$ret{clockidx} = $clockidx;
 		}
 		elsif($_ =~ m/^L=\d/) 		#### MC bit length
 		{
 			(undef, $mcbitnum) = split(/=/,$_);
-			Debug "$name: extracted  number of $mcbitnum bits\n" if ($debug);;
+			Debug "$name: extracted  number of $mcbitnum bits\n" if ($debug);
 			$ret{mcbitnum} = $mcbitnum;
 		}
-		
+		elsif($_ =~ m/^N=\d{1}/)	### xFSK Native Nr
+		{
+			(undef, $nativenr) = split(/=/,$_);
+			Debug "$name: extracted xFSK Native Nr $nativenr \n" if ($debug);
+			$ret{N} = $nativenr;
+		}
 		elsif($_ =~ m/^C=\d+/) 		#### Message from array
 		{
 			$_ =~ s/C=//;  
