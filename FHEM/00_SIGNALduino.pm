@@ -27,7 +27,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_25.02.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_29.02.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -82,7 +82,9 @@ my %sets = (
   "reset"     => 'noArg',
   "close"     => 'noArg',
   "enableMessagetype" => 'syncedMS,unsyncedMU,manchesterMC',
+  #"enableMessagetype" => 'syncedMS,syncedMSEQ,unsyncedMU,manchesterMC',
   "disableMessagetype" => 'syncedMS,unsyncedMU,manchesterMC',
+  #"disableMessagetype" => 'syncedMS,syncedMSEQ,unsyncedMU,manchesterMC',
   "LaCrossePairForSec" => 'textFieldNL',
   "sendMsg"   => 'textFieldNL',
   "cc1101_freq"    => 'textFieldNL',
@@ -3132,6 +3134,9 @@ sub SIGNALduino_Parse_MN($$$$@)
 				Log3 $name, 4, "$name ParseMN: ID=$id dmsg=$dmsg";
 				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
 			}
+			else {
+				Log3 $name, 4, "$name ParseMN: method error! $res";
+			}
 		}
 	}
 	return 1;
@@ -4885,23 +4890,35 @@ sub SIGNALduino_LaCrosse()
 	my ($calccrc,$crc) = SIGNALduino_CalculateCRC($dmsg,4);
 	
 	if ($calccrc !=$crc) {
-		Log3 $name, 4, "$name LaCrosse_convert: Error! dmsg=$dmsg checksumCalc=$calccrc checksum=$crc";
-		return (-1,"checksum Error");
+		#Log3 $name, 4, "$name LaCrosse_convert: Error! dmsg=$dmsg checksumCalc=$calccrc checksum=$crc";
+		return (-1,"LaCrosse_convert checksum Error: dmsg=$dmsg checksumCalc=$calccrc checksum=$crc");
 	}
 	
 	my $addr = ((hex(substr($dmsg,0,2)) & 0x0F) << 2) | ((hex(substr($dmsg,2,2)) & 0xC0) >> 6);
 	my $temperature = ( ( ((hex(substr($dmsg,2,2)) & 0x0F) * 100) + (((hex(substr($dmsg,4,2)) & 0xF0) >> 4) * 10) + (hex(substr($dmsg,4,2)) & 0x0F) ) / 10) - 40;
-	return (-1,"temp err!") if ($temperature >= 60 || $temperature <= -40);
+	return (-1,"LaCrosse_convert: temp=$temperature") if ($temperature >= 60 || $temperature <= -40);
 
 	my $humidity = hex(substr($dmsg,6,2));
 	my $batInserted = ((hex(substr($dmsg,2,2)) & 0x20) << 2);
-
-	Log3 $name, 4, "$name LaCrosse_convert: ID=$id, addr=$addr temp=$temperature, hum=" . ($humidity & 0x7F) . " bat=" . ($humidity & 0x80)  . " batInserted=$batInserted";
+	my $SensorType = 1;
+	my $channel = "";
+	my $humObat = $humidity & 0x7F;
+	if ($humObat == 106) {	# Kanal 1
+		$channel = " channel=1 no";
+	}
+	elsif ($humObat == 125) {	# Kanal 2
+		$SensorType = 2;
+		$channel = " channel=2 no";
+	}
+	elsif ($humObat > 99) {
+		return (-1,"LaCrosse_convert: hum=$humObat")
+	}
+	
+	Log3 $name, 4, "$name LaCrosse_convert: ID=$id, addr=$addr temp=$temperature " . $channel . "hum=$humObat bat=" . ($humidity & 0x80)  . " batInserted=$batInserted";
 	
 	# build string for 36_LaCrosse.pm
-	# Todo: es gibt Sensoren mit 2 Kanaelen?
 	my $dmsgMod = "OK 9 $addr ";
-	$dmsgMod .= (1 | $batInserted);
+	$dmsgMod .= ($SensorType | $batInserted);
 
 	$temperature = (($temperature* 10 + 1000) & 0xFFFF);
 	$dmsgMod .= " " . (($temperature >> 8) & 0xFF)  . " " . ($temperature & 0xFF) . " $humidity";
@@ -4932,8 +4949,8 @@ sub SIGNALduino_PCA301()
 		Log3 $name, 4, "$name PCA301_convert: translated native RF telegram PCA301 $dmsg";
 	}
 	else {
-		Log3 $name, 4, "$name PCA301_convert: wrong checksum $checksum";
-		return (-1,"checksum Error");
+		#Log3 $name, 4, "$name PCA301_convert: wrong checksum $checksum";
+		return (-1,"PCA301_convert: wrong checksum $checksum");
 	}
 	return (1,$dmsg);
 }
@@ -4953,8 +4970,8 @@ sub SIGNALduino_KoppFreeControl()
 	$chk = hex(substr($dmsg,$anz*2,2));
 	
 	if ($blkck != $chk) {
-		Log3 $name, 4, "$name KoppFreeControl: Error! dmsg=$dmsg checksumCalc=$blkck checksum=$chk";
-		return (-1,"checksum Error");
+		#Log3 $name, 4, "$name KoppFreeControl: Error! dmsg=$dmsg checksumCalc=$blkck checksum=$chk";
+		return (-1,"KoppFreeControl checksum Error: msg=$dmsg checksumCalc=$blkck checksum=$chk");
 	}
 	else {
 		Log3 $name, 4, "$name KoppFreeControl: dmsg=$dmsg anz=$anz checksum=$blkck ok";
