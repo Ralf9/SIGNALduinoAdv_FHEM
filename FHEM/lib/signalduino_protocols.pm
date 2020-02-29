@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_25.02.'
+		"version" => 'v3.4.5-dev_ralf_28.02.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -2566,9 +2566,9 @@ our %ProtocolListSIGNALduino  = (
 				length_max      => '49',
 				method          => \&main::SIGNALduino_GROTHE,		# Call to process this message
 			},
-		"100"	=>	# Lacrosse
+		"100"	=>	# Lacrosse, Mode 1 - IT+
 			{
-				name            => 'Lacrosse',
+				name            => 'Lacrosse mode 1',
 				changed         => '20200104 new',
 				id              => '100',
 				knownFreqs      => '868.3',
@@ -2609,6 +2609,20 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^0.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'Kopp',
 				method        => \&main::SIGNALduino_KoppFreeControl,
+			},
+		"103"	=>	# Lacrosse mode 2 - IT+
+			{
+				name            => 'Lacrosse mode 2',
+				changed         => '20200228 new',
+				id              => '103',
+				knownFreqs      => '868.3',
+				N               => 2,
+				datarate        => '9.579',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'LaCrosse',
+				method        => \&main::SIGNALduino_LaCrosse,
 			}
 
 		########################################################################
