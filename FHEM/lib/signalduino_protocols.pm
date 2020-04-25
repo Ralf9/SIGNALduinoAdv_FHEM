@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_28.02.'
+		"version" => 'v3.4.5-dev_ralf_25.04.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -1125,7 +1125,7 @@ our %ProtocolListSIGNALduino  = (
 			format       => 'twostate',
 			preamble     => 'W38#',
 			clientmodule	=> 'SD_WS',
-			#modulematch	=> '^P38#.*',
+			modulematch	=> '^W38#.*',
 			length_min   => '36',
 			length_max   => '36',
 		},
@@ -1203,7 +1203,7 @@ our %ProtocolListSIGNALduino  = (
 						# MU;P0=-112;P1=1075;P2=-511;P3=452;P5=1418;D=01212121232323232323232323232525252523232323232323232323252525252323232323232323232325252525;CP=3;R=77;
 		{
 			name				=> 'wireless doorbell',
-			comment				=> 'Pollin 94-551227',
+			comment				=> 'Pollin 551227',
 			changed				=> '20181210 new',
 			id				=> '42',
 			one				=> [1,-1],
@@ -1385,7 +1385,7 @@ our %ProtocolListSIGNALduino  = (
 				comment         => 'Remote control is traded under different names',
 				changed         => '20191215 new',
 				id              => '49.1',
-				clockabs        => 500,
+				clockabs        => 515,
 				clockpos        => ['zero',0],
 				one             => [2,-1],  # 1025,-515  (timings from salae logic)
 				zero            => [1,-2],  # 515,-1030  (timings from salae logic)
@@ -1684,7 +1684,7 @@ our %ProtocolListSIGNALduino  = (
 		# kurz 400 mikroSek / lang 800 mikroSek / gesamt 800 mikroSek = 0, gesamt 1200 mikroSek = 1 - Sollzeiten 
 		{
 			name		=> 'FS10',
-			comment		=> 'remote Control',
+			comment		=> 'remote control',
 			id		=> '61',
 			one		=> [1,-2],
 			zero		=> [1,-1],
@@ -1868,7 +1868,7 @@ our %ProtocolListSIGNALduino  = (
 			length_max      => '44',
 		},
 	"70"	=>	## FHT80TF (Funk-Tuer-Fenster-Melder FHT 80TF und FHT 80TF-2)
-						# https://github.com/RFD-FHEM/RFFHEM/issues/171	
+						# https://github.com/RFD-FHEM/RFFHEM/issues/171 @HomeAutoUser
 	# closed MU;P0=-24396;P1=417;P2=-376;P3=610;P4=-582;D=012121212121212121212121234123434121234341212343434121234123434343412343434121234341212121212341212341234341234123434;CP=1;R=35;
 	# open   MU;P0=-21652;P1=429;P2=-367;P4=634;P5=-555;D=012121212121212121212121245124545121245451212454545121245124545454512454545121245451212121212124512451245451245121212;CP=1;R=38;
 		{
@@ -2349,20 +2349,21 @@ our %ProtocolListSIGNALduino  = (
 						# Waeco_MA650_TX | too buttons
 						# KeeLoq is a registered trademark of Microchip Technology Inc.
 		{
-			name				=> 'Roto shutter',
-			comment				=> 'remote control Aurel TX-nM-HCS',
+			name				=> 'HCS300/HCS301',
+			comment				=> 'remote controls Aurel TX-nM-HCS, enjoy motors HS, Rademacher RP-S1-HS-RF11, SCS Sentinel PR3-4207-002, Waeco MA650_TX',
 			changed				=> '20181204 new',
 			id				=> '88',
+			knownFreqs		=> '433.92 | 868.35',
 			one				=> [1,-2],
 			zero				=> [2,-1],
 			preSync				=> [1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1,],	# 11 pulses preambel, 1 sync, 66 data, pause ... repeat
 			sync				=> [1,-10],				# this is a end marker, but we use this as a start marker
 			pause         => [-39],         # Guard Time typ. 15.6 mS
-			clockabs			=> 400,						# ca 400us
+			clockabs			=> 400,						# Basic pulse element typ. 0.4 mS (Timings from table CODE WORD TRANSMISSION TIMING REQUIREMENTS in PDF)
 			reconstructBit			=> '1',
 			developId			=> 'm',
 			format				=> 'twostate',
-			preamble			=> 'P88#',				# prepend to converted message
+			preamble			=> 'P88#',
 			clientmodule	=> 'SD_Keeloq',
 			#modulematch	=> '',
 			length_min		=> '65',
@@ -2480,12 +2481,12 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule	=> 'SD_UT',
 			#modulematch	=> '^P92#.*',
 		},
-	"93"	=>	## ESTO Lighting GmbH | remote control KL-RF01 with 9 buttons (CP 375-395)
-						# https://github.com/RFD-FHEM/RFFHEM/issues/449
-						# MS;P1=376;P4=-1200;P5=1170;P6=-409;P7=-12224;D=17141414561456561456565656145656141414145614141414565656145656565614;CP=1;SP=7;R=231;e;m0; 
-						# MS;P1=393;P2=-1174;P4=1180;P5=-401;P6=-12222;D=16121212451245451245454545124545124545451212121212121212454545454512;CP=1;SP=6;R=243;e;m0;
-						# MS;P0=397;P1=-385;P2=-1178;P3=1191;P4=-12230;D=04020202310231310231313131023131023131020202020202020231313131313102;CP=0;SP=4;R=250;e;m0;
-		{
+		"93"	=>	## ESTO Lighting GmbH | remote control KL-RF01 with 9 buttons (CP 375-395)
+							# https://github.com/RFD-FHEM/RFFHEM/issues/449 @daniel89fhem 
+							# light_color_cold_white   MS;P1=376;P4=-1200;P5=1170;P6=-409;P7=-12224;D=17141414561456561456565656145656141414145614141414565656145656565614;CP=1;SP=7;R=231;e;m0; 
+							# dimup                    MS;P1=393;P2=-1174;P4=1180;P5=-401;P6=-12222;D=16121212451245451245454545124545124545451212121212121212454545454512;CP=1;SP=6;R=243;e;m0;
+							# dimdown                  MS;P0=397;P1=-385;P2=-1178;P3=1191;P4=-12230;D=04020202310231310231313131023131023131020202020202020231313131313102;CP=0;SP=4;R=250;e;m0;
+			{
 			name         => 'ESTO Lighting GmbH',
 			comment      => 'remote control KL-RF01',
 			changed      => '20181229 new',
@@ -2502,10 +2503,13 @@ our %ProtocolListSIGNALduino  = (
 			#modulematch	=> '^P93#.*',
 		},
 		"94"	=>	# Atech wireless weather station (vermutlicher Name: WS-308)
-							# https://github.com/RFD-FHEM/RFFHEM/issues/547 @Kreidler1221
-							# wrong? MU;P0=-31266;P1=1537;P2=-294;P3=-7582;P4=-1999;P5=-223;D=012121212121212131414141412121412121414141414141414141412121412121414141414141212141212141412121412121414121015151512121212131414141412121412121414141414141414141412121412121414141414141212141212141412121412121414121;CP=1;
-							# MU;P0=-31266;P1=1538;P2=-285;P3=-7582;P4=-1995;D=012121212121212131414141412121412121414141414141414141412121412121414141414121214121214141414121214121214121012121212121212131414141412121412121414141414141414141412121412121414141414121214121214141414121214121214121;CP=1;
-							# MU;P0=-31268;P1=1538;P2=-285;P3=-7574;P4=-1997;D=012121212121212131414141412121412121414141414141414141412121412121414141412121414141212141212141212141414121012121212121212131414141412121412121414141414141414141412121412121414141412121414141212141212141212141414121;CP=1;
+							# https://github.com/RFD-FHEM/RFFHEM/issues/547 @Kreidler1221 2019-03-15
+							# Sensor sends Bit 0 as "0", Bit 1 as "110"
+							# Id:0C T:-14.6 MU;P0=-32001;P1=1525;P2=-303;P3=-7612;P4=-2008;D=01212121212121213141414141212141212141414141412121414141414121214141212141414141212141212141412121412121414121214121;CP=1;
+							# Id:0C T:-0.4  MU;P0=-32001;P1=1533;P2=-297;P3=-7612;P4=-2005;D=0121212121212121314141414121214121214141414141212141414141414141414141412121414141212141412121414121;CP=1;
+							# Id:0C T:0.2   MU;P0=-32001;P1=1532;P2=-299;P3=-7608;P4=-2005;D=0121212121212121314141414121214121214141414141414141414141414141414141212141412121412121412121414121;CP=1;
+							# Id:0C T:10.2  MU;P0=-31292;P1=1529;P2=-300;P3=-7610;P4=-2009;D=012121212121212131414141412121412121414141414141414141412121414141414141412121414121214121214121214121214121012121212121212131414141412121412121414141414141414141412121414141414141412121414121214121214121214121214121;CP=1;
+							# Id:0C T:27    MU;P0=-31290;P1=1533;P2=-297;P3=-7608;P4=-2006;D=012121212121212131414141412121412121414141414141414141212141414121214121214121214141414141212141414121214121012121212121212131414141412121412121414141414141414141212141414121214121214121214141414141212141414121214121;CP=1;
 			{
 				name				=> 'Atech',
 				comment				=> 'Temperature sensor',
@@ -2547,10 +2551,15 @@ our %ProtocolListSIGNALduino  = (
 				length_min			=> '50',
 				length_max			=> '50',
 			},
-		"96"	=>	# Funk-Gong | Taster Grothe Mistral SE 03.1 , Innenteil Grothe Mistral 200M(E)
+		"96"	=>	# Funk-Gong | Taster Grothe Mistral SE 03.1 / 01.1, Innenteil Grothe Mistral 200M(E)
 							# https://forum.fhem.de/index.php/topic,64251.msg940593.html?PHPSESSID=nufcvvjobdd8r7rgr0cq3qkrv0#msg940593 @coolheizer
-							# Button_1    MC;LL=-424;LH=438;SL=-215;SH=212;D=238823B1001F8;C=214;L=49;R=68;
-							# Button_2    MC;LL=-412;LH=458;SL=-187;SH=240;D=238129D9A78;C=216;L=41;R=241;
+							# SD_BELL_104762 Alarm        MC;LL=-430;LH=418;SL=-216;SH=226;D=23C823B1401F8;C=214;L=49;R=53;
+							# SD_BELL_104762 ring         MC;LL=-439;LH=419;SL=-221;SH=212;D=238823B1001F8;C=215;L=49;R=69;
+							# SD_BELL_104762 ring low bat MC;LL=-433;LH=424;SL=-214;SH=210;D=238823B100248;C=213;L=49;R=65;
+							# SD_BELL_0253B3 Alarm        MC;LL=-407;LH=451;SL=-195;SH=239;D=23C129D9E78;C=215;L=41;R=241;
+							# SD_BELL_0253B3 ring         MC;LL=-412;LH=458;SL=-187;SH=240;D=238129D9A78;C=216;L=41;R=241;
+							# SD_BELL_024DB5 Alarm        MC;LL=-415;LH=454;SL=-200;SH=226;D=23C126DAE58;C=215;L=41;R=246;
+							# SD_BELL_024DB5 ring         MC;LL=-409;LH=448;SL=-172;SH=262;D=238126DAA58;C=215;L=41;R=238;
 			{
 				name            => 'Grothe Mistral SE',
 				comment         => 'Wireless doorbell Grothe Mistral SE 01.1 or 03.1',
@@ -2565,6 +2574,71 @@ our %ProtocolListSIGNALduino  = (
 				length_min      => '40',
 				length_max      => '49',
 				method          => \&main::SIGNALduino_GROTHE,		# Call to process this message
+			},
+		"97"	=>	# Momento, remote control for wireless digital picture frame - elektron-bbs 2020-03-21
+							# Short press repeatedly message 3 times, long press repeatedly until release.
+							# When sending, the original message is not reproduced, but the recipient also reacts to the messages generated in this way.
+							# Momento_0000064 play/pause MU;P0=-294;P1=237;P2=5829;P3=-3887;P4=1001;P5=-523;P6=504;P7=-995;D=01010101010101010101010234545454545454545454545454545454545454545456767454567454545456745456745456745454523454545454545454545454545454545454545454545676745456745454545674545674545674545452345454545454545454545454545454545454545454567674545674545454567454;CP=4;R=45;O; 
+							# Momento_0000064 power      MU;P0=-998;P1=-273;P2=256;P3=5830;P4=-3906;P5=991;P6=-527;P7=508;D=12121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121345656565656565656565656565656565656565656567070565670565656565670567056565670707034565656565656565656565656565656565656565656707056567;CP=2;R=40;O;
+							# Momento_0000064 up         MU;P0=-1005;P1=-272;P2=258;P3=5856;P4=-3902;P5=1001;P6=-520;P7=508;D=0121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121213456565656565656565656565656565656565656565670705656705656567056565670565670567056345656565656565656565656565656565656565656567070565;CP=2;R=63;O;
+			{
+				name            => 'Momento',
+				comment         => 'Remote control for wireless digital picture frame',
+				changed         => '20200330 new',
+				id              => '97',
+				one             => [2,-4],		# 500, -1000
+				zero            => [4,-2],		# 1000, -500
+				start           => [23,-15],	# 5750, -3750
+				clockabs        => 250,
+				clockpos        => ['one',0],
+				format          => 'twostate',
+				preamble        => 'P97#',
+				clientmodule    => 'SD_UT',
+				length_min      => '40',
+				length_max      => '40',
+			},
+		"98"	=>	# Funk-Tuer-Gong: Modell GEA-028DB, Ningbo Rui Xiang Electrical Co.,Ltd., Vertrieb durch Walter Werkzeuge Salzburg GmbH, Art. Nr. K612021A
+							# https://forum.fhem.de/index.php/topic,109952.0.html 2020-04-12
+							# SD_BELL_6A2C   MU;P0=1488;P1=-585;P2=520;P3=-1509;P4=1949;P5=-5468;CP=2;R=38;D=01232301230123010101230123230101454501232301230123010101230123230101454501232301230123010101230123230101454501232301230123010101230123230101454501232301230123010101230123230101454501232301230123010101230123230101454501232301230123010101230123230101454501;O;
+							# SD_BELL_6A2C   MU;P0=-296;P1=-1542;P2=1428;P3=-665;P4=483;P5=1927;P6=-5495;P7=92;CP=4;R=31;D=1234141232356562341412341234123232341234141232356562341412341234123232341234141232356562341412341234123232341234141232356562341412341234123232341234141232356562341412341234123232341234141232356562341412341234123232341234141232370;e;i;
+			{
+				name            => 'GEA-028DB',
+				comment         => 'Wireless doorbell',
+				changed         => '20200412 new',
+				id              => '98',
+				one             => [1,-2.9],
+				zero            => [2.8,-1.1],
+				start           => [3.7,-10.5],
+				end             => [3.7,-10.5],
+				clockabs        => 520,
+				clockpos        => ['one',0],
+				format          => 'twostate',
+				clientmodule    => 'SD_BELL',
+				modulematch     => '^P98#',
+				preamble        => 'P98#',
+				length_min      => '16',
+				length_max      => '16',
+			},
+		"99"	=>	# NAVARIS touch light switch Model No.: 44344.04
+							# https://github.com/RFD-FHEM/RFFHEM/issues/828
+							# Navaris_211073   MU;P0=-302;P1=180;P2=294;P3=-208;P4=419;P5=-423;D=01023101010101023232310102323451010231010101023101010231010101010232323101023234510102310101010231010102310101010102323231010232345101023101010102310101023101010101023232310102323451010231010101023101010231010101010232323101023234510102310101010231010102;CP=1;R=36;O;
+							# Navaris_13F8E3   MU;P0=406;P1=-294;P2=176;P3=286;P4=-191;P6=-415;D=01212134212134343434343434212121343434212121343406212121342121343434343434342121213434342121213434062121213421213434343434343421212134343421212134340621212134212134343434343434212121343434212121343406212121342121343434343434342121213434342121213434062121;CP=2;R=67;O;
+			{
+				name            => 'Navaris 44344.04',
+				comment         => 'Wireless touch light switch',
+				changed         => '20200421 new',
+				id              => '99',
+				one             => [1.6,-1],
+				zero            => [1,-1.6],
+				start           => [2.1,-2.1],
+				clockabs        => 190,
+				clockpos        => ['zero',0],
+				format          => 'twostate',
+				clientmodule    => 'SD_UT',
+				modulematch     => '^P99#',
+				preamble        => 'P99#',
+				length_min      => '24',
+				length_max      => '24',
 			},
 		"100"	=>	# Lacrosse, Mode 1 - IT+
 			{
@@ -2623,6 +2697,29 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'LaCrosse',
 				method        => \&main::SIGNALduino_LaCrosse,
+			},
+		"104"	=>	# Remote control TR60C-1 with touch screen from Satellite Electronic (Zhongshan) Ltd., Importer Westinghouse Lighting for ceiling fan Bendan
+							# https://forum.fhem.de/index.php?topic=53282.msg1045428#msg1045428 phoenix-anasazi 2020-04-21
+							# TR60C1_0 light_off_fan_off  MU;P0=18280;P1=-737;P2=419;P3=-331;P4=799;P5=-9574;P6=-7080;D=012121234343434341212121212121252121212123434343434121212121212125212121212343434343412121212121212521212121234343434341212121212121252121212123434343434121212121212126;CP=2;R=2;
+							# TR60C1_9 light_off_fan_4    MU;P0=14896;P1=-751;P2=394;P3=-370;P4=768;P5=-9572;P6=-21472;D=0121234123434343412121212121212523412123412343434341212121212121252341212341234343434121212121212125234121234123434343412121212121212523412123412343434341212121212121252341212341234343434121212121212126;CP=2;R=4;
+							# TR60C1_B light_on_fan_2     MU;P0=-96;P1=152;P2=-753;P3=389;P4=-374;P5=769;P6=-9566;P7=-19920;D=012345454523232345454545634523454523234545452323234545454563452345452323454545232323454545456345234545232345454523232345454545634523454523234545452323234545454563452345452323454545232323454545457;CP=3;R=1;
+							# https://github.com/RFD-FHEM/RFFHEM/issues/842
+			{
+				name            => 'TR60C-1',
+				comment         => 'Remote control for example Westinghouse Bendan 77841B',
+				changed         => '20200422 new',
+				id              => '104',
+				one             => [-1,2],  #  -380,760
+				zero            => [-2,1],  #  -760,380
+				start           => [-25,1], # -9500,380
+				clockabs        => 380,
+				clockpos        => ['zero',1],
+				format          => 'twostate',
+				clientmodule    => 'SD_UT',
+				modulematch     => '^P104#',
+				preamble        => 'P104#',
+				length_min      => '16',
+				length_max      => '16',
 			}
 
 		########################################################################

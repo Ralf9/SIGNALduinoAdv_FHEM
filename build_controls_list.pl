@@ -62,10 +62,10 @@ sub listfiles2{
 	                	my $time = POSIX::strftime("%H:%M:%S", localtime( $fi->{mtime} ));
 					
 						my @line_parts = split (" ",$modifiy_line);
-						@line_parts[2] = fileparse($file,"");
-						@line_parts[3] = $fi->{size};
-						@line_parts[4] = $date;
-						@line_parts[5] = $time;
+						$line_parts[2] = fileparse($file,"");
+						$line_parts[3] = $fi->{size};
+						$line_parts[4] = $date;
+						$line_parts[5] = $time;
 							
 						$modifiy_line = join(" ",@line_parts)."\n";				
 						print (" to $modifiy_line\n");
@@ -82,19 +82,9 @@ sub listfiles2{
 				}       
 	            $fi = file_info($file);
 	              
-                if ( $file =~ /(firmware|\.hex|\.HEX)/ ){
-#                    print "$file is a firmware\n";
-                    push @lines, sprintf("MOV %s unused\n", $fi->{path});
-                }
                 push @lines, sprintf("UPD %s %-7s %s\n", $date_time, $fi->{size}, $fi->{path});
             }
         }
-        push @lines, "MOV FHEM/14_Cresta.pm unused\n";
-        push @lines, "MOV FHEM/14_SIGNALduino_AS.pm unused\n";
-        push @lines, "MOV FHEM/14_SIGNALduino_un.pm unused\n";
-        push @lines, "MOV FHEM/14_SIGNALduino_ID7.pm unused\n";
-        push @lines, "MOV FHEM/14_SIGNALduino_RSL.pm unused\n";
-
 
         open(my $fh, '>:raw', 'controls_signalduino.txt');
         
