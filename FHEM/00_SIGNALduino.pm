@@ -275,7 +275,7 @@ SIGNALduino_Initialize
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101"
+  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101" #,Maple_sduino_USB,Maple_sduino_LAN,Maple_cul_USB"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
@@ -519,7 +519,7 @@ SIGNALduino_Set
     return "This command is only available with a cc1101 receiver";
   }
   
-  return "$name is not active, may firmware is not suppoted, please flash or reset" if ($cmd ne 'reset' && $cmd ne 'flash' && exists($hash->{DevState}) && $hash->{DevState} ne 'initialized');
+  return "$name is not active, may firmware is not supported, please flash or reset" if ($cmd ne 'reset' && $cmd ne 'flash' && exists($hash->{DevState}) && $hash->{DevState} ne 'initialized');
 
   if ($cmd =~ m/^cc1101_/) {
      $cmd = substr($cmd,7);
@@ -1287,11 +1287,12 @@ sub SIGNALduino_parseCcBankInfo
  if ($msg =~ m/b=.*ccmode=.*ccconf.*/) {
   my $rmsg = "\n";
   my @msg_radio_parts = split(/  /,$msg);	# Split message parts by "  " (double space)
-  Log3 $hash, 3, "parseCcBankInfo anz: " . scalar(@msg_radio_parts);
+  #Log3 $hash, 3, "parseCcBankInfo anz: " . scalar(@msg_radio_parts);
   foreach my $radiomsg (@msg_radio_parts)
   {
 	%parts = ();
 	my @msg_parts = split(/ /,$radiomsg);		# Split message parts by " "
+	$freq = 0;
 	foreach (@msg_parts)
 	{
 		my ($m, $mv) = split(/=/,$_);
@@ -1314,7 +1315,16 @@ sub SIGNALduino_parseCcBankInfo
 	my $radiomsg = "";
 	if (exists($parts{r})) {
 		$radionr = lc($parts{r}) . "_";
-		$radiomsg = $parts{r} . ": ";
+		$radiomsg = $parts{r};
+		if (substr($parts{boffs},-1) ne '*') {	# ein * am Ende bedeuted, dass dieses Radio selektiert ist
+			$radiomsg .= ": ";
+		}
+		else {
+			$radiomsg .= "* ";
+			if ($freq > 0) {
+				$hash->{cc1101_frequency} = $freq;
+			}
+		}
 	}
 	my $radioconf = $radionr . "ccconf";
 	$hash->{$radioconf} = $ccconf;
@@ -1351,6 +1361,23 @@ SIGNALduino_ResetDevice
 
   Log3 $name, 3, "$name reset"; 
   DevIo_CloseDev($hash);
+  if (defined($hash->{version}) && substr($hash->{version},0,6) eq 'V 4.1.') {
+    my $uploadResetfound=0;
+    my $tool_name = "upload-reset";
+    for my $path ( split /:/, $ENV{PATH} ) {
+      if ( -f "$path/$tool_name" && -x _ ) {
+         $uploadResetfound=1;
+         last;
+      }
+    }
+    if ($uploadResetfound) {
+      my $mapleReset = 'upload-reset /dev/ttyACM0 750';
+      `$mapleReset`;
+    }
+    else {
+      Log3 $name, 2, "$name reset: upload-reset not found";
+    }
+  }
   my $ret = DevIo_OpenDev($hash, 0, "SIGNALduino_DoInit", 'SIGNALduino_Connect');
 
   return $ret;
