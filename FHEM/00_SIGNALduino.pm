@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2019-07-07 18:00:00Z v3.4.0-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 10488 2020-05-24 16:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -28,7 +28,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.09.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.24.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -1358,10 +1358,11 @@ SIGNALduino_ResetDevice
 {
   my ($hash) = @_;
   my $name = $hash->{NAME};
+  my $dev = $hash->{DEF};
 
   Log3 $name, 3, "$name reset"; 
   DevIo_CloseDev($hash);
-  if (defined($hash->{version}) && substr($hash->{version},0,6) eq 'V 4.1.') {
+  if ($dev =~ m/\@/ && defined($hash->{version}) && substr($hash->{version},0,6) eq 'V 4.1.') {
     my $uploadResetfound=0;
     my $tool_name = "upload-reset";
     for my $path ( split /:/, $ENV{PATH} ) {
@@ -1370,8 +1371,10 @@ SIGNALduino_ResetDevice
          last;
       }
     }
-    if ($uploadResetfound) {
-      my $mapleReset = 'upload-reset /dev/ttyACM0 750';
+    if ($uploadResetfound) { 
+      $dev =~ s/\@.*$//;	# ; am Ende entfernen
+      my $mapleReset = "upload-reset $dev 750";
+      Log3 $name, 3, "$name upload-reset: $mapleReset";
       `$mapleReset`;
     }
     else {
