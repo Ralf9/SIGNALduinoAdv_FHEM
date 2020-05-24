@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_25.04.'
+		"version" => 'v3.4.5-dev_ralf_12.05.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -2661,6 +2661,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20200124 new',
 				id              => '101',
 				knownFreqs      => '868.950',
+				dispatchequals	=>  'true',
 				N               => 3,
 				datarate        => '6620.41',
 				sync            => '2DD4',
