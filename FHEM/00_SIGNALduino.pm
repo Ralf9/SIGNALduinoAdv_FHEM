@@ -9,6 +9,7 @@
 # It routes Messages serval Modules which are already integrated in FHEM. But there are also modules which comes with it.
 # N. Butzek, S. Butzek, 2014-2015
 # S.Butzek,Ralf9 2016-2019
+# Ralf9 2020
 
 package main;
 my $missingModulSIGNALduino="";
@@ -1023,7 +1024,7 @@ SIGNALduino_Get
 	if ($arg =~ /\002M.;.*;\003$/)
 	{
 		Log3 $name, 4, "$name/msg get raw: $arg";
-		return SIGNALduino_Parse($hash, $hash, $hash->{NAME}, $arg);
+		return SIGNALduino_Parse($hash, $hash->{NAME}, $arg);
   	}
   	else {
 		my $arg2 = "";
@@ -1473,7 +1474,7 @@ sub SIGNALduino_StartInit
 		#DevIo_SimpleWrite($hash, "V\n",2);
 		$hash->{DevState} = 'waitInit';
 		RemoveInternalTimer($hash);
-		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduino_CheckCmdResp", $hash, 0);
+		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT + 30 * $hash->{initretry}, "SIGNALduino_CheckCmdResp", $hash, 0);
 	}
 }
 
@@ -1847,7 +1848,7 @@ SIGNALduino_Read
 		Log3 $name, 4, "$name/msg READ: $rmsg";
 	}
 
-	if ( $rmsg && !SIGNALduino_Parse($hash, $hash, $name, $rmsg) && defined($hash->{getcmd}) && defined($hash->{getcmd}->{cmd}))
+	if ( $rmsg && !SIGNALduino_Parse($hash, $name, $rmsg) && defined($hash->{getcmd}) && defined($hash->{getcmd}->{cmd}))
 	{
 		#Log3 $name, 4, "$name/msg READ: getcmd=$hash->{getcmd}->{cmd}";
 		my $regexp;
@@ -1882,7 +1883,7 @@ SIGNALduino_Read
 				$hash->{keepalive}{ok}    = 1;
 				$hash->{keepalive}{retry} = 0;
 			}
-			Log3 $name, 5, "$name/msg READ: regexp=$regexp cmd=$hash->{getcmd}->{cmd} msg=$rmsg";
+			Log3 $name, 5, "$name/msg READ: regexp=$regexp cmd=$hash->{getcmd}->{cmd} msg=$rmsg" if(defined($regexp));
 			
 			if ($hash->{getcmd}->{cmd} eq 'version') {
 				my $msg_start = index($rmsg, 'V 3.');
@@ -2305,7 +2306,7 @@ sub SIGNALduino_Split_Message
 # Function which dispatches a message if needed.
 sub SIGNALduno_Dispatch
 {
-	my ($hash, $rmsg, $dmsg, $rssi, $id) = @_;
+	my ($hash, $rmsg, $dmsg, $rssi, $id, $nrEqualDmsg) = @_;
 	my $name = $hash->{NAME};
 	
 	if (!defined($dmsg))
@@ -2345,8 +2346,13 @@ sub SIGNALduno_Dispatch
 		Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich";
 	} else {
 		if (defined($hash->{DoubleMsgIDs}{$id})) {
-			$DMSGgleich = 0;
-			Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich";
+			if ($nrEqualDmsg < 2) {	# keine MU-Nachricht oder keine doppelte MU-Nachricht
+				$DMSGgleich = 0;
+				Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich";
+			}
+			else {
+				Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich ($nrEqualDmsg)";
+			}
 		}
 		else {
 			Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich: disabled";
@@ -2386,6 +2392,7 @@ sub SIGNALduno_Dispatch
 		if (AttrVal($name,"suppressDeviceRawmsg",0) == 0) {
 			$addvals{RAWMSG} = $rmsg;
 		}
+		$addvals{DMSGequal} = $nrEqualDmsg if ($nrEqualDmsg > 1);
 		if(defined($rssi)) {
 			$hash->{RSSI} = $rssi;
 			$addvals{RSSI} = $rssi;
@@ -2409,7 +2416,7 @@ sub SIGNALduno_Dispatch
 sub
 SIGNALduino_Parse_MS
 {
-	my ($hash, $iohash, $name, $rmsg,%msg_parts) = @_;
+	my ($hash, $name, $rmsg,%msg_parts) = @_;
 
 	my $protocolid;
 	my $syncidx=$msg_parts{syncidx};			
@@ -2429,8 +2436,8 @@ SIGNALduino_Parse_MS
 	#Debug "Message splitted:";
 	#Debug Dumper(\@msg_parts);
 
-	my $debug = AttrVal($iohash->{NAME},"debug",0);
-	my $dummy = IsDummy($iohash->{NAME});
+	my $debug = AttrVal($hash->{NAME},"debug",0);
+	my $dummy = IsDummy($hash->{NAME});
 	
 	if (defined($clockidx) and defined($syncidx))
 	{
@@ -2543,7 +2550,7 @@ SIGNALduino_Parse_MS
 				#Log3 $name, 5, "demodulating $sig_str";
 				#Debug $patternLookupHash{substr($rawData,$i,$signal_width)}; ## Get $signal_width number of chars from raw data string
 				if (exists $patternLookupHash{$sigStr}) { ## Add the bits to our bit array
-					push(@bit_msg,$patternLookupHash{$sigStr});
+					push(@bit_msg,$patternLookupHash{$sigStr}) if ($patternLookupHash{$sigStr} ne '');
 				} elsif (exists($ProtocolListSIGNALduino{$id}{reconstructBit})) {
 					if (length($sigStr) == $signal_width) {			# ist $sigStr zu lang?
 						chop($sigStr);
@@ -2634,7 +2641,7 @@ SIGNALduino_Parse_MS
 				#		next;
 				#	}
 				#}
-				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
+				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
 				$message_dispatched=1;
 			}
 		}
@@ -2681,9 +2688,26 @@ sub SIGNALduino_getProtoProp
 	#return undef;
 }
 
+
+sub SIGNALduino_Parse_MU_Dispatch
+{
+	my ($hash,$rmsg,$dmsg,$rssi,$id,$nrEqualDmsg) = @_;
+	my $modulematch;
+	
+	if (defined($ProtocolListSIGNALduino{$id}{modulematch})) {
+		$modulematch = $ProtocolListSIGNALduino{$id}{modulematch};
+	}
+	if (!defined($modulematch) || $dmsg =~ m/$modulematch/) {
+		SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,$nrEqualDmsg);
+		return 1;
+	}
+	return 0;
+}
+
+
 sub SIGNALduino_Parse_MU
 {
-	my ($hash, $iohash, $name, $rmsg,%msg_parts) = @_;
+	my ($hash, $name, $rmsg,%msg_parts) = @_;
 
 	my $protocolid;
 	my $clockidx=$msg_parts{clockidx};
@@ -2691,9 +2715,9 @@ sub SIGNALduino_Parse_MU
 	my $rawData;
 	my %patternListRaw;
 	my $message_dispatched=0;
-	my $debug = AttrVal($iohash->{NAME},"debug",0);
+	my $debug = AttrVal($name,"debug",0);
 	my $maxRepeat = AttrVal($name,"maxMuMsgRepeat", 4);
-	my $dummy = IsDummy($iohash->{NAME});
+	my $dummy = IsDummy($name);
 	
 	if (defined($rssi)) {
 		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
@@ -2890,6 +2914,10 @@ sub SIGNALduino_Parse_MU
 			my $length_str;
 			my $bit_msg_length;
 			my $nrRestart = 0;
+			my $dmsg = "";
+			my $lastDmsg = "";
+			my $nrEqualDmsg = 1;
+			my $ret;
 			
 			while ( $rawData =~ m/$regex/g) {
 				#Log3 $name, 5, "$name: regex=$regex part=$1";
@@ -2941,7 +2969,6 @@ sub SIGNALduino_Parse_MU
 					}
 					
 					my $bit_msg_length = scalar @bit_msg;
-					my $dmsg;
 					
 					if (defined($ProtocolListSIGNALduino{$id}{dispatchBin})) {
 						$dmsg = join ("", @bit_msg);
@@ -2975,28 +3002,32 @@ sub SIGNALduino_Parse_MU
 						Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr;
 					}
 					
-					my $modulematch;
-					if (defined($ProtocolListSIGNALduino{$id}{modulematch})) {
-						$modulematch = $ProtocolListSIGNALduino{$id}{modulematch};
+					if (SIGNALduino_getProtoProp($id,'dispatchequals',0) eq 'true' || defined($hash->{rawListNr})) {
+						$lastDmsg = $dmsg;
+						$dmsg = 'eq';
 					}
-					if (!defined($modulematch) || $dmsg =~ m/$modulematch/) {
-						Debug "$name: dispatching now msg: $dmsg" if ($debug);
-						#if (defined($ProtocolListSIGNALduino{$id}{developId}) && substr($ProtocolListSIGNALduino{$id}{developId},0,1) eq "m") {
-						#	my $devid = "m$id";
-						#	my $develop = lc(AttrVal($name,"development",""));
-						#	if ($develop !~ m/$devid/) {		# kein dispatch wenn die Id nicht im Attribut development steht
-						#		Log3 $name, 3, "$name: ID=$devid skiped dispatch (developId=m). To use, please add m$id to the attr development";
-						#		last;
-						#	}
-						#}
-						
-						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
-						$message_dispatched=1;
+					
+					if ($dmsg eq $lastDmsg) {
+						$nrEqualDmsg++
+					}
+					else {
+						if ($lastDmsg ne "") {
+							Log3 $name, 4, "$name: equalDMS $lastDmsg ($nrEqualDmsg)";
+							$ret = SIGNALduino_Parse_MU_Dispatch($hash,$rmsg,$lastDmsg,$rssi,$id,$nrEqualDmsg);
+							$message_dispatched = 1 if $ret;
+						}
+						$lastDmsg = $dmsg if ($dmsg ne 'eq');
+						$nrEqualDmsg = 1;
 					}
 					
 					$repeat++;
 					$repeatStr = " repeat $repeat";
 					last if ($repeat > $maxRepeat);	# Abbruch, wenn die max repeat anzahl erreicht ist
+			}
+			if ($dmsg eq $lastDmsg && $lastDmsg ne "") {
+				Log3 $name, 4, "$name: equalDMS $dmsg ($nrEqualDmsg)";
+				$ret = SIGNALduino_Parse_MU_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,$nrEqualDmsg);
+				$message_dispatched = 1 if $ret;
 			}
 			Log3 $name, 5, "$name: regex ($regex) did not match, aborting" if ($nrRestart == 0);
 		}
@@ -3014,7 +3045,7 @@ sub
 SIGNALduino_Parse_MC
 {
 
-	my ($hash, $iohash, $name, $rmsg,%msg_parts) = @_;
+	my ($hash, $name, $rmsg,%msg_parts) = @_;
 	my $clock=$msg_parts{clockabs};	     ## absolute clock
 	my $rawData=$msg_parts{rawData};
 	my $rssi=$msg_parts{rssi};
@@ -3023,7 +3054,7 @@ SIGNALduino_Parse_MC
 	my $bitData;
 	my $dmsg;
 	my $message_dispatched=0;
-	my $debug = AttrVal($iohash->{NAME},"debug",0);
+	my $debug = AttrVal($name,"debug",0);
 	if (defined($rssi)) {
 		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
 	}
@@ -3122,7 +3153,7 @@ SIGNALduino_Parse_MC
 								Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg";
 							}
 						}
-						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
+						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
 						$message_dispatched=1;
 					}
 				} else {
@@ -3139,12 +3170,12 @@ SIGNALduino_Parse_MC
 
 sub SIGNALduino_Parse_MN
 {
-	my ($hash, $iohash, $name, $rmsg,%msg_parts) = @_;
+	my ($hash, $name, $rmsg,%msg_parts) = @_;
 	my $rawData=$msg_parts{rawData};
 	my $rssi=$msg_parts{rssi};
 	my $N=$msg_parts{N};
 	my $dmsg;
-	my $debug = AttrVal($iohash->{NAME},"debug",0);
+	my $debug = AttrVal($name,"debug",0);
 	if (defined($rssi)) {
 		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
 	}
@@ -3187,7 +3218,7 @@ sub SIGNALduino_Parse_MN
 			if ($rcode != -1) {
 				$dmsg = $res;
 				Log3 $name, 4, "$name ParseMN: ID=$id dmsg=$dmsg";
-				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id);
+				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
 			}
 			else {
 				Log3 $name, 4, "$name ParseMN: method error! $res";
@@ -3200,7 +3231,7 @@ sub SIGNALduino_Parse_MN
 sub
 SIGNALduino_Parse
 {
-  my ($hash, $iohash, $name, $rmsg, $initstr) = @_;
+  my ($hash, $name, $rmsg) = @_;
 
 	#print Dumper(\%ProtocolListSIGNALduino);
 	
@@ -3222,7 +3253,7 @@ SIGNALduino_Parse
 		$hash->{keepalive}{retry} = 0;
 	}
 	
-	my $debug = AttrVal($iohash->{NAME},"debug",0);
+	my $debug = AttrVal($name,"debug",0);
 	
 	
 	Debug "$name: incoming message: ($rmsg)\n" if ($debug);
@@ -3240,21 +3271,21 @@ SIGNALduino_Parse
 	# Message synced type   -> MS
 	if (@{$hash->{msIdList}} && $rmsg=~ m/^MS;(P\d=-?\d+;){3,8}D=\d+;CP=\d;SP=\d;/) 
 	{
-		$dispatched= SIGNALduino_Parse_MS($hash, $iohash, $name, $rmsg,%signal_parts);
+		$dispatched= SIGNALduino_Parse_MS($hash, $name, $rmsg,%signal_parts);
 	}
 	# Message unsynced type   -> MU
   	elsif (@{$hash->{muIdList}} && $rmsg=~ m/^MU;(P\d=-?\d+;){3,8}((CP|R)=\d+;){0,2}D=\d+;/)
 	{
-		$dispatched=  SIGNALduino_Parse_MU($hash, $iohash, $name, $rmsg,%signal_parts);
+		$dispatched=  SIGNALduino_Parse_MU($hash, $name, $rmsg,%signal_parts);
 	}
 	# Manchester encoded Data   -> MC
   	elsif (@{$hash->{mcIdList}} && $rmsg=~ m/^M[cC];.*;/) 
 	{
-		$dispatched=  SIGNALduino_Parse_MC($hash, $iohash, $name, $rmsg,%signal_parts);
+		$dispatched=  SIGNALduino_Parse_MC($hash, $name, $rmsg,%signal_parts);
 	}
 	elsif (@{$hash->{mnIdList}} && $rmsg=~ m/^MN;.*;/) 
 	{
-		$dispatched=  SIGNALduino_Parse_MN($hash, $iohash, $name, $rmsg,%signal_parts);
+		$dispatched=  SIGNALduino_Parse_MN($hash, $name, $rmsg,%signal_parts);
 	}
 	else {
 		Debug "$name: unknown Messageformat, aborting\n" if ($debug);
@@ -4383,10 +4414,10 @@ sub SIGNALduino_MCTFA
 		my %seen;
 		my @dupmessages = map { 1==$seen{$_}++ ? $_ : () } @messages;
 	
-		return ($i,"loop error, please report this data $bitData") if ($i==10);
+		return (-1,"loop error, please report this data $bitData") if ($i==10);
 		if (scalar(@dupmessages) > 0 ) {
 			Log3 $name, 4, "$name: repeated hex ".$dupmessages[0]." found ".$seen{$dupmessages[0]}." times";
-			return  (1,$dupmessages[0]);
+			return  ($seen{$dupmessages[0]},$dupmessages[0]);
 		} else {  
 			return (-1," no duplicate found$retmsg");
 		}
