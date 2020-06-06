@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2020-05-24 16:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 10488 2020-06-06 16:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.24.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_06.06.",
 	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
 	SDUINO_INIT_WAIT          => 2,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -399,7 +399,7 @@ SIGNALduino_Define
 	Log3 $name, 3, "$name: Protocolhashversion: " . $hash->{versionprotoL};
   }
   
-  Log3 $name, 3, "$name: Firmwareversion: ".$hash->{READINGS}{version}{VAL}  if ($hash->{READINGS}{version}{VAL});
+  #Log3 $name, 3, "$name: Firmwareversion: ".$hash->{READINGS}{version}{VAL}  if ($hash->{READINGS}{version}{VAL});
 
   return $ret;
 }
@@ -422,9 +422,6 @@ SIGNALduino_Undef
 {
   my ($hash, $arg) = @_;
   my $name = $hash->{NAME};
-  
-  
- 
 
   foreach my $d (sort keys %defs) {
     if(defined($defs{$d}) &&
@@ -438,9 +435,11 @@ SIGNALduino_Undef
   }
 
   SIGNALduino_Shutdown($hash);
-  
+
   DevIo_CloseDev($hash); 
-  RemoveInternalTimer($hash);    
+  RemoveInternalTimer($hash);
+  RemoveInternalTimer("HandleWriteQueue:$name");
+  RemoveInternalTimer("sduino_IdList:$name");
   return;
 }
 
@@ -1286,6 +1285,10 @@ sub SIGNALduino_parseCcBankInfo
 		return $msg;
 	}
  if ($msg =~ m/b=.*ccmode=.*ccconf.*/) {
+	for my $radio ('a'..'d') {	# delete radio ccconf internals
+		delete($hash->{$radio . '_ccconf'});
+		delete($hash->{$radio . '_ccconfFSK'});
+	}
   my $rmsg = "\n";
   my @msg_radio_parts = split(/  /,$msg);	# Split message parts by "  " (double space)
   #Log3 $hash, 3, "parseCcBankInfo anz: " . scalar(@msg_radio_parts);
@@ -1411,7 +1414,7 @@ SIGNALduino_DoInit
 	my $err;
 	my $msg = undef;
 
-	my ($ver, $try) = ("", 0);
+	#my ($ver, $try) = ("", 0);
 	#Dirty hack to allow initialisation of DirectIO Device for some debugging and tesing
   	Log3 $name, 1, "$name/define: ".$hash->{DEF};
   
@@ -1419,6 +1422,7 @@ SIGNALduino_DoInit
 	RemoveInternalTimer("HandleWriteQueue:$name");
     @{$hash->{QUEUE}} = ();
     $hash->{sendworking} = 0;
+    delete($hash->{recAwNotMatch});
     
     if (($hash->{DEF} !~ m/\@directio/) and ($hash->{DEF} !~ m/none/) )
 	{
@@ -1528,7 +1532,11 @@ sub SIGNALduino_CheckCmdResp
 				RemoveInternalTimer($hash);
 				InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduino_CheckCmdResp", $hash, 0);
 			}
-			else {
+			else {	# firmware hat keine EEPROM Baenke
+				for my $radio ('a'..'d') {	# delete radio ccconf internals
+					delete($hash->{$radio . '_ccconf'});
+					delete($hash->{$radio . '_ccconfFSK'});
+				}
 				$initflag = 1;
 				delete($hash->{getcmd});
 			}
@@ -1850,29 +1858,30 @@ SIGNALduino_Read
 
 	if ( $rmsg && !SIGNALduino_Parse($hash, $name, $rmsg) && defined($hash->{getcmd}) && defined($hash->{getcmd}->{cmd}))
 	{
-		#Log3 $name, 4, "$name/msg READ: getcmd=$hash->{getcmd}->{cmd}";
+		my $getcmd = $hash->{getcmd}->{cmd};
+		#Log3 $name, 4, "$name/msg READ: getcmd=$getcmd";
 		my $regexp;
-		if (exists($gets{$hash->{getcmd}->{cmd}}) && $rmsg =~ m/Unsupported command/) {
+		if (exists($gets{$getcmd}) && $rmsg =~ m/Unsupported command/ && defined($hash->{DevState}) && $hash->{DevState} !~ m/wait/) {
 		
 		}
-		elsif ($hash->{getcmd}->{cmd} eq 'sendraw') {
+		elsif ($getcmd eq 'sendraw') {
 			$regexp = '^S(R|C|M|N);';
 		}
-		elsif ($hash->{getcmd}->{cmd} eq 'ccregAll') {
+		elsif ($getcmd eq 'ccregAll') {
 			$regexp = '^ccreg 00:';
 		}
-		elsif ($hash->{getcmd}->{cmd} eq 'readEEPROM64') {
+		elsif ($getcmd eq 'readEEPROM64') {
 			$regexp = '^EEPROM [0-9a-zA-Z]{4}: .*EEPROM [0-9a-zA-Z]{4}:';
 		}
-		elsif ($hash->{getcmd}->{cmd} eq 'ri') {
+		elsif ($getcmd eq 'ri') {
 			$regexp = 'mac =.*ip =';
 		}
-		elsif ($hash->{getcmd}->{cmd} eq 'bWidth') {
+		elsif ($getcmd eq 'bWidth') {
 			$regexp = '^C.* = .*';
 		}
 		else {
-			if (exists($gets{$hash->{getcmd}->{cmd}})) {
-				$regexp = $gets{$hash->{getcmd}->{cmd}}[1];
+			if (exists($gets{$getcmd})) {
+				$regexp = $gets{$getcmd}[1];
 			}
 		}
 		if(!defined($regexp) || $rmsg =~ m/$regexp/) {
@@ -1883,9 +1892,9 @@ SIGNALduino_Read
 				$hash->{keepalive}{ok}    = 1;
 				$hash->{keepalive}{retry} = 0;
 			}
-			Log3 $name, 5, "$name/msg READ: regexp=$regexp cmd=$hash->{getcmd}->{cmd} msg=$rmsg" if(defined($regexp));
+			Log3 $name, 4, "$name/msg READ: regexp=$regexp cmd=$getcmd msg=$rmsg" if(defined($regexp));
 			
-			if ($hash->{getcmd}->{cmd} eq 'version') {
+			if ($getcmd eq 'version') {
 				my $msg_start = index($rmsg, 'V 3.');
 				if ($msg_start < 0) {
 					$msg_start = index($rmsg, 'V 4.');
@@ -1897,17 +1906,17 @@ SIGNALduino_Read
 				$hash->{version} = $rmsg;
 			}
 			
-			if (defined($hash->{DevState}) && $hash->{DevState} eq 'waitInit' && $hash->{getcmd}->{cmd} eq 'version') {
+			if (defined($hash->{DevState}) && $hash->{DevState} eq 'waitInit' && $getcmd eq 'version') {
 				RemoveInternalTimer($hash);
 				SIGNALduino_CheckCmdResp($hash);
 			}
-			elsif ($hash->{getcmd}->{cmd} eq 'cmdBank' && defined($hash->{DevState}) && $hash->{DevState} eq 'waitBankInfo') {
-				#Log3 $name, 3, "$name/msg READcmdbank: regexp=$regexp cmd=$hash->{getcmd}->{cmd} msg=$rmsg";
+			elsif (defined($hash->{DevState}) && $hash->{DevState} eq 'waitBankInfo' && $getcmd eq 'cmdBank' ) {
+				#Log3 $name, 3, "$name/msg READcmdbank: regexp=$regexp cmd=$getcmd msg=$rmsg";
 				$hash->{ccconf} = $rmsg;
 				RemoveInternalTimer($hash);
 				SIGNALduino_CheckCmdResp($hash);
 			}
-			elsif ($hash->{getcmd}->{cmd} eq 'sendraw') {
+			elsif ($getcmd eq 'sendraw') {
 				# zu testen der sendeQueue, kann wenn es funktioniert auf verbose 5
 				Log3 $name, 4, "$name/read sendraw answer: $rmsg";
 				delete($hash->{getcmd});
@@ -1916,13 +1925,13 @@ SIGNALduino_Read
 			}
 			else {
 				my $reading;
-				($rmsg, $reading) = SIGNALduino_parseResponse($hash,$hash->{getcmd}->{cmd},$rmsg);
+				($rmsg, $reading) = SIGNALduino_parseResponse($hash,$getcmd,$rmsg);
 				if (length($reading) > 0 && length($reading) < 130) {
-					readingsSingleUpdate($hash, $hash->{getcmd}->{cmd}, $reading, 0);
+					readingsSingleUpdate($hash, $getcmd, $reading, 0);
 				}
 				if (defined($hash->{getcmd}->{asyncOut})) {
 					#Log3 $name, 4, "$name/msg READ: asyncOutput";
-					my $ao = asyncOutput( $hash->{getcmd}->{asyncOut}, $hash->{getcmd}->{cmd}.": " . $rmsg );
+					my $ao = asyncOutput( $hash->{getcmd}->{asyncOut}, $getcmd.": " . $rmsg );
 				}
 				delete($hash->{getcmd});
 			}
@@ -1933,9 +1942,9 @@ SIGNALduino_Read
 			else {
 				$hash->{recAwNotMatch} = 1;
 			}
-			Log3 $name, 4, "$name/msg READ: ". $hash->{recAwNotMatch} .". Received answer ($rmsg) for ". $hash->{getcmd}->{cmd}." does not match $regexp";
+			Log3 $name, 4, "$name/msg READ: ". $hash->{recAwNotMatch} .". Received answer ($rmsg) for ". $getcmd." does not match $regexp";
 			if ($hash->{recAwNotMatch} > SDUINO_recAwNotMatch_Max) {
-				Log3 $name, 4, "$name/msg READ: too much (". SDUINO_recAwNotMatch_Max .")! Received answer ($rmsg) for ". $hash->{getcmd}->{cmd}." does not match $regexp";
+				Log3 $name, 4, "$name/msg READ: too much (". SDUINO_recAwNotMatch_Max .")! Received answer ($rmsg) for ". $getcmd." does not match $regexp";
 				delete($hash->{recAwNotMatch});
 				delete($hash->{getcmd});
 			}
@@ -4468,9 +4477,8 @@ sub SIGNALduino_OSV2
 			{
 			  last;
 			}
-			my $osv2byte = "";
-			$osv2byte=NULL;
-			$osv2byte=substr($bitData,$idx,16);
+			
+			my $osv2byte=substr($bitData,$idx,16);
 
 			my $rvosv2byte="";
 			
@@ -4514,13 +4522,9 @@ sub SIGNALduino_OSV2
 		
 		for ($idx=$msg_start; $idx<$message_end; $idx=$idx+4)
 		{
-			if (length($bitData)-$idx  < 4 )
-			{
-			  last;
-			}
-			my $osv3nibble = "";
-			$osv3nibble=NULL;
-			$osv3nibble=substr($bitData,$idx,4);
+			last if (length($bitData)-$idx  < 4 );
+			
+			my $osv3nibble=substr($bitData,$idx,4);
 
 			my $rvosv3nibble="";
 			
