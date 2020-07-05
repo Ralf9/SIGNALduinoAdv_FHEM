@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 10488 2020-06-06 16:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-07-05 10:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.3.2 (release 3.3)
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,9 +29,9 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_06.06.",
-	SDUINO_INIT_WAIT_XQ       => 1.5,       # wait disable device
-	SDUINO_INIT_WAIT          => 2,
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.07.",
+	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
+	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
 	SDUINO_CMD_TIMEOUT        => 10,
 	SDUINO_KEEPALIVE_TIMEOUT  => 60,
@@ -228,7 +228,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|26|29|30|34|46|68|69|76|81|83|86|90|91|91.1|92|93|95|97|99|104)#.*',	# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|26|29|30|34|46|68|69|76|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -260,17 +260,17 @@ SIGNALduino_Initialize
   }
 
 # Provider
-  $hash->{ReadFn}  = "SIGNALduino_Read";
-  $hash->{WriteFn} = "SIGNALduino_Write";
-  $hash->{ReadyFn} = "SIGNALduino_Ready";
+  $hash->{ReadFn}  = \&SIGNALduino_Read;
+  $hash->{WriteFn} = \&SIGNALduino_Write;
+  $hash->{ReadyFn} = \&SIGNALduino_Ready;
 
 # Normal devices
-  $hash->{DefFn}  		 	= "SIGNALduino_Define";
-  $hash->{FingerprintFn} 	= "SIGNALduino_FingerprintFn";
-  $hash->{UndefFn} 		 	= "SIGNALduino_Undef";
-  $hash->{GetFn}   			= "SIGNALduino_Get";
-  $hash->{SetFn}   			= "SIGNALduino_Set";
-  $hash->{AttrFn}  			= "SIGNALduino_Attr";
+  $hash->{DefFn}  		 	= \&SIGNALduino_Define;
+  $hash->{FingerprintFn} 	= \&SIGNALduino_FingerprintFn;
+  $hash->{UndefFn} 		 	= \&SIGNALduino_Undef;
+  $hash->{GetFn}   			= \&SIGNALduino_Get;
+  $hash->{SetFn}   			= \&SIGNALduino_Set;
+  $hash->{AttrFn}  			= \&SIGNALduino_Attr;
   $hash->{AttrList}			= 
                        "Clients MatchList do_not_notify:1,0 dummy:1"
 					  ." hexFile"
@@ -948,7 +948,7 @@ SIGNALduino_Get
      return "Unknown argument $a[1], choose one of $arguments";
   }
 
-  my $arg = ($a[2] ? $a[2] : "");
+  my $arg = (exists($a[2]) ? $a[2] : "");
 
   return "no command to send, get aborted." if (length($gets{$a[1]}[0]) == 0 && length($arg) == 0);
   
@@ -1411,8 +1411,8 @@ SIGNALduino_DoInit
 {
 	my $hash = shift;
 	my $name = $hash->{NAME};
-	my $err;
-	my $msg = undef;
+	#my $err;
+	#my $msg = undef;
 
 	#my ($ver, $try) = ("", 0);
 	#Dirty hack to allow initialisation of DirectIO Device for some debugging and tesing
@@ -1447,6 +1447,12 @@ sub SIGNALduino_SimpleWrite_XQ {
 	my $name = $hash->{NAME};
 	
 	Log3 $name, 3, "$name/init: disable receiver (XQ)";
+	if ($hash->{STATE} eq 'disconnected') {
+		RemoveInternalTimer($hash);
+		delete($hash->{initretry});
+		Log3 $name,3 , "$name/init: disable receiver aborted because of STATE = disconnected!";
+		return;
+	}
 	SIGNALduino_SimpleWrite($hash, "XQ");
 	#DevIo_SimpleWrite($hash, "XQ\n",2);
 }
@@ -1459,6 +1465,12 @@ sub SIGNALduino_StartInit
 	$hash->{version} = undef;
 	
 	Log3 $name,3 , "$name/init: get version, retry = " . $hash->{initretry};
+	if ($hash->{STATE} eq 'disconnected') {
+		RemoveInternalTimer($hash);
+		delete($hash->{initretry});
+		Log3 $name,3 , "$name/init: get version aborted because of STATE = disconnected!";
+		return;
+	}
 	if ($hash->{initretry} >= SDUINO_INIT_MAXRETRY) {
 		$hash->{DevState} = 'INACTIVE';
 		# einmaliger reset, wenn danach immer noch 'init retry count reached', dann SIGNALduino_CloseDevice()
@@ -1478,7 +1490,7 @@ sub SIGNALduino_StartInit
 		#DevIo_SimpleWrite($hash, "V\n",2);
 		$hash->{DevState} = 'waitInit';
 		RemoveInternalTimer($hash);
-		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT + 30 * $hash->{initretry}, "SIGNALduino_CheckCmdResp", $hash, 0);
+		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT + 20 * $hash->{initretry}, "SIGNALduino_CheckCmdResp", $hash, 0);
 	}
 }
 
@@ -1518,11 +1530,11 @@ sub SIGNALduino_CheckCmdResp
 			readingsSingleUpdate($hash, "state", "opened", 1);
 			if ($ver =~ m/\((b.*)|(R: .*)\)/) {
 				if ($ver =~ m/\((b.*)\)/) {
-					Log3 $name, 4, "$name/init: firmwareversion with ccBankSupport found";
+					Log3 $name, 3, "$name/init: firmwareversion with ccBankSupport found -> send b?";
 					SIGNALduino_SimpleWrite($hash, "b?");
 				}
 				else {
-					Log3 $name, 4, "$name/init: firmwareversion with ccBankSupport and multi cc1101 found";
+					Log3 $name, 3, "$name/init: firmwareversion with ccBankSupport and multi cc1101 found -> send br";
 					SIGNALduino_SimpleWrite($hash, "br");
 				}
 				delete($hash->{ccconf});
@@ -1533,6 +1545,7 @@ sub SIGNALduino_CheckCmdResp
 				InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduino_CheckCmdResp", $hash, 0);
 			}
 			else {	# firmware hat keine EEPROM Baenke
+				Log3 $name, 3, "$name/init: firmwareversion without ccBankSupport found";
 				for my $radio ('a'..'d') {	# delete radio ccconf internals
 					delete($hash->{$radio . '_ccconf'});
 					delete($hash->{$radio . '_ccconfFSK'});
@@ -1859,7 +1872,7 @@ SIGNALduino_Read
 	if ( $rmsg && !SIGNALduino_Parse($hash, $name, $rmsg) && defined($hash->{getcmd}) && defined($hash->{getcmd}->{cmd}))
 	{
 		my $getcmd = $hash->{getcmd}->{cmd};
-		#Log3 $name, 4, "$name/msg READ: getcmd=$getcmd";
+		#Log3 $name, 3, "$name/msg READ: getcmd=$getcmd msg=$rmsg";
 		my $regexp;
 		if (exists($gets{$getcmd}) && $rmsg =~ m/Unsupported command/ && defined($hash->{DevState}) && $hash->{DevState} !~ m/wait/) {
 		
@@ -2122,7 +2135,7 @@ sub SIGNALduino_PatternExists
 		} else {
 			# search is not found, return -1
 			return -1;
-			last;	
+			#last;	
 		}
 		$i++;
 		#return ($valid ? $pstr : -1);  # return $pstr if $valid or -1
@@ -5992,6 +6005,9 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="SIGNALduinoset"></a>
 	<b>SET</b>
 	<ul>
+		<li>LaCrossePairForSec</li>
+		(NUR bei Verwendung eines cc110x Funk-Moduls)<br>
+		Aktivieren Sie die automatische Erstellung neuer LaCrosse-Sensoren für "x" Sekunden. Wenn ignore_battery nicht angegeben wird, werden nur Sensoren erstellt, die das Flag 'Neue Batterie' senden.<br><br>
 		<li>cc1101_freq / cc1101_bWidth / cc1101_patable / cc1101_rAmpl / cc1101_sens<br>
 		(NUR bei Verwendung eines cc110x Funk-Moduls)<br><br>
 		Stellt die SIGNALduino-Frequenz / Bandbreite / PA-Tabelle / Empf&auml;nger-Amplitude / Empfindlichkeit ein.<br>
@@ -6009,6 +6025,8 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 		<li><code>cc1101_rAmpl</code> , ist die Empf&auml;ngerverst&auml;rkung mit Werten zwischen 24 und 42 dB. Gr&ouml;ssere Werte erlauben den Empfang schwacher Signale. Der Standardwert ist 42.</li>
 		<a name="cc1101_sens"></a>
 		<li><code>cc1101_sens</code> , ist die Entscheidungsgrenze zwischen den Ein- und Aus-Werten und betr&auml;gt 4, 8, 12 oder 16 dB. Kleinere Werte erlauben den Empfang von weniger klaren Signalen. Standard ist 4 dB.</li>
+		<a name="cc1101_reg"></a>
+		<li><code>cc1101_reg</code> Es k&ouml;nnen mehrere Register auf einmal gesetzt werden. Das Register wird &uuml;ber seinen zweistelligen Hexadezimalwert angegeben, gefolgt von einem zweistelligen Wert. Mehrere Register werden via Leerzeichen getrennt angegeben</li>
 		</ul>
 		<br>
 		<a name="close"></a>
@@ -6148,6 +6166,12 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<li>close<br>
 	Beendet die Verbindung zum SIGNALduino.
 	</li><br>
+	<a name="cmdBank"></a>
+	<li>cmdBank<br>
+	Damit kann eine Info über die EEPROM Speicherb&auml;ke ausgegeben werden oder die Speicherb&auml;ke den cc1101 zugeordnet werden<br>
+	<A-D> damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
+	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;ke)
+	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
 	Abh&auml;ngig von der installierten Firmware besitzt der SIGNALduino verschiedene Befehle. Bitte beachten Sie den Quellcode der Firmware Ihres SIGNALduino, um die Antwort dieses Befehls zu interpretieren.
@@ -6163,6 +6187,12 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="ping"></a>
    	<li>ping<br>
 	Pr&uuml;ft die Kommunikation mit dem SIGNALduino.
+	</li><br>
+	<a name="protocolIdToJson"></a>
+	<li>protocolIdToJson<br>
+	Damit kann eine vorhandene Protokoll ID als json String ausgegeben werden. Unter dem json String wird die Protokolldefinition besser lesbar dargestellt.<br>
+	Der json String kann dann bei Bedarf z.B. in einem Texteditor editiert werden und dann in das Attribut <code>"userprotocol"</code> eingetragen werden.<br>
+	Damit es keine Konflikte mit vorhandenen Protokoll IDs geben kann, ist zu empfehlen für die ID eine hohe Nummer z.B. ab 500 zu verwenden.
 	</li><br>
 	<a name="raw"></a>
 	<li>raw<br>
@@ -6200,12 +6230,10 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="development"></a>
 	<li>development<br>
-		<li>development<br>
-		Das development Attribut ist nur in den Entwicklungsversionen des FHEM Modules aus Gr&uuml;den der Abw&auml;rtskompatibilit&auml;t vorhanden. Bei Setzen des Attributes auf "1" werden alle Protokolle aktiviert, welche mittels developID=y markiert sind. 
-		<br>
-		Wird das Attribut auf 1 gesetzt, so werden alle in Protokolle die mit dem developID Flag "y" markiert sind aktiviert. Die Flags (Spalte dev) k&ouml;nnen &uuml;ber das Webfrontend im Abschnitt "Information menu" mittels "Display protocollist" eingesehen werden.
-		</li>
-		<br>
+	Das development Attribut ist nur in den Entwicklungsversionen des FHEM Modules aus Gr&uuml;den der Abw&auml;rtskompatibilit&auml;t vorhanden. Bei Setzen des Attributes auf "1" werden alle Protokolle aktiviert, welche mittels developID=y markiert sind. 
+	<br>
+	Wird das Attribut auf 1 gesetzt, so werden alle in Protokolle die mit dem developID Flag "y" markiert sind aktiviert. Die Flags (Spalte dev) k&ouml;nnen &uuml;ber das Webfrontend im Abschnitt "Information menu" mittels "Display protocollist" eingesehen werden.
+	<br>
 	</li><br>
 	<li><a href="#do_not_notify">do_not_notify</a></li><br>
 	<a name="doubleMsgCheck_IDs"></a>
@@ -6279,12 +6307,6 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<li>noMsgVerbose<br>
 	Mit diesem Attribut k&ouml;nnen Sie die Protokollierung von Debug-Nachrichten vom io-Ger&auml;t steuern. Wenn dieser Wert auf 3 festgelegt ist, werden diese Nachrichten protokolliert, wenn der globale Verbose auf 3 oder h&ouml;her eingestellt ist.
 	</li><br>
-	<a name="eventlogging"></a>
-	<li>eventlogging<br>
-    	Mit diesem Attribut k&ouml;nnen Sie steuern, ob jede Logmeldung auch als Ereignis bereitgestellt wird. Dies erm&ouml;glicht das Erzeugen eines Ereignisses fuer jede Protokollnachricht.
-    	Setze dies auf 0 und Logmeldungen werden nur in der globalen Fhem-Logdatei gespeichert, wenn der Loglevel h&ouml;her oder gleich dem Verbose-Attribut ist.
-    	Setze dies auf 1 und jede Logmeldung wird auch als Ereignis versendet. Dadurch k&ouml;nnen Sie die Ereignisse in einer separaten Protokolldatei protokollieren.
-    	</li><br>
 	<a name="rawmsgEvent"></a>
 	<li>rawmsgEvent<br>
 	Bei der Einstellung "1", l&ouml;sen empfangene Rohnachrichten Ereignisse aus.
@@ -6300,6 +6322,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 		<ul>
 			<li>stable: Als stabil getestete Versionen, erscheint nur sehr selten</li>
 			<li>testing: Neue Versionen, welche noch getestet werden muss</li>
+			<li>Ralf9: Versionen von Ralf9 (<a href="https://github.com/Ralf9/SIGNALDuino/releases">GitHub</a>)</li>
 		</ul>
 		<br>Die Liste der verf&uuml;gbaren Versionen muss manuell mittels <code>get availableFirmware</code> neu geladen werden.
 		
@@ -6330,12 +6353,10 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 		Ausserdem wird mit checkbox Symbolen angezeigt ob ein Protokoll verarbeitet wird. Durch Klick auf das Symbol, wird im Hintergrund das Attribut whitlelistIDs angepasst. Die Attribute whitelistIDs und blacklistIDs beeinflussen den dargestellten Status.
 		Protokolle die in der Spalte <code>dev</code> markiert sind, befinden sich in Entwicklung. 
 		<ul>
-			<li>Wemm eine Zeile mit 'm' markiert ist, befindet sich das logische Modul, welches eine Schnittstelle bereitstellt in Entwicklung. Im Standard &uuml;bergeben diese Protokolle keine Daten an logische Module. Um die Kommunikation zu erm&ouml;glichenm muss der Protokolleintrag aktiviert werden.</li> 
-			<li>Wemm eine Zeile mit 'p' markiert ist, wurde der Protokolleintrag reserviert oder befindet sich in einem fr&uuml;hen Entwicklungsstadium.</li>
-			<li>Wemm eine Zeile mit 'y' markiert ist, wurde das Protkokoll noch nicht ausgiebig getestet und &uuml;berpr&uuml;ft.</li>
+			<li>Wenn eine Zeile mit 'm' markiert ist, befindet sich das logische Modul, welches eine Schnittstelle bereitstellt in Entwicklung. Im Standard &uuml;bergeben diese Protokolle keine Daten an logische Module. Um die Kommunikation zu erm&ouml;glichenm muss der Protokolleintrag aktiviert werden.</li> 
+			<li>Wenn eine Zeile mit 'p' markiert ist, wurde der Protokolleintrag reserviert oder befindet sich in einem fr&uuml;hen Entwicklungsstadium.</li>
+			<li>Wenn eine Zeile mit 'y' markiert ist, wurde das Protkokoll noch nicht ausgiebig getestet und &uuml;berpr&uuml;ft.</li>
 		</ul>
-		<br>
-		Protokolle, welche in dem blacklistIDs Attribut eingetragen sind, k&ouml;nnen nicht &uuml;ber das Men&uuml; aktiviert werden. Dazu bitte das Attribut blacklistIDs entfernen.
 		</li><br>
    	</ul>
    
