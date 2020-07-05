@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 10488 2020-05-12 16:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 345 2020-07-05 10:00:00Z v3.4.5-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_12.05.'
+		"version" => 'v3.4.5-dev_ralf_05.07.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -2721,8 +2721,31 @@ our %ProtocolListSIGNALduino  = (
 				preamble        => 'P104#',
 				length_min      => '16',
 				length_max      => '16',
+			},
+		"105"	=>	# Remote control BF-301 (Roller shade system) from Shenzhen BOFU Mechanic & Electronic Co., Ltd.
+							# Protocol description found on https://github.com/akirjavainen/markisol/blob/master/Markisol.ino
+							# original remotes repeat 8 (multi) or 10 (single) times by default
+							# https://github.com/RFD-FHEM/RFFHEM/issues/861 stsirakidis 2020-06-27
+							# BF_301_FAD0 down   MU;P0=-697;P1=5629;P2=291;P3=3952;P4=-2459;P5=1644;P6=-298;P7=689;D=34567676767676207620767620762020202076202020762020207620202020207676762076202020767614567676767676207620767620762020202076202020762020207620202020207676762076202020767614567676767676207620767620762020202076202020762020207620202020207676762076202020767614;CP=2;R=41;O;
+							# BF_301_FAD0 stop   MU;P0=5630;P1=3968;P2=-2458;P3=1642;P4=-285;P5=690;P6=282;P7=-704;D=12345454545454675467545467546767676754676767546754675467676767675454546754676767675402345454545454675467545467546767676754676767546754675467676767675454546754676767675402345454545454675467545467546767676754676767546754675467676767675454546754676767675402;CP=6;R=47;O;
+							# BF_301_FAD0 up     MU;P0=-500;P1=5553;P2=-2462;P3=1644;P4=-299;P5=679;P6=298;P7=-687;D=01234545454545467546754546754676767675467676767675454546767676767545454675467546767671234545454545467546754546754676767675467676767675454546767676767545454675467546767671234545454545467546754546754676767675467676767675454546767676767545454675467546767671;CP=6;R=48;O;
+			{
+				name            => 'BF-301',
+				comment         => 'Remote control, markisol',
+				changed         => '20200704 new',
+				id              => '105',
+				one             => [2,-1],       # 660,-330
+				zero            => [1,-2],       # 330,-660
+				start           => [17,-7,5,-1], # 5610,-2310,1650,-330
+				clockabs        => 330,
+				clockpos        => ['zero',0],
+				format          => 'twostate',
+				clientmodule    => 'SD_UT',
+				modulematch     => '^P105#',
+				preamble        => 'P105#',
+				length_min      => '40',
+				length_max      => '40',
 			}
-
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
 
