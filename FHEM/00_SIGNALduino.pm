@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-07-05 10:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-08-04 10:00:00Z v3.4.5-dev-Ralf9 $
 #
-# v3.3.2 (release 3.3)
+# v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.07.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_04.08.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -618,7 +618,7 @@ SIGNALduino_Set
 			$flashCommand = $attr{$name}{flashCommand};
 			Log3 $name, 3, "$hash->{TYPE} $name: flashCommand is manual defined! $flashCommand";
 		}
-
+		
         # check if flashtool (custom or default) exists, abort otherwise
 		my $flashTool = (split / /, $flashCommand)[0];
 		my $flashToolFound=0;
@@ -643,7 +643,6 @@ SIGNALduino_Set
 	    $log .= "host: $host\n";
 	    $log .= "log file: $logFile\n";
 	
-		
 	    if($flashCommand ne "" && !IsDummy($name)) {
 	      if (-e $logFile) {
 	        unlink $logFile;
@@ -652,7 +651,7 @@ SIGNALduino_Set
 	      DevIo_CloseDev($hash);
 	      $hash->{STATE} = "FIRMWARE UPDATE running";
 	      $log .= "$name closed\n";
-
+	
 	      my $avrdude = $flashCommand;
 	      $avrdude =~ s/\Q[PORT]\E/$port/g;
 	      $avrdude =~ s/\Q[HOST]\E/$host/g;
@@ -1377,9 +1376,9 @@ SIGNALduino_ResetDevice
   DevIo_CloseDev($hash);
   if ($dev =~ m/\@/ && defined($hash->{version}) && substr($hash->{version},0,6) eq 'V 4.1.') {
     my $uploadResetfound=0;
-    my $flashTool = "upload-reset";
+    my $tool_name = "upload-reset";
     for my $path ( split /:/, $ENV{PATH} ) {
-      if ( -f "$path/$flashTool" && -x _ ) {
+      if ( -f "$path/$tool_name" && -x _ ) {
          $uploadResetfound=1;
          last;
       }
@@ -1689,6 +1688,7 @@ SIGNALduino_SendFromQueue
   my $name = $hash->{NAME};
   
   if($msg ne "") {
+    #Log3 $name, 5, "$name SendFromQueue: msg=$msg";
 	SIGNALduino_XmitLimitCheck($hash,$msg);
     #DevIo_SimpleWrite($hash, $msg . "\n", 2);
     $hash->{sendworking} = 1;
@@ -1739,6 +1739,7 @@ SIGNALduino_HandleWriteQueue
   if(@{$hash->{QUEUE}}) {
     my $msg= shift(@{$hash->{QUEUE}});
 
+    #Log3 $name, 5, "$name/HandleWriteQueue: msg=$msg";
     if($msg eq "") {
       SIGNALduino_HandleWriteQueue("x:$name");
     } else {
