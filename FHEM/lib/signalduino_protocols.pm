@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_05.07.'
+		"version" => 'v3.4.5-dev_ralf_05.08.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -1696,7 +1696,7 @@ our %ProtocolListSIGNALduino  = (
 			#postamble	=> '',         # Append to converted message
 			clientmodule	=> 'FS10',
 			#modulematch	=> '',
-			length_min	=> '38',	# eigentlich 41 oder 46 (Pruefsumme nicht bei allen)
+			length_min	=> '30',       # 43-1=42 (letztes Bit fehlt) 42-12=30 (12 Bit Preambel)
 			length_max      => '48',	# eigentlich 46
 		}, 
 	"62" => ## Clarus_Switch  
