@@ -606,22 +606,6 @@ SIGNALduino_Set
 	if ($hardware =~ m/(?:nano|mini|radino)/)
 	{
 		
-		my $avrdudefound=0;
-		my $tool_name = "avrdude"; 
-		for my $path ( split /:/, $ENV{PATH} ) {
-		    if ( -f "$path/$tool_name" && -x _ ) {
-		    	$avrdudefound=1;
-		        last;
-		    }
-		}
-	    Log3 $name, 5, "$name: avrdude found = $avrdudefound";
-	    return "avrdude is not installed. Please provide avrdude tool example: sudo apt-get install avrdude" if($avrdudefound == 0);
-
-	    $log .= "flashing Arduino $name\n";
-	    $log .= "hex file: $hexFile\n";
-	    $log .= "port: $port\n";
-	    $log .= "log file: $logFile\n";
-	
 		my $flashCommand;
 	    if( !defined( $attr{$name}{flashCommand} ) ) {		# check defined flashCommand from user | not, use standard flashCommand | yes, use user flashCommand
 				Log3 $name, 5, "$hash->{TYPE} $name: flashCommand is not defined. standard used to flash.";
@@ -634,8 +618,32 @@ SIGNALduino_Set
 			$flashCommand = $attr{$name}{flashCommand};
 			Log3 $name, 3, "$hash->{TYPE} $name: flashCommand is manual defined! $flashCommand";
 		}
-		
+
+        # check if flashtool (custom or default) exists, abort otherwise
+		my $flashTool = (split / /, $flashCommand)[0];
+		my $flashToolFound=0;
+
+		for my $path ( split /:/, $ENV{PATH} ) {
+		    if ( -f "$path/$flashTool" && -x _ ) {
+		    	$flashToolFound=1;
+		        last;
+		    }
+		}
+
+	    Log3 $name, 5, "$name: flashTool $flashTool found = $flashToolFound";
+	    return "$flashTool could not be found. Either set PATH properly or provide $flashTool via: sudo apt-get install $flashTool" if($flashToolFound == 0);
+
+	    # strip IP-port in case port is an IP-address
+            my $host = $port;
+            $host =~ s/:\d+//;
+
+	    $log .= "flashing Arduino $name\n";
+	    $log .= "hex file: $hexFile\n";
+	    $log .= "port: $port\n";
+	    $log .= "host: $host\n";
+	    $log .= "log file: $logFile\n";
 	
+		
 	    if($flashCommand ne "" && !IsDummy($name)) {
 	      if (-e $logFile) {
 	        unlink $logFile;
@@ -644,9 +652,10 @@ SIGNALduino_Set
 	      DevIo_CloseDev($hash);
 	      $hash->{STATE} = "FIRMWARE UPDATE running";
 	      $log .= "$name closed\n";
-	
+
 	      my $avrdude = $flashCommand;
 	      $avrdude =~ s/\Q[PORT]\E/$port/g;
+	      $avrdude =~ s/\Q[HOST]\E/$host/g;
 	      $avrdude =~ s/\Q[BAUDRATE]\E/$baudrate/g;
 	      $avrdude =~ s/\Q[HEXFILE]\E/$hexFile/g;
 	      $avrdude =~ s/\Q[LOGFILE]\E/$logFile/g;
@@ -1368,9 +1377,9 @@ SIGNALduino_ResetDevice
   DevIo_CloseDev($hash);
   if ($dev =~ m/\@/ && defined($hash->{version}) && substr($hash->{version},0,6) eq 'V 4.1.') {
     my $uploadResetfound=0;
-    my $tool_name = "upload-reset";
+    my $flashTool = "upload-reset";
     for my $path ( split /:/, $ENV{PATH} ) {
-      if ( -f "$path/$tool_name" && -x _ ) {
+      if ( -f "$path/$flashTool" && -x _ ) {
          $uploadResetfound=1;
          last;
       }
