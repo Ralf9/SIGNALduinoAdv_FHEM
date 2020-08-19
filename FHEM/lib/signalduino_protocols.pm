@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_05.08.'
+		"version" => 'v3.4.5-dev_ralf_18.08.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -1229,8 +1229,8 @@ our %ProtocolListSIGNALduino  = (
 			preamble 		=> 'Ys',
 			clientmodule	=> 'SOMFY', # not used now
 			modulematch 	=> '^Ys[0-9A-F]{14}',
-			length_min 		=> '56',
-			length_max 		=> '57',
+			length_min 		=> '52',
+			length_max 		=> '81',
 			method          => \&main::SIGNALduino_SomfyRTS, # Call to process this message
 			msgIntro		=> 'SR;P0=-2560;P1=2560;P3=-640;D=10101010101010113;',
 			#msgOutro		=> 'SR;P0=-30415;D=0;',
