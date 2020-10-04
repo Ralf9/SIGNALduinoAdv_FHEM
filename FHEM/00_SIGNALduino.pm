@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-08-04 10:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-08-18 10:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_04.08.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_18.08.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -4810,13 +4810,50 @@ sub SIGNALduino_SomfyRTS
 {
 	my ($name, $bitData,$id,$mcbitnum) = @_;
 	
+	my $flag = 0;
 	if (defined($mcbitnum)) {
 		Log3 $name, 4, "$name: Somfy bitdata: $bitData ($mcbitnum)";
-		if ($mcbitnum == 57 || $mcbitnum == 81) {
-			$bitData = substr($bitData, 1, $mcbitnum - 1);
-			Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+		if ($mcbitnum <= 60) {
+			if (substr($bitData, 0, 4) eq '1010') {
+				$flag = 1;	# ok
+			}
+			elsif (($mcbitnum == 56 || $mcbitnum == 57) && substr($bitData, 0, 5) eq '01010') {
+				$bitData = substr($bitData, 1, $mcbitnum - 1);
+				if ($mcbitnum == 56) {
+					$bitData .= '0';
+				}
+				Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+				$flag = 1;	# ok
+			}
+			elsif ($mcbitnum >= 52 && $mcbitnum <= 55) {
+				$bitData = substr($bitData, $mcbitnum - 52, 52);
+				$bitData = '1010' . $bitData;
+				Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). 1010 am Anfang zugefuegt";
+				$flag = 1;	# ok
+			}
+		}
+		else {	# 80 Bit Nachrichten
+			if (substr($bitData, 0, 4) eq '1010' || substr($bitData, 0, 4) eq '1000') {
+				$flag = 1;	# ok
+			}
+			elsif (($mcbitnum == 80 || $mcbitnum == 81) && (substr($bitData, 0, 5) eq '01010' || substr($bitData, 0, 5) eq '01000')) {
+				$bitData = substr($bitData, 1, $mcbitnum - 1);
+				if ($mcbitnum == 80) {
+					$bitData .= '0';
+				}
+				Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+				$flag = 1;	# ok
+			}
+			elsif ($mcbitnum == 78 || $mcbitnum == 79) {
+				$bitData = substr($bitData, $mcbitnum - 78, 78);
+				$bitData = '10' . $bitData;
+				Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). 10 am Anfang zugefuegt";
+				$flag = 1;	# ok
+			}
 		}
 	}
+	return (-1,"Somfy check error!") if ($flag == 0);
+	
 	my $encData = SIGNALduino_b2h($bitData);
 
 	#Log3 $name, 4, "$name: Somfy RTS protocol enc: $encData";

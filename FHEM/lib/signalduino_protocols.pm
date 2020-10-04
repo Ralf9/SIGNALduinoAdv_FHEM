@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_05.08.'
+		"version" => 'v3.4.5-dev_ralf_04.10.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -1229,8 +1229,8 @@ our %ProtocolListSIGNALduino  = (
 			preamble 		=> 'Ys',
 			clientmodule	=> 'SOMFY', # not used now
 			modulematch 	=> '^Ys[0-9A-F]{14}',
-			length_min 		=> '56',
-			length_max 		=> '57',
+			length_min 		=> '52',
+			length_max 		=> '81',
 			method          => \&main::SIGNALduino_SomfyRTS, # Call to process this message
 			msgIntro		=> 'SR;P0=-2560;P1=2560;P3=-640;D=10101010101010113;',
 			#msgOutro		=> 'SR;P0=-30415;D=0;',
@@ -2745,6 +2745,29 @@ our %ProtocolListSIGNALduino  = (
 				preamble        => 'P105#',
 				length_min      => '40',
 				length_max      => '40',
+			},
+		"106"	=>  ## BBQ temperature sensor GT-TMBBQ-01s (Sender), GT-TMBBQ-01e (Empfaenger)
+				# https://forum.fhem.de/index.php/topic,114437.0.html KoelnSolar 2020-09-23
+				# https://github.com/RFD-FHEM/RFFHEM/issues/892 Ralf9 2020-09-24
+				# SD_WS_106_T  T: 22.6  MS;P0=525;P1=-2051;P3=-8905;P4=-4062;D=0301010401010404010101040401010401040401040404;CP=0;SP=3;R=35;e;b=2;m0;
+				# SD_WS_106_T  T: 88.1  MS;P1=-8514;P2=488;P3=-4075;P4=-2068;D=2123242423232423242423242324232323232423242324;CP=2;SP=1;R=31;e;b=70;s=4;m0;
+				# SD_WS_106_T  T: 97.8  MS;P1=-9144;P2=469;P3=-4101;P4=-2099;D=2123242423232423242423242323232423242423242424;CP=2;SP=1;R=58;O;b=70;s=4;m0;
+				# Sensor sends every 5 seconds 1 message.
+			{
+				name            => 'GT-TMBBQ-01',
+				comment         => 'BBQ temperature sensor',
+				changed         => '20200923 new',
+				id              => '106',
+				one             => [1,-8],  # 500,-4000
+				zero            => [1,-4],  # 500,-2000
+				sync            => [1,-18], # 500,-9000
+				clockabs        => 500,
+				format          => 'twostate',
+				preamble        => 'W106#',
+				clientmodule    => 'SD_WS',
+				#modulematch    => '',
+				length_min      => '22',
+				length_max      => '22',
 			}
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
