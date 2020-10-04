@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 345 2020-07-05 10:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 345 2020-10-04 18:00:00Z v3.4.5-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_04.10.'
+		"version" => 'v3.4.5-ralf_04.10.'
 		);
 
 our %ProtocolListSIGNALduino  = (

@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-08-18 10:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-08-18 10:00:00Z v3.4.5-Ralf9 $
 #
 # v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_18.08.",
+	SDUINO_VERSION            => "v3.4.5-ralf_18.08.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
