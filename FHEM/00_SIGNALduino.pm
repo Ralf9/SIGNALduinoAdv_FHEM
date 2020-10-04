@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-08-18 10:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-10-04 18:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_18.08.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_04.10.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -276,7 +276,7 @@ SIGNALduino_Initialize
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101" #,Maple_sduino_USB,Maple_sduino_LAN,Maple_cul_USB"
+  					  ." hardware:ESP32,ESP32cc1101,ESP8266,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,Maple_sduino_USB,Maple_sduino_serial,Maple_sduino_LAN,Maple_cul_USB,Maple_cul_serial"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
@@ -536,14 +536,15 @@ SIGNALduino_Set
     my @deviceName = split('@', $hash->{DeviceName});
     my $port = $deviceName[0];
 	my $hardware=AttrVal($name,"hardware","");
-	my $baudrate=$hardware eq "uno" ? 115200 : 57600;
+	my $baudrate=57600;
+	if (($hardware =~ m/optiboot/) || $hardware eq "uno") {
+		$baudrate=115200;
+		$hardware =~ s/_optiboot$//;
+	}
     my $defaultHexFile = "./FHEM/firmware/$hash->{TYPE}_$hardware.hex";
     my $logFile = AttrVal("global", "logdir", "./log/") . "$hash->{TYPE}-Flash.log";
     return "Please define your hardware! (attr $name hardware <model of your receiver>) " if ($hardware eq "");
 	return "ERROR: argument failed! flash [hexFile|url]" if (!$args[0]);
-	
-	
-	
 
     #Log3 $hash, 3, "SIGNALduino_Set choosen flash option: $args[0] of available: ".Dumper($my_sets{flash});
     
@@ -557,12 +558,7 @@ SIGNALduino_Set
 			$account = $channel;
 		}
 		my ($tags, undef) = split("__", $args[0]);
-		my $ghurl = "https://api.github.com/repos/$account/<REPONAME>/releases/tags/$tags";
-		if ($hardware =~ /ESP/) {
-			$ghurl =~ s/<REPONAME>/SIGNALESP/ ;
-		} else {
-			$ghurl =~ s/<REPONAME>/SIGNALDuino/ ; 
-		}
+		my $ghurl = "https://api.github.com/repos/$account/SIGNALDuino/releases/tags/$tags";
 		Log3 $hash, 3, "$name: SIGNALduino_Set flash $tags try to fetch release $ghurl";
 		
 	    my $http_param = {
@@ -602,16 +598,15 @@ SIGNALduino_Set
 	Log3 $name, 3, "$name: filename $hexFile provided, trying to flash";
     return "Usage: set $name flash [filename]\n\nor use the hexFile attribute" if($hexFile !~ m/^(\w|\/|.)+$/);
 
-	# Only for Arduino , not for ESP
-	if ($hardware =~ m/(?:nano|mini|radino)/)
+	# Only for Arduino , not for ESP or MapleMini
+	if ($hardware =~ m/(?:nano|mini|radino|uno)/)
 	{
-		
 		my $flashCommand;
 	    if( !defined( $attr{$name}{flashCommand} ) ) {		# check defined flashCommand from user | not, use standard flashCommand | yes, use user flashCommand
 				Log3 $name, 5, "$hash->{TYPE} $name: flashCommand is not defined. standard used to flash.";
 			if ($hardware eq "radinoCC1101") {																	# radinoCC1101 Port not /dev/ttyUSB0 --> /dev/ttyACM0
 				$flashCommand = "avrdude -c avr109 -b [BAUDRATE] -P [PORT] -p atmega32u4 -vv -D -U flash:w:[HEXFILE] 2>[LOGFILE]";
-			} elsif ($hardware ne "ESP_1M" && $hardware ne "ESP32" && $hardware ne "radinoCC1101") {			# nano, nanoCC1101, miniculCC1101, promini
+			} else {
 				$flashCommand = "avrdude -c arduino -b [BAUDRATE] -P [PORT] -p atmega328p -vv -U flash:w:[HEXFILE] 2>[LOGFILE]";
 			}
 		} else {
@@ -649,7 +644,7 @@ SIGNALduino_Set
 	      }
 	
 	      DevIo_CloseDev($hash);
-	      $hash->{STATE} = "FIRMWARE UPDATE running";
+	      readingsSingleUpdate($hash,'state','FIRMWARE UPDATE running',1);
 	      $log .= "$name closed\n";
 	
 	      my $avrdude = $flashCommand;
@@ -660,13 +655,24 @@ SIGNALduino_Set
 	      $avrdude =~ s/\Q[LOGFILE]\E/$logFile/g;
 	
 	      $log .= "command: $avrdude\n\n";
-	      `$avrdude`;
+	      # `$avrdude`;
+	      qx($avrdude);
 	
 	      local $/=undef;
 	      if (-e $logFile) {
 	        open FILE, $logFile;
 	        my $logText = <FILE>;
 	        close FILE;
+	        if ($logText =~ m/flash verified/) {
+	          Log3 $name, 3, "$name: avrdude, Firmware update was successfull";
+	          readingsSingleUpdate($hash,'state','FIRMWARE UPDATE successfull',1);
+	          FW_directNotify("FILTER=$name", "#FHEMWEB:WEB", "FW_okDialog('avrdude, Firmware update was successfull')", '');
+	        } else {
+	          readingsSingleUpdate($hash,'state','FIRMWARE UPDATE with error',1);
+	          Log3 $name, 3, "$name: avrdude, ERROR: avrdude exited with error";
+	          FW_directNotify("FILTER=$name", "#FHEMWEB:WEB", "FW_okDialog('ERROR: avrdude exited with error, for details see last flashlog.')", '');
+	          $log .= 'ERROR: avrdude exited with error';
+	        }
 	        $log .= "--- AVRDUDE ---------------------------------------------------------------------------------\n";
 	        $log .= $logText;
 	        $log .= "--- AVRDUDE ---------------------------------------------------------------------------------\n\n";
@@ -674,7 +680,6 @@ SIGNALduino_Set
 	      else {
 	        $log .= "WARNING: avrdude created no log file\n\n";
 	      }
-	
 	    }
 	    else {
 	      $log .= "\n\nNo flashCommand found. Please define this attribute.\n\n";
@@ -687,11 +692,12 @@ SIGNALduino_Set
 			Log3 $name, 3, "$name; flashCommand=$flashCommand";
 	    }
 	    $log .= "$name opened\n";
-		
+	    $hash->{helper}{avrdudelogs} = $log;
 	    return;
 	} else
 	{
-		return "Sorry, Flashing your ESP via Module is currently not supported.";
+		FW_directNotify("FILTER=$name", "#FHEMWEB:WEB", "FW_okDialog('<u>ERROR:</u><br>Sorry, flashing your $hardware is currently not supported.<br>The file is only downloaded in /opt/fhem/FHEM/firmware.')", '');
+		return "Sorry, Flashing your ESP or Maple via Module is currently not supported.";
 	}
 	
   } elsif ($cmd =~ m/reset/i) {
@@ -976,9 +982,11 @@ SIGNALduino_Get
   	if ($channel ne "stable" && $channel ne "testing") {
   	    $account = $channel;
   	}
-	my $hardware=AttrVal($name,"hardware","nano");
+	#my $hardware=AttrVal($name,"hardware","nano");
+	$hash->{asyncOut}=$hash->{CL};
   	SIGNALduino_querygithubreleases($hash, $account);
-	return "$a[1]: \n\nFetching $channel firmware versions for $hardware from github\n";
+	#return "$a[1]: \n\nFetching $channel firmware versions for $hardware from github\n";
+	return;
   }
   elsif ($a[1] eq "protocolIdToJson")
   {
@@ -1526,7 +1534,7 @@ sub SIGNALduino_CheckCmdResp
 			SIGNALduino_CloseDevice($hash);
 		}
 		elsif($ver =~ m/^V 3\.1\./) {
-			$msg = "$name: Version of your arduino is not compatible, pleas flash new firmware. (device closed) Got for V:  $ver";
+			$msg = "$name: Version of your arduino is not compatible, please flash new firmware. (device closed) Got for V:  $ver";
 			readingsSingleUpdate($hash, "state", "unsupported firmware found", 1);
 			Log3 $name, 1, $msg;
 			$hash->{DevState} = 'INACTIVE';
@@ -4686,8 +4694,8 @@ sub	SIGNALduino_Hideki
 	if ($mcbitnum == 89) {
 		my $bit0 = substr($bitData,0,1);
 		$bit0 = $bit0 ^ 1;
-		Log3 $name, 4, "$name hideki: L=$mcbitnum add bit $bit0 at begin $bitData";
 		$bitData = $bit0 . $bitData;
+		Log3 $name, 4, "$name hideki: L=$mcbitnum add bit $bit0 at begin $bitData";
 	}
     Debug "$name: search in $bitData \n" if ($debug);
 	my $message_start = index($bitData,"10101110");
@@ -5498,7 +5506,10 @@ sub SIGNALduino_githubParseHttpResponse
     my ($param, $err, $data) = @_;
     my $hash = $param->{hash};
     my $name = $hash->{NAME};
+    my $ret = '';
+    my $channel=AttrVal($name,"updateChannelFW","stable");
     my $hardware=AttrVal($name,"hardware",undef);
+    $hardware =~ s/_optiboot$//;
     if ($hardware eq "nano") {
        $hardware = "nano328";
     }
@@ -5523,7 +5534,7 @@ sub SIGNALduino_githubParseHttpResponse
 			my @fwreleases;
 			if (ref($json_array) eq "ARRAY") {
 				foreach my $item( @$json_array ) { 
-					next if (AttrVal($name,"updateChannelFW","stable") eq "stable" && $item->{prerelease});
+					next if ($channel eq "stable" && $item->{prerelease});
 
 					#Debug " item = ".Dumper($item);
 					
@@ -5531,6 +5542,8 @@ sub SIGNALduino_githubParseHttpResponse
 					{
 						#Log3 $name, 5, "$name queryReleases: hardware=$hardware name=$asset->{name}";
 						next if ($asset->{name} !~ m/$hardware/i);
+						$ret .= $asset->{name} . "\n";
+						#Log3 $name, 5, "$name queryReleases: hardware=$hardware name=$asset->{name}";
 						$releaselist.=$item->{tag_name}."__".substr($item->{created_at},0,10)."," ;		
 						last;
 					}
@@ -5570,8 +5583,31 @@ sub SIGNALduino_githubParseHttpResponse
     # Damit ist die Abfrage zuende.
     # Evtl. einen InternalTimer neu schedulen
     FW_directNotify("#FHEMWEB:$FW_wname", "location.reload('true')", "");
+    if (defined($hash->{asyncOut})) {
+		$ret = "Fetching $channel firmware versions for $hardware from github\n\n" . $ret;
+		$hash->{ret} = $ret;
+		InternalTimer(gettimeofday() + 0.1, "SIGNALduino_asyncOutput", $hash, 0);
+		#my $ao = asyncOutput( $hash->{asyncOut}, $ret );
+		#delete($hash->{asyncOut});
+	}
+	#InternalTimer(gettimeofday() + 1, "SIGNALduino_location_reload", $hash, 0);
+	#Log3 $name, 5, "$name: SIGNALduino_githubParseHttpResponse done:";
 	return 0;
 }
+
+sub SIGNALduino_asyncOutput
+{
+	my ($hash) = @_;
+	my $ao = asyncOutput( $hash->{asyncOut}, $hash->{ret} );
+	delete($hash->{ret});
+	delete($hash->{asyncOut});
+}
+
+#sub SIGNALduino_location_reload
+#{
+#    FW_directNotify("#FHEMWEB:$FW_wname", "location.reload('true')", "");
+#}
+
 
 1;
 
@@ -6215,9 +6251,9 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="cmdBank"></a>
 	<li>cmdBank<br>
-	Damit kann eine Info über die EEPROM Speicherb&auml;ke ausgegeben werden oder die Speicherb&auml;ke den cc1101 zugeordnet werden<br>
+	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden<br>
 	<A-D> damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;ke)
+	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;nke)
 	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
