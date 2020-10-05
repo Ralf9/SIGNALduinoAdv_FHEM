@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 345 2020-07-05 10:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 345 2020-10-05 22:00:00Z v3.4.5-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_04.10.'
+		"version" => 'v3.4.5-dev_ralf_05.10.'
 		);
 
 our %ProtocolListSIGNALduino  = (
@@ -2768,7 +2768,26 @@ our %ProtocolListSIGNALduino  = (
 				#modulematch    => '',
 				length_min      => '22',
 				length_max      => '22',
+			},
+		"107"	=>	# Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor Use with FSK
+				# MN;D=5100C6BF107F1FF8BAFFFFFF75A818CC;N=6;
+			{
+				name            => 'WH51',
+				comment         => 'Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor',
+				changed         => '20201005 new',
+				id              => '107',
+				knownFreqs      => '868.3',
+				N               => 6,
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				match           => '^51.*',  # Family code 0x51 (ECOWITT/FineOffset WH51)
+				preamble        => 'W107#',
+				clientmodule    => 'SD_WS',
+				length_min      => '28',
+				method          => \&main::SIGNALduino_FSK_default,
 			}
+		
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
 
