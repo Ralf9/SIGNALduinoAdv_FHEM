@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-10-04 18:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-10-05 22:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_04.10.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.10.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -3257,6 +3257,7 @@ sub SIGNALduino_Parse_MN
 			my ($rcode,$res) = $method->($name,$rawData,$id);
 			if ($rcode != -1) {
 				$dmsg = $res;
+				$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 				Log3 $name, 4, "$name ParseMN: ID=$id dmsg=$dmsg";
 				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
 			}
@@ -5016,6 +5017,13 @@ sub SIGNALduino_CalculateCRC
 }
 
 # xFSK method
+
+sub SIGNALduino_FSK_default
+{
+	my ($name,$dmsg,$id) = @_;
+	
+	return (1,$dmsg);
+}
 
 sub SIGNALduino_LaCrosse
 {
