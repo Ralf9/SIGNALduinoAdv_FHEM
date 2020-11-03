@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-10-05 22:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-11-02 22:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_05.10.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_02.11.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -49,6 +49,7 @@ use constant {
 
 my %ProtocolListSIGNALduino = %SD_Protocols::ProtocolListSIGNALduino;
 my $VersionProtocolList = \%SD_Protocols::VersionProtocolList;
+my %rfmode = %SD_Protocols::rfmode;
 
 #sub SIGNALduino_Attr(@);
 #sub SIGNALduino_HandleWriteQueue($);
@@ -378,6 +379,15 @@ SIGNALduino_Define
   $hash->{MatchList} = \%matchListSIGNALduino;
   $hash->{DeviceName} = $dev;
   
+  my $rfmodelist = "";
+  #$rfmodelist .= 'test1,test2,';
+  foreach my $rf (sort keys %rfmode) {
+     $rfmodelist .= $rf . ",";
+  }
+  
+  $rfmodelist =~ s/,$//;
+  $hash->{rfmodesets}{rfmode} = $rfmodelist;
+  
   my $ret=undef;
   
   InternalTimer(gettimeofday(), 'SIGNALduino_IdList',"sduino_IdList:$name",0);       # verzoegern bis alle Attribute eingelesen sind
@@ -473,6 +483,7 @@ SIGNALduino_Set
   #Log3 $hash, 3, "SIGNALduino_Set called with params @a";
 
   my $hasCC1101 = 0;
+  my $hasFSK = 0;
   my $CC1101Frequency = "433";
   my $mVer = 3;		# 4 = Maple
   if ($hash->{version}) {
@@ -484,21 +495,29 @@ SIGNALduino_Set
 	}
 	if ($hash->{version} =~ m/V\s4\./) {	# MapleCul oder MapleSduino
 		$mVer = 4;
+		$hasFSK = 1;
+	}
+	elsif ($hash->{version} =~ m/V\s3\.3\.4/) {
+		$hasFSK = 1;
 	}
   }
   
   my %my_sets = %sets;
   #Log3 $hash, 3, "SIGNALduino_Set addionals set commands: ".Dumper(%{$hash->{additionalSets}});
-  #Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
+  #Log3 $hash, 3, "SIGNALduino_Set addionals rfmode set commands: ".Dumper(%{$hash->{rfmodesets}});
   #Log3 $hash, 3, "SIGNALduino_Set global set commands: ".Dumper(%sets);
 
   %my_sets = ( %my_sets,  %{$hash->{additionalSets}} ) if ( defined($hash->{additionalSets}) );
+  %my_sets = ( %my_sets,  %{$hash->{rfmodesets}} ) if ( defined($hash->{rfmodesets}) );
+  
+  #Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
   
   if (!defined($my_sets{$a[1]})) {
     my $arguments = ' ';
     foreach my $arg (sort keys %my_sets) {
       next if ($arg =~ m/cc1101/ && $hasCC1101 == 0);
-      next if ($my_sets{$arg} ne "" && $arg ne "flash" && IsDummy($hash->{NAME}));
+      next if ($my_sets{$arg} ne "" && $arg ne "flash" && $arg ne "LaCrossePairForSec" && IsDummy($hash->{NAME}));
+      next if (($arg eq "rfmode" || $arg eq "LaCrossePairForSec") && $hasFSK == 0);
       if ($arg =~ m/patable/) {
         next if (substr($arg, -3) ne $CC1101Frequency);
       }
@@ -780,8 +799,12 @@ SIGNALduino_Set
     return "Usage: set $name LaCrossePairForSec <seconds_active> [ignore_battery]" if(!$arg || $a[0] !~ m/^\d+$/ || ($a[1] && $a[1] ne "ignore_battery") );
     $hash->{LaCrossePair} = $a[1]?2:1;
     InternalTimer(gettimeofday()+$a[0], "SIGNALduino_RemoveLaCrossePair", $hash, 0);
-
-  
+  } elsif( $cmd eq "rfmode" ) {
+    my $rfcw = $rfmode{$arg};
+    Log3 $name, 5, "$name: rfmode msg=$arg $rfcw";
+    $hash->{getcmd}->{cmd} = "rfmode";
+    $hash->{getcmd}->{arg} = $arg;
+    SIGNALduino_AddSendQueue($hash,$rfcw);
   } elsif( $cmd eq "sendMsg" ) {
 	Log3 $name, 5, "$name: sendmsg msg=$arg";
 	
@@ -1185,6 +1208,12 @@ sub SIGNALduino_parseResponse
 		delete($hash->{getcmd});
 		SIGNALduino_AddSendQueue($hash,"W12$ob");
 		SIGNALduino_WriteInit($hash);
+	}
+	elsif($cmd eq "rfmode") {
+		Log3 $name, 3, "$name/msg parseResponse rfmode: $msg";
+		$retReading = $msg;
+		$retReading =~ s/CW([A-Fa-f0-9]+.)+//;
+		$retReading = $hash->{getcmd}->{arg} . ' => ' . $retReading;
 	}
 	elsif($cmd eq "ccpatable") {
 		my $CC1101Frequency = "433";
@@ -1909,6 +1938,9 @@ SIGNALduino_Read
 		}
 		elsif ($getcmd eq 'bWidth') {
 			$regexp = '^C.* = .*';
+		}
+		elsif ($getcmd eq 'rfmode') {
+			$regexp = '^CW|ccFactoryReset';
 		}
 		else {
 			if (exists($gets{$getcmd})) {
@@ -6259,9 +6291,14 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="cmdBank"></a>
 	<li>cmdBank<br>
-	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden<br>
-	<A-D> damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;nke)
+	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;nke)<br>
+	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden.<br>
+	<code>s   - </code>damit wird eine &Uuml;bersicht von allen B&auml;nken ausgegeben.<br>
+	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert.<br>
+	Nur beim Maple:<br>
+	<code>r   - </code>damit wird von allen cc1101 eine Bankinfo ausgegeben.<br>
+	<code>A-D - </code>damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
+	
 	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
