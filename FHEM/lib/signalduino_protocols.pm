@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 345 2020-11-01 22:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 345 2020-11-26 22:00:00Z v3.4.5-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_01.11.'
+		"version" => 'v3.4.5-dev_ralf_26.11.'
 		);
 
 our %rfmode = (
@@ -1035,8 +1035,8 @@ our %ProtocolListSIGNALduino  = (
 							## Pollin ISOTRONIC - 12 Tasten remote | model 58608 (war alt ID 31)
 							# remote basicadresse with 12bit -> changed if push reset behind battery cover
 							# https://github.com/RFD-FHEM/RFFHEM/issues/44 @kaihs
-							# P34#891EE   MU;P0=-9584;P1=592;P2=-665;P3=1223;P4=-1311;D=01234141412341412341414123232323412323234;CP=1;R=0;
-							# P34#891FE   MU;P0=-12724;P1=597;P2=-667;P3=1253;P4=-1331;D=01234141412341412341414123232323232323232;CP=1;R=0;
+							# P34#891EE    MU;P0=-9584;P1=592;P2=-665;P3=1223;P4=-1311;D=01234141412341412341414123232323412323234;CP=1;R=0;
+							# P34#891FF   MU;P0=-12724;P1=597;P2=-667;P3=1253;P4=-1331;D=01234141412341412341414123232323232323232;CP=1;R=0;
 		{   
 			name 			=> 'QUIGG | LIBRA | Mandolyn | Pollin ISOTRONIC',
 			comment         => 'remote control DMV-7000, TR-502MSV, 58608',
@@ -1228,10 +1228,13 @@ our %ProtocolListSIGNALduino  = (
 			length_min		=> '28',
 			length_max		=> '120',
 		},
-	"43" => ## Somfy RTS
-            # MC;LL=-1405;LH=1269;SL=-723;SH=620;D=98DBD153D631BB;C=669;L=56;R=229;
+	"43" => ## Somfy RTS, mit verbessertem msg fix für nicht optimale Empfangsbedingungen
+			# MC;LL=-1330;LH=1229;SL=-686;SH=597;D=A8B5B99A6CA088;C=640;L=56;R=63;
+			# MC;LL=-1317;LH=1237;SL=-689;SH=594;D=545ADCCD365044;C=639;L=56;R=63;
+			# MC;LL=-1281;LH=1282;SL=-635;SH=639;D=04747459CBF22;C=639;L=52;R=1;s11;b2;
 		{
 			name 			=> 'Somfy RTS',
+			comment			=> 'with msg fix',
 			id 				=> '43',
 			knownFreqs      => '433.42',
 			clockrange  	=> [610,680],			# min , max
@@ -1240,6 +1243,27 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule	=> 'SOMFY', # not used now
 			modulematch 	=> '^Ys[0-9A-F]{14}',
 			length_min 		=> '52',
+			length_max 		=> '81',
+			method          => \&main::SIGNALduino_SomfyRTS, # Call to process this message
+			msgIntro		=> 'SR;P0=-2560;P1=2560;P3=-640;D=10101010101010113;',
+			#msgOutro		=> 'SR;P0=-30415;D=0;',
+			frequency		=> '10AB85550A',
+		},
+	"43.1" => ## Somfy RTS, ohne verbessertem msg fix, fuer Wandsender deren msg nicht mit A anfangen
+            # MC;LL=-1405;LH=1269;SL=-723;SH=620;D=98DBD153D631BB;C=669;L=56;R=229;
+		{
+			name 			=> 'Somfy RTS no fix',
+			comment			=> 'wall transmitter',
+			changed			=> '20201126 new',
+			id 				=> '43',
+			developId 		=> 'm',
+			knownFreqs      => '433.42',
+			clockrange  	=> [610,680],			# min , max
+			format			=> 'manchester', 
+			preamble 		=> 'Ys',
+			clientmodule	=> 'SOMFY', # not used now
+			modulematch 	=> '^Ys[0-9A-F]{14}',
+			length_min 		=> '56',
 			length_max 		=> '81',
 			method          => \&main::SIGNALduino_SomfyRTS, # Call to process this message
 			msgIntro		=> 'SR;P0=-2560;P1=2560;P3=-640;D=10101010101010113;',
@@ -2780,6 +2804,7 @@ our %ProtocolListSIGNALduino  = (
 				length_max      => '22',
 			},
 		"107"	=>	# Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor Use with FSK
+				# https://forum.fhem.de/index.php/topic,109056.0.html
 				# MN;D=5100C6BF107F1FF8BAFFFFFF75A818CC;N=6;
 			{
 				name            => 'WH51',
