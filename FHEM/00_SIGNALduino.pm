@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-11-02 22:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2020-11-26 22:00:00Z v3.4.5-dev-Ralf9 $
 #
 # v3.4.5
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_02.11.",
+	SDUINO_VERSION            => "v3.4.5-dev_ralf_26.11.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -208,7 +208,7 @@ my $clientsSIGNALduino = ":IT:"
 						."LaCrosse:"
 						."KOPP_FC:"
 						."PCA301:"
-						."SIGNALduino_TOOL:"
+						."SD_Tool:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -245,7 +245,7 @@ my %matchListSIGNALduino = (
      "30:LaCrosse"				=> '^(\\S+\\s+9 |OK\\sWS\\s)',
      "31:KOPP_FC"				=> '^kr..................',
      "32:PCA301"				=> '^\\S+\\s+24',
-     "90:SIGNALduino_TOOL"		=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
+     "90:SD_Tool"				=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -2392,7 +2392,10 @@ sub SIGNALduno_Dispatch
 	if (IsDummy($name) && defined($hash->{rawListNr})) {	# wenn es das Internal rawListNr gibt, dann wird die Nr per dispatch an das Modul SIGNALduino_TOOL uebergeben
 		$rssi = "" if (!defined($rssi));
 		$dmsg = lc($dmsg) if ($id eq '74');
-		$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $dmsg;
+		if (substr($rmsg,0,2) ne 'MC') {
+			$nrEqualDmsg = "";
+		}
+		$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $nrEqualDmsg . "#" . $dmsg;
 		Log3 $name, 4, "$name Dispatch: $dmsg, $rssi dispatch";
 		Dispatch($hash, $dmsg, undef);  ## Dispatch zum Modul SIGNALduino_TOOL
 		return;
@@ -3225,7 +3228,11 @@ SIGNALduino_Parse_MC
 								Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg";
 							}
 						}
-						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
+						my $nrEqualDmsg = 0;
+						if ($rcode > 1) {
+							$nrEqualDmsg = $rcode;
+						}
+						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,$nrEqualDmsg);
 						$message_dispatched=1;
 					}
 				} else {
@@ -4854,6 +4861,17 @@ sub SIGNALduino_SomfyRTS
 	my $flag = 0;
 	if (defined($mcbitnum)) {
 		Log3 $name, 4, "$name: Somfy bitdata: $bitData ($mcbitnum)";
+		if ($id eq '43.1') {
+			if ($mcbitnum == 57 || $mcbitnum == 81) {
+			$bitData = substr($bitData, 1, $mcbitnum - 1);
+			Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+			}
+			my $encData = SIGNALduino_b2h($bitData);
+
+			#Log3 $name, 4, "$name: Somfy RTS protocol enc: $encData";
+			return (1, $encData);
+		}
+		
 		if ($mcbitnum <= 60) {
 			if (substr($bitData, 0, 4) eq '1010') {
 				$flag = 1;	# ok
