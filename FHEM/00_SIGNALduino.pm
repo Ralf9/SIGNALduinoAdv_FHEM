@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-11-26 22:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 345 2021-01-08 22:00:00Z v3.4.6-dev-Ralf9 $
 #
-# v3.4.5
+# v3.4.6
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -9,7 +9,7 @@
 # It routes Messages serval Modules which are already integrated in FHEM. But there are also modules which comes with it.
 # N. Butzek, S. Butzek, 2014-2015
 # S.Butzek,Ralf9 2016-2019
-# Ralf9 2020
+# Ralf9 2020-2021
 
 package main;
 my $missingModulSIGNALduino="";
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-dev_ralf_26.11.",
+	SDUINO_VERSION            => "v3.4.6-dev_ralf_08.01.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -66,7 +66,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "freeram"  => ["R", '^[0-9]+'],
   "raw"      => ["", '.*'],
   "uptime"   => ["t", '^[0-9]+' ],
-  "cmds"     => ["?", '.*Use one of[\? 0-9A-Za-z]+[\r\n]*$' ],
+  "cmds"     => ["?", '(.*Use one of[\? 0-9A-Za-z]+[\r\n]*$)|(CSmcmbl=)' ],
   "ping"     => ["P",'^OK$'],
   "config"   => ["CG",'(^MS.*MU.*MC.*)|(ccmode=)'],
   "protocolIdToJson"   => ['none','none'],
@@ -229,7 +229,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|26|29|30|34|46|68|69|76|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -975,7 +975,7 @@ SIGNALduino_Get
      foreach my $arg (sort keys %gets) {
         next if ($arg =~ m/^cc/ && $hasCC1101 == 0);
         next if ($arg ne "raw" && $arg ne "protocolIdToJson" && $arg ne "zAvailableFirmware" && IsDummy($name));
-        if ($arg ne "raw" && $arg ne "ccreg" && $arg ne "cmdBank" && $arg ne "protocolIdToJson") {
+        if ($arg ne "raw" && $arg ne "cmds" && $arg ne "ccreg" && $arg ne "cmdBank" && $arg ne "protocolIdToJson") {
            $arg .= ":noArg";
         }
         $arguments.= $arg . " ";
@@ -1573,7 +1573,7 @@ sub SIGNALduino_CheckCmdResp
 		  my $initflag = 0;
 		  if ($hash->{DevState} ne 'waitBankInfo') {
 			readingsSingleUpdate($hash, "state", "opened", 1);
-			if ($ver =~ m/\((b.*)|(R: .*)\)/) {
+			if ($ver =~ m/cc1101.*\(((b.*)|(R: .*)\))/) {
 				if ($ver =~ m/\((b.*)\)/) {
 					Log3 $name, 3, "$name/init: firmwareversion with ccBankSupport found -> send b?";
 					SIGNALduino_SimpleWrite($hash, "b?");
@@ -1589,8 +1589,13 @@ sub SIGNALduino_CheckCmdResp
 				RemoveInternalTimer($hash);
 				InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduino_CheckCmdResp", $hash, 0);
 			}
-			else {	# firmware hat keine EEPROM Baenke
-				Log3 $name, 3, "$name/init: firmwareversion without ccBankSupport found";
+			else {	# firmware hat keine EEPROM Baenke oder kein cc1101
+				if ($ver =~ m/cc1101/) {
+					Log3 $name, 3, "$name/init: firmwareversion without ccBankSupport found";
+				}
+				else {
+					Log3 $name, 3, "$name/init: firmwareversion without cc1101 found";
+				}
 				for my $radio ('a'..'d') {	# delete radio ccconf internals
 					delete($hash->{$radio . '_ccconf'});
 					delete($hash->{$radio . '_ccconfFSK'});
@@ -4862,9 +4867,11 @@ sub SIGNALduino_SomfyRTS
 	if (defined($mcbitnum)) {
 		Log3 $name, 4, "$name: Somfy bitdata: $bitData ($mcbitnum)";
 		if ($id eq '43.1') {
-			if ($mcbitnum == 57 || $mcbitnum == 81) {
-			$bitData = substr($bitData, 1, $mcbitnum - 1);
-			Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+			if ($mcbitnum == 57 || ($mcbitnum == 81 && substr($bitData,0,1) eq '0'))  {
+				$bitData = substr($bitData, 1, $mcbitnum - 1);
+				Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+			} elsif ($mcbitnum > 80) {
+				$bitData = substr($bitData, 0, 80); # Bits am Ende entfernen
 			}
 			my $encData = SIGNALduino_b2h($bitData);
 
@@ -6081,7 +6088,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<tr><td>
 	Der <a href="https://wiki.fhem.de/wiki/SIGNALduino">SIGNALduino</a> ist basierend auf einer Idee von "mdorenka" und ver&ouml;ffentlicht im <a href="http://forum.fhem.de/index.php/topic,17196.0.html">FHEM Forum</a>.<br>
 
-	Mit der OpenSource-Firmware (<a href="https://github.com/RFD-FHEM/SIGNALDuino/releases">SIGNALDuino</a> und <a href="https://github.com/RFD-FHEM/SIGNALESP/releases">SIGNALESP</a>) ist dieser f&auml;hig zum Empfangen und Senden verschiedener Protokolle auf 433 und 868 Mhz.
+	Mit der OpenSource-Firmware (<a href="https://github.com/Ralf9/SIGNALDuino/releases">SIGNALDuino</a>) ist dieser f&auml;hig zum Empfangen und Senden verschiedener Protokolle auf 433 und 868 Mhz.
 	<br><br>
 	Folgende Ger&auml;te werden zur Zeit unterst&uuml;tzt:
 	<br><br>
@@ -6146,9 +6153,10 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="SIGNALduinoset"></a>
 	<b>SET</b>
 	<ul>
-		<li>LaCrossePairForSec</li>
+		<a name="LaCrossePairForSec"></a>
+		<li>LaCrossePairForSec<br>
 		(NUR bei Verwendung eines cc110x Funk-Moduls)<br>
-		Aktivieren Sie die automatische Erstellung neuer LaCrosse-Sensoren für "x" Sekunden. Wenn ignore_battery nicht angegeben wird, werden nur Sensoren erstellt, die das Flag 'Neue Batterie' senden.<br><br>
+		Aktivieren Sie die automatische Erstellung neuer LaCrosse-Sensoren für "x" Sekunden. Wenn ignore_battery nicht angegeben wird, werden nur Sensoren erstellt, die das Flag 'Neue Batterie' senden.</li><br>
 		<li>cc1101_freq / cc1101_bWidth / cc1101_patable / cc1101_rAmpl / cc1101_sens<br>
 		(NUR bei Verwendung eines cc110x Funk-Moduls)<br><br>
 		Stellt die SIGNALduino-Frequenz / Bandbreite / PA-Tabelle / Empf&auml;nger-Amplitude / Empfindlichkeit ein.<br>
@@ -6257,10 +6265,14 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="reset"></a>
 	<li>reset<br>
 	&Ouml;ffnet die Verbindung zum Ger&auml;t neu und initialisiert es.</li><br>
+	<a name="rfmode"></a>
+	<li>rfmode<br>
+	Damit kann ein rfmode ausgew&auml;hlt werden, es werden dann die dazu notwendigen Register zum sduino mit dem CW Befehl gesendet.<br>
+	Bei slowRf wird ein cc1101 Factoryreset durchgef&uuml;hrt</li><br>
 	<a name="sendMsg"></a>
 	<li>sendMsg<br>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
-	Alternativ ist es auch moeglich, die zu sendenden Daten in hexadezimaler Form zu uebergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
+	Alternativ ist es auch moeglich, die zu sendenden Daten in hexadezimaler Form zu &uuml;bergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
 	<br><br>
 	Bitte beachte, dieses Kommando funktioniert nur fuer MU oder MS Protokolle nach dieser Vorgehensweise:
 		<br><br>
@@ -6270,7 +6282,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 			<li>P<protocol id>#binarydata#R<anzahl der wiederholungen>#C<optional taktrate>   (#C is optional) 
 			<br>Beispiel binarydata: <code>set sduino sendMsg P0#0101#R3#C500</code>
 			<br>Wird eine sende Kommando fuer die Bitfolge 0101 anhand der protocol id 0 erzeugen. Als Takt wird 500 verwendet.
-			<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;<br></li></ul><br>
+			<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;</li></ul><br>
 			<ul><li>P<protocol id>#0xhexdata#R<anzahl der wiederholungen>#C<optional taktrate>    (#C is optional) 
 			<br>Beispiel 0xhexdata: <code>set sduino sendMsg P29#0xF7E#R4</code>
 			<br>Wird eine sende Kommando fuer die Hexfolge F7E anhand der protocol id 29 erzeugen. Die Nachricht soll 4x gesenset werden.
@@ -6291,17 +6303,17 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="ccconf"></a>
 	<li>ccconf<br>
    	Liest s&auml;mtliche radio-chip (cc1101) Register (Frequenz, Bandbreite, etc.) aus und zeigt die aktuelle Konfiguration an.<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger)
+	(NUR bei Verwendung eines cc1101 Funk-Moduls)
    	</li><br>
 	<a name="ccpatable"></a>
 	<li>ccpatable<br>
    	Liest die cc1101 PA Tabelle aus (power amplification for RF sending).<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger)
+	(NUR bei Verwendung eines cc1101 Funk-Moduls)
    	</li><br>
 	<a name="ccreg"></a>
 	<li>ccreg<br>
    	Liest das cc1101 Register aus (99 liest alle aus).<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger)
+	(NUR bei Verwendung eines cc1101 Funk-Moduls)
 	</li><br>
 	<a name="close"></a>
 	<li>close<br>
@@ -6309,7 +6321,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="cmdBank"></a>
 	<li>cmdBank<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;nke)<br>
+	(NUR bei Verwendung eines cc110x Funk-Moduls und EEPROM Speicherb&auml;nke)<br>
 	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden.<br>
 	<code>s   - </code>damit wird eine &Uuml;bersicht von allen B&auml;nken ausgegeben.<br>
 	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert.<br>
@@ -6320,7 +6332,8 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
-	Abh&auml;ngig von der installierten Firmware besitzt der SIGNALduino verschiedene Befehle. Bitte beachten Sie den Quellcode der Firmware Ihres SIGNALduino, um die Antwort dieses Befehls zu interpretieren.
+	Abh&auml;ngig von der installierten Firmware besitzt der SIGNALduino verschiedene Befehle.<br>
+	S - Zeigt die ConfigSet Variablen an.
 	</li><br>
 	<a name="config"></a>
 	<li>config<br>

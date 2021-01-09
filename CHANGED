@@ -1,3 +1,11 @@
+08.01.2021
+ signalduino_protocols.pm - update protocol ID 24 + 56
+ 00_SIGNALduino.pm:
+ - Anpassungen für den Standard Fix für Somfy Nachrichten mit der Protocol ID 43.1
+ - Bei "get cmds" können nun auch mit dem Parameter "S" die ConfigSet Variablen angezeigt werden
+ - Anpassungen für den MapleSduino mit einem einfachen Empfänger, z.B. dem RXB6
+ - "Device specific help" ergänzt
+
 29.11.2020
  00_SIGNALduino.pm und signalduino_protocols.pm
  - add id 43.1, ohne verbessertem msg fix, für Somfy Wandsender deren msg nicht mit A anfangen
