@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 345 2020-11-26 22:00:00Z v3.4.5-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 345 2021-01-08 22:00:00Z v3.4.6-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.5-dev_ralf_26.11.'
+		"version" => 'v3.4.6-dev_ralf_08.01.'
 		);
 
 our %rfmode = (
@@ -751,25 +751,31 @@ our %ProtocolListSIGNALduino  = (
 			length_min      => '36',
 			length_max      => '44',				
 		},
-	"24" => # visivon
-	        # https://github.com/RFD-FHEM/RFFHEM/issues/39
-			# MU;P0=132;P1=500;P2=-233;P3=-598;P4=-980;P5=4526;D=012120303030303120303030453120303121212121203121212121203121212121212030303030312030312031203030303030312031203031212120303030303120303030453120303121212121203121212121203121212121212030303030312030312031203030303030312031203031212120303030;CP=0;O;
+	"24" => ## visivo
+			# https://github.com/RFD-FHEM/RFFHEM/issues/39 @sidey79
+			# Visivo_7DF825 up    MU;P0=132;P1=500;P2=-233;P3=-598;P4=-980;P5=4526;D=012120303030303120303030453120303121212121203121212121203121212121212030303030312030312031203030303030312031203031212120303030303120303030453120303121212121203121212121203121212121212030303030312030312031203030303030312031203031212120303030;CP=0;O;
+			# https://forum.fhem.de/index.php/topic,42273.0.html @MikeRoxx
+			# Visivo_7DF825 up    MU;P0=505;P1=140;P2=-771;P3=-225;P5=4558;D=012031212030303030312030303030312030303030303121212121203121203120312121212121203120312120303031212121212031212121252031212030303030312030303030312030303030303121212121203121203120312121212121203120312120303031212121212031212121252031212030;CP=1;O;
+			# Visivo_7DF825 down  MU;P0=147;P1=-220;P2=512;P3=-774;P5=4548;D=001210303210303212121210303030321030303035321030321212121210321212121210321212121212103030303032103032103210303030303210303210303212121210303030321030303035321030321212121210321212121210321212121212103030303032103032103210303030303210303210;CP=0;O;
+			# Visivo_7DF825 stop  MU;P0=-764;P1=517;P2=-216;P3=148;P5=4550;D=012303012121212123012121212123012121212121230303030301230301230123030303012303030123012303030123030303012303030305012303012121212123012121212123012121212121230303030301230301230123030303012303030123012303030123030303012303030305012303012120;CP=3;O;
 		{
-			name			=> 'visivon remote',	
+			name			=> 'Visivo remote',
+			comment			=> 'Remote control for motorized screen',
+			changed			=> '20201220',
 			id			=> '24',
-			one			=> [3,-2],
-			zero			=> [1,-5],
-			#one			=> [3,-2],
-			#zero			=> [1,-1],
-			start           => [30,-5],
-			clockabs		=> 150,                  #ca 150us
-			clockpos	=> ['zero',0],
-			format 			=> 'twostate',	  		
-			preamble		=> 'u24#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
+			knownFreqs		=> '315',
+			one			=> [3,-1],  #  546,-182
+			zero			=> [1,-4],  #  182,-728
+			start			=> [25,-4], # 4550,-728
+			clockabs		=> 182,
+			clockpos		=> ['zero',0],
+			reconstructBit	=> '1',
+			format 			=> 'twostate',
+			preamble		=> 'P24#',				# prepend to converted message	
+			clientmodule    => 'SD_UT',
 			#modulematch     => '',  				# not used now
-			length_min      => '54',
-			length_max      => '58',				
+			length_min      => '55',
+			length_max      => '56',				
 		},
 	"25" => # LES remote for led lamp
             # https://github.com/RFD-FHEM/RFFHEM/issues/40
@@ -1347,7 +1353,7 @@ our %ProtocolListSIGNALduino  = (
 			preamble				=> 'P46#',
 			clientmodule			=> 'SD_UT',
 			modulematch			=> '^P46#.*',
-			length_min			=> '14',       # ???
+			length_min			=> '17',       # old 14
 			length_max			=> '18',
 		},
 	"47"	=>	## Maverick
@@ -1608,21 +1614,31 @@ our %ProtocolListSIGNALduino  = (
 			length_min      => '24',
 			length_max      => '24',
 		},	
-	"56" => ##  Celexon
+	"56" => ## Celexon Motorleinwand
+             # https://forum.fhem.de/index.php/topic,52025.0.html @Horst12345
+              # AC114_01B_00587B down MU;P0=5036;P1=-624;P2=591;P3=-227;P4=187;P5=-5048;D=0123412341414123234141414141414141412341232341414141232323234123234141414141414123414141414141414141234141414123234141412341232323250123412341414123234141414141414141412341232341414141232323234123234141414141414123414141414141414141234141414123234141412;CP=4;O;
+              # Alphavision Slender Line Plus motor canvas, remote control AC114-01B from Shenzhen A-OK Technology Grand Development Co.
+              # https://github.com/RFD-FHEM/RFFHEM/issues/906 @TheChatty
+              # AC114_01B_479696 up   MU;P0=-16412;P1=5195;P2=-598;P3=585;P4=-208;P5=192;D=01234523452525234345234525252343434345252345234345234525234523434525252525252525234525252525252525252525252345234345234343434343434341234523452525234345234525252343434345252345234345234525234523434525252525252525234525252525252525252525252345234345234343;CP=5;R=105;O;
+              # AC114_01B_479696 stop MU;P0=-2341;P1=5206;P2=-571;P3=591;P4=-211;P5=207;D=01234523452525234345234525252343434345252345234345234525234523434525252525252525234525252525252525252523452525234343452523452343434341234523452525234345234525252343434345252345234345234525234523434525252525252525234525252525252525252523452525234343452523;CP=5;R=107;O;
 		{
-			name			=> 'Celexon',	
-			id          	=> '56',
-			clockabs     	=> 200, 						
-			clockpos     => ['zero',0],
-			zero			=> [1,-3],
-			one				=> [3,-1],
-			start			=> [25,-3],						
+			name			=> 'AC114-xxB',
+			comment			=> 'Remote control for motorized screen from Alphavision, Celexon',
+			changed			=> '20201209',
+			id			=> '56',
+			clockabs		=> 200,
+			clockpos		=> ['zero',0],
+			reconstructBit	=> '1',
+			zero			=> [1,-3],  #  200,-600
+			one			=> [3,-1],  #  600,-200
+			start			=> [25,-3], # 5000,-600
+			pause			=> [-25],   # -5000, pause between repeats of send messages (clockabs*pause must be < 32768)
 			format 			=> 'twostate',	
-			preamble		=> 'u56#',						# prepend to converted message	
-			#clientmodule    => ''	,   					# not used now
+			preamble		=> 'P56#',						# prepend to converted message	
+			clientmodule    => 'SD_UT',
 			#modulematch     => '',  						# not used now
-			length_min      => '56',
-			length_max      => '68',
+			length_min      => '64', # 65 - reconstructBit = 64
+			length_max      => '65', # normal 65 Bit, 3 Bit werden aufgefuellt
 		},		
 	"57"	=>	## m-e doorbell fuer FG- und Basic-Serie
 						# https://forum.fhem.de/index.php/topic,64251.0.html
