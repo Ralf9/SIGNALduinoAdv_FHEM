@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.6-dev_ralf_08.01.",
+	SDUINO_VERSION            => "v3.4.6-dev_ralf_16.01.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -68,7 +68,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "uptime"   => ["t", '^[0-9]+' ],
   "cmds"     => ["?", '(.*Use one of[\? 0-9A-Za-z]+[\r\n]*$)|(CSmcmbl=)' ],
   "ping"     => ["P",'^OK$'],
-  "config"   => ["CG",'(^MS.*MU.*MC.*)|(ccmode=)'],
+  "config"   => ["CG",'(MS.*MU.*MC.*)|(ccmode=)'],
   "protocolIdToJson"   => ['none','none'],
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
@@ -290,6 +290,7 @@ SIGNALduino_Initialize
 					  ." rawmsgEvent:1,0"
 					  ." cc1101_frequency"
 					  ." doubleMsgCheck_IDs"
+					  ." sendSlowRF_A_IDs"
 					  ." suppressDeviceRawmsg:1,0"
 					  ." development:0$dev"
 					  ." noMsgVerbose:0,1,2,3,4,5"
@@ -810,6 +811,7 @@ SIGNALduino_Set
 	
 	# Split args in serval variables
 	my ($protocol,$data,$repeats,$clock,$frequency,$datalength,$dataishex);
+	my $slowrfA = '';
 	my $n=0;
 	foreach my $s (split "#", $arg) {
 	    my $c = substr($s,0,1);
@@ -830,6 +832,10 @@ SIGNALduino_Set
 	}
 	return "$name: sendmsg, unknown protocol: $protocol" if (!exists($ProtocolListSIGNALduino{$protocol}));
 
+	if (defined($hash->{sendAslowrfID}{$protocol})) {
+		$slowrfA = 'A';
+	}
+	
 	$repeats=1 if (!defined($repeats));
 
 	if (exists($ProtocolListSIGNALduino{$protocol}{frequency}) && $hasCC1101 && !defined($frequency)) {
@@ -869,11 +875,12 @@ SIGNALduino_Set
 
 		if ($intro ne "" || $outro ne "")
 		{
-			$intro = "SC;R=$repeats;" . $intro;
+			$intro = "SC$slowrfA;R=$repeats;" . $intro;
 			$repeats = 0;
+			$slowrfA = '';
 		}
 
-		$sendData = $intro . "SM;" . ($repeats > 0 ? "R=$repeats;" : "") . "C=$clock;D=$data;" . $outro . $frequency; #	SM;R=2;C=400;D=AFAFAF;
+		$sendData = $intro . "SM$slowrfA;" . ($repeats > 0 ? "R=$repeats;" : "") . "C=$clock;D=$data;" . $outro . $frequency; #	SM;R=2;C=400;D=AFAFAF;
 		Log3 $name, 5, "$name: sendmsg Preparing manchester protocol=$protocol, repeats=$repeats, clock=$clock data=$data";
 	} else {
 		if ($protocol == 3 || substr($data,0,2) eq "is") {
@@ -936,7 +943,7 @@ SIGNALduino_Set
 			$SignalData.=$signalHash{$bitconv{$bit}}; ## Add the signal to our data string
 		}
 		$SignalData.=$signalHash{end} if (exists($signalHash{end}));
-		$sendData = "SR;R=$repeats;$pattern$SignalData;$frequency";
+		$sendData = "SR$slowrfA;R=$repeats;$pattern$SignalData;$frequency";
 	}
 
 	
@@ -3565,6 +3572,21 @@ SIGNALduino_Attr
 			else {
 				Log3 $name, 3, "$name delete Attr: doubleMsgCheck_IDs";
 				delete $hash->{DoubleMsgIDs};
+			}
+		}
+	}
+	elsif ($aName eq "sendSlowRF_A_IDs")
+	{
+		if (defined($aVal)) {
+			if (length($aVal)>0) {
+				Log3 $name, 3, "$name Attr: sendSlowRF_A_IDs enabled: $aVal";
+				my %sendAslowrfID = map { $_ => 1 } split(",", $aVal);
+				$hash->{sendAslowrfID} = \%sendAslowrfID;
+				#print Dumper $hash->{sendAslowrfID};
+			}
+			else {
+				Log3 $name, 3, "$name delete Attr: sendSlowRF_A_IDs";
+				delete $hash->{sendAslowrfID};
 			}
 		}
 	}
@@ -6469,6 +6491,11 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="rawmsgEvent"></a>
 	<li>rawmsgEvent<br>
 	Bei der Einstellung "1", l&ouml;sen empfangene Rohnachrichten Ereignisse aus.
+	</li><br>
+	<a name="sendSlowRF_A_IDs"></a>
+	<li>sendSlowRF_A_IDs<br>
+	Nur für MapleSduino Firmware ab V 4.12<br>
+	Hier k&ouml;nnen komma getrennt die protocolId angegeben bei denen das cc1101 Modul A zu senden verwendet wird.
 	</li><br>
 	<a name="suppressDeviceRawmsg"></a>
 	<li>suppressDeviceRawmsg<br>
