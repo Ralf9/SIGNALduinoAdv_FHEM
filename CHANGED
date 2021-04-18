@@ -1,3 +1,13 @@
+18.04.2021
+  00_SIGNALduino.pm:
+  - add DEVIATN to get ccconf
+  - add set cc1101_dataRate
+  - add set cc1101_deviatn
+12.04.2021
+  signalduino_protocols.pm:
+  - new protocol ID 78 for BeSmart S4 remote control
+  - improved cc1101 reg setings for Kopp Free Control
+
 16.01.2021
   00_SIGNALduino.pm - add attribute "sendSlowRF_A_IDs"
 08.01.2021
@@ -23,12 +33,10 @@
  signalduino_protocols.pm - new protocol ID 106 for GT-TMBBQ-01
 19.08.2020
  00_SIGNALduino.pm - update SomfyRTS message fix
-
 12.12.2017
  14_SD_WS07.pm implementing correction factor temperature and humidity. logs revised
 02.12.2017
  14_Hideki.pm implementing Hideki SecondChecksum
-
 22.11.2017
  Fix max length (Proto 51) is to small (#79929 #msg719499)
 21.11.2017

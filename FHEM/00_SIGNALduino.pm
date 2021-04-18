@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2021-01-08 22:00:00Z v3.4.6-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 346 2021-04-18 17:00:00Z v3.4.6-dev-Ralf9 $
 #
 # v3.4.6
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.6-dev_ralf_16.01.",
+	SDUINO_VERSION            => "v3.4.6-dev_ralf_18.04.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -96,6 +96,8 @@ my %sets = (
   "cc1101_patable_433" => '-10_dBm,-5_dBm,0_dBm,5_dBm,7_dBm,10_dBm',
   "cc1101_patable_868" => '-10_dBm,-5_dBm,0_dBm,5_dBm,7_dBm,10_dBm',
   "cc1101_reg"     => 'textFieldNL',
+  "cc1101_dataRate" => 'textFieldNL',
+  "cc1101_deviatn" => 'textFieldNL',
 );
 
 my %patable = (
@@ -229,7 +231,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -518,7 +520,8 @@ SIGNALduino_Set
     foreach my $arg (sort keys %my_sets) {
       next if ($arg =~ m/cc1101/ && $hasCC1101 == 0);
       next if ($my_sets{$arg} ne "" && $arg ne "flash" && $arg ne "LaCrossePairForSec" && IsDummy($hash->{NAME}));
-      next if (($arg eq "rfmode" || $arg eq "LaCrossePairForSec") && $hasFSK == 0);
+      next if ($arg eq "rfmode" && $hasFSK == 0);
+      next if ($arg eq "LaCrossePairForSec" && !IsDummy($hash->{NAME}) && $hasFSK == 0);
       if ($arg =~ m/patable/) {
         next if (substr($arg, -3) ne $CC1101Frequency);
       }
@@ -778,6 +781,43 @@ SIGNALduino_Set
 	my $pa = "x" . $patable{$paFreq}{$arg};
 	Log3 $name, 3, "$name: Setting patable $paFreq $arg $pa";
 	SIGNALduino_AddSendQueue($hash,$pa);
+	SIGNALduino_WriteInit($hash);
+  } elsif( $cmd eq "dataRate" ) {
+	if ($arg >= 600 and $arg <= 500000) {
+		SIGNALduino_AddSendQueue($hash,"C10");
+		$hash->{getcmd}->{cmd} = "dataRate";
+		$hash->{getcmd}->{arg} = $arg;
+	}
+	else {
+		return "$name: set datarate $arg out of range (0.6 - 500kBaud)";
+	}
+  } elsif( $cmd eq "deviatn" ) {
+	my $deviatn;
+	my $bits;
+	my $devlast = 0;
+	my $bitlast = 0;
+	OUTDEVLOOP:
+	for (my $e=0; $e<8; $e++) {
+		for (my $m=0; $m<8; $m++) {
+			$deviatn = (8+$m)*(2**$e) *26000/(2**17);
+			$bits = $m + ($e << 4);
+			if ($arg > $deviatn) {
+				$devlast = $deviatn;
+				$bitlast = $bits;
+			}
+			else {
+				if (($deviatn - $arg) < ($arg - $devlast)) {
+					$devlast = $deviatn;
+					$bitlast = $bits;
+				}
+				last OUTDEVLOOP;
+			}
+		}
+	}
+	my $hexbits = sprintf("%02x",$bitlast);
+	my $devstr =  sprintf("% 5.3f",$devlast);
+	Log3 $name, 3, "$name: Setting deviatn (15) to $hexbits = $devstr kHz";
+	SIGNALduino_AddSendQueue($hash,"W17$hexbits");
 	SIGNALduino_WriteInit($hash);
   } elsif( $cmd eq "reg" ) {
 	## check for four hex digits
@@ -1212,8 +1252,48 @@ sub SIGNALduino_parseResponse
 		$ob = sprintf("%02x", $ob+$bits);
 		$msg = "Setting MDMCFG4 (10) to $ob = $bw KHz";
 		Log3 $name, 3, "$name/msg parseResponse bWidth: Setting MDMCFG4 (10) to $ob = $bw KHz";
+		$retReading = $msg;
 		delete($hash->{getcmd});
 		SIGNALduino_AddSendQueue($hash,"W12$ob");
+		SIGNALduino_WriteInit($hash);
+	}
+	elsif($cmd eq "dataRate") {
+		my $val = hex(substr($msg,6));
+		my $arg = $hash->{getcmd}->{arg};
+		my $ob = $val & 0xf0;
+		
+		my $e = $arg * (2**20) / 26000000;
+		$e = log($e) / log(2);
+		$e = int($e);
+		my $m = ($arg * (2**28) / (26000000 * (2**$e))) - 256;
+		my $mr = round($m,0);
+		my $m = int($m);
+		my $datarate0 = ((256+$m)*(2**($e & 15 )))*26000000/(2**28);
+		my $m1 = $m + 1;
+		my $e1 = $e;
+		if ($m1 == 256) {
+			$m1 = 0;
+			$e1++;
+		}
+		my $datarate1 = ((256+$m1)*(2**($e1 & 15 )))*26000000/(2**28);
+		
+		my $datastr;
+		if ($mr == $m) {
+			$datastr = sprintf("%.2f* (%.2f) Baud",$datarate0, $datarate1);
+		}
+		else {
+			$datastr = sprintf("(%.2f) %.2f* Baud",$datarate0, $datarate1);
+			$m = $m1;
+			$e = $e1;
+		}
+		my $mhex = sprintf("%02x",$m);
+		$ob = sprintf("%02x", $ob+$e);
+		$msg = "Setting MDMCFG4/3 (10 11) to $ob $mhex = $datastr";
+		Log3 $name, 3, "$name/msg parseResponse dataRate $arg: $msg";
+		$retReading = $msg;
+		delete($hash->{getcmd});
+		SIGNALduino_AddSendQueue($hash,"W12$ob");
+		SIGNALduino_AddSendQueue($hash,"W13$mhex");
 		SIGNALduino_WriteInit($hash);
 	}
 	elsif($cmd eq "rfmode") {
@@ -1290,7 +1370,7 @@ sub SIGNALduino_parseCcconf
 	my $msg = shift;
 	my (undef,$str) = split('=', $msg);
 	my $var;
-	my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"1B"=>1,"1D"=>1 );
+	my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"15"=>1,"1B"=>1,"1D"=>1 );
 	my $ccconfFSK="";
 	my $modFlag = 0;
 	foreach my $a (sort keys %r) {
@@ -1298,7 +1378,12 @@ sub SIGNALduino_parseCcconf
 		$r{$a} = hex($var);
 	}
 	my $mod_format = $modformat[($r{"12"}>>4)&7];
-	$ccconfFSK = "Modulation:$mod_format (SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7] . ")";
+	my $deviatnStr = "";
+	if ($mod_format =~ m/FSK/) {
+		my $deviatn = (8+($r{"15"}&7))*(2**(($r{"15"}>>4)&7)) *26000/(2**17);
+		$deviatnStr = sprintf(" DEVIATN:%.3fkHz",$deviatn);
+	}
+	$ccconfFSK = "Modulation:$mod_format (SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7] . ")" . $deviatnStr;
 	if ($mod_format ne $modformat[3]) {
 		$mod_format = "";
 		$modFlag = 1;
@@ -1948,7 +2033,7 @@ SIGNALduino_Read
 		elsif ($getcmd eq 'ri') {
 			$regexp = 'mac =.*ip =';
 		}
-		elsif ($getcmd eq 'bWidth') {
+		elsif ($getcmd eq 'bWidth' or $getcmd eq 'dataRate') {
 			$regexp = '^C.* = .*';
 		}
 		elsif ($getcmd eq 'rfmode') {
@@ -4769,6 +4854,7 @@ sub	SIGNALduino_Hideki
 	if ($message_start >= 0 )   # 0x75 but in reverse order
 	{
 		#Log3 $name, 3, "$name: receive hideki protocol inverted";
+		#Log3 $name, 3, "$name: msgstart: $message_start data=$bitData";
 		Debug "$name: Hideki protocol detected \n" if ($debug);
 
 		# Todo: Mindest Laenge fuer startpunkt vorspringen 
