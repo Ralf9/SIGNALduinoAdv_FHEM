@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 346 2021-04-12 23:00:00Z v3.4.6-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 346 2021-04-30 20:00:00Z v3.4.6-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.6-dev_ralf_12.04.'
+		"version" => 'v3.4.6-dev_ralf_30.04.'
 		);
 
 our %rfmode = (
@@ -78,8 +78,10 @@ our %rfmode = (
 	"PCA301_mode3_6631"      => 'CW0001,012E,0246,0307,042D,05D4,06FF,0700,0802,0D21,0E6B,0FD0,1088,110B,1206,1322,14F8,1553,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D03,3E03,4050,4143,4241,435f,4433,4530,4631,4700',
 	"KOPP_FC_4785"           => 'CW0001,012E,0246,0304,04AA,0554,060F,07E0,0800,0D21,0E65,0FCA,10C7,1183,1216,1373,14F8,1540,170C,1829,1936,1B07,1C40,1D91,2211,23E9,242A,2500,261F,3D04,3E02,404b,416f,4270,4370,445f,4546,4643,4700',
 	"WS1600_TX22_mode5_8842" => 'CW0001,012E,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1165,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D05,3E03,404d,4135,425f,4349,4454,452b,4600',
-	"DP100_WH51_17241"       => 'CW0001,012E,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0FE8,1009,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D06,3E03,4057,4148,4235,4331,4400'
-);
+	"DP100_WH51_17241"       => 'CW0001,012E,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0FE8,1009,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D06,3E03,4057,4148,4235,4331,4400',
+	"bresser_5in1_8220"      => 'CW0001,012E,0246,0306,042D,05D4,06FF,0700,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4535,4631,4700',
+	"HoneywActivL_SlowRf_FSK"=> 'CW000D,012E,022D,0307,04D3,0591,063D,0704,0832,0D21,0E65,0FE8,1087,11F8,1200,1323,14B9,1550,1700,1818,1914,1B43,1C00,1D91,2211,23E9,242A,2500,2611,3D00,3E00,4048,4177,4253,436C,446F,4577,4652,4746'
+	);
 
 our %ProtocolListSIGNALduino  = (
 	"0"	=>	## various weather sensors (500 | 9100)
@@ -248,10 +250,9 @@ our %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	
 			preamble		=> 'P2#',		# prepend to converted message		
 			clientmodule    => 'SD_AS',
-			modulematch     => '^P2#.{7,8}',
-			length_min      => '32',
-			length_max      => '34',
-			paddingbits     => '8',		    # pad up to 8 bits, default is 4
+			modulematch      => '^P2#.{8,10}',
+			length_min       => '32', # without CRC
+			length_max       => '40', # with CRC
         },
 	"3"	=>	## itv1 - remote like WOFI Lamp | Intertek Modell 1946518 // ELRO
 					# need more Device Infos / User Message
@@ -393,8 +394,8 @@ our %ProtocolListSIGNALduino  = (
 		}, 	
 	"9"    => 			## Funk Wetterstation CTW600
 		{
-			name			=> 'CTW 600',	
-			comment			=> 'FunkWS WH1080/WH3080/CTW600',
+			name			=> 'weatherID9',	
+			comment			=> 'Weatherstation WH1080, WH3080, WH5300SE, CTW600',
 			id          => '9',
 			knownFreqs      => '433.92 | 868.35',
 			zero			=> [3,-2],
@@ -819,17 +820,18 @@ our %ProtocolListSIGNALduino  = (
 				length_min    => '40',
 				length_max    => '40',
 			},
-		"27"	=>	## Temperatur-/Feuchtigkeitssensor EuroChron EFTH-800 (433 MHz)
+		"27"  =>  ## Temperatur-/Feuchtigkeitssensor EuroChron EFTH-800 (433 MHz) - https://github.com/RFD-FHEM/RFFHEM/issues/739
 							# SD_WS_27_TH_2 - T: 15.5 H: 48 - MU;P0=-224;P1=258;P2=-487;P3=505;P4=-4884;P5=743;P6=-718;D=0121212301212303030301212123012123012123030123030121212121230121230121212121212121230301214565656561212123012121230121230303030121212301212301212303012303012121212123012123012121212121212123030121;CP=1;R=53;
 							# SD_WS_27_TH_3 - T:  3.8 H: 76 - MU;P0=-241;P1=251;P2=-470;P3=500;P4=-4868;P5=743;P6=-718;D=012121212303030123012301212123012121212301212303012121212121230303012303012123030303012123014565656561212301212121230303012301230121212301212121230121230301212121212123030301230301212303030301212301;CP=1;R=23;
 							# SD_WS_27_TH_3 - T:  5.3 H: 75 - MU;P0=-240;P1=253;P2=-487;P3=489;P4=-4860;P5=746;P6=-725;D=012121212303030123012301212123012121212303012301230121212121230303012301230303012303030301214565656561212301212121230303012301230121212301212121230301230123012121212123030301230123030301230303030121;CP=1;R=19;
+							# Eurochron Zusatzsensor fuer EFS-3110A - https://github.com/RFD-FHEM/RFFHEM/issues/889
 							# short pulse of 244 us followed by a 488 us gap is a 0 bit
 							# long pulse of 488 us followed by a 244 us gap is a 1 bit
 							# sync preamble of pulse, gap, 732 us each, repeated 4 times
 							# sensor sends two messages at intervals of about 57-58 seconds
 			{
 				name            => 'EFTH-800',
-				comment         => 'EuroChron weatherstation EFTH-800',
+				comment         => 'EuroChron weatherstation EFTH-800, EFS-3110A',
 				changed         => '20191227 new',
 				id              => '27',
 				one             => [2,-1],
@@ -1321,7 +1323,7 @@ our %ProtocolListSIGNALduino  = (
 			preamble     => 'r', # prepend to converted message
 			clientmodule => 'Revolt', 
 			modulematch  => '^r[A-Fa-f0-9]{22}', 
-			length_min   => '84',
+			length_min   => '96',
 			length_max   => '120',	
 			postDemodulation => \&main::SIGNALduino_postDemo_Revolt,
 		},    
@@ -1663,7 +1665,7 @@ our %ProtocolListSIGNALduino  = (
 				# MC;LL=-981;LH=964;SL=-480;SH=520;D=002BA37EBDBBA24F0015D1BF5EDDD127800AE8DFAF6EE893C;C=486;L=194;
 		{
 			name		=> 'TFA 30.3208.0',
-			comment		=> 'temperature / humidity sensor',
+			comment         => 'Temperature/humidity sensors (TFA 30.3208.02, 30.3228.02, 30.3229.02, Froggit/Renkforce FT007xx, Ambient Weather F007-xx)',
 			id          	=> '58',
 			clockrange     	=> [460,520],			# min , max
 			format 			=> 'manchester',	    # tristate can't be migrated from bin into hex!
@@ -1784,10 +1786,10 @@ our %ProtocolListSIGNALduino  = (
 			length_min   => '24',
 			filterfunc   => \&main::SIGNALduino_filterMC,
 		},
-	"64" => ##  WH2 #############################################################################
-			# MU;P0=-32001;P1=457;P2=-1064;P3=1438;D=0123232323212121232123232321212121212121212323212121232321;CP=1;R=63;
-			# MU;P0=-32001;P1=473;P2=-1058;P3=1454;D=0123232323212121232123232121212121212121212121232321212321;CP=1;R=51;
-			# MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
+	"64" => ##  WH2
+			# no decode!   MU;P0=-32001;P1=457;P2=-1064;P3=1438;D=0123232323212121232123232321212121212121212323212121232321;CP=1;R=63;
+			# no decode!   MU;P0=-32001;P1=473;P2=-1058;P3=1454;D=0123232323212121232123232121212121212121212121232321212321;CP=1;R=51;
+			# no value!    MU;P0=134;P1=-113;P3=412;P4=-1062;P5=1379;D=01010101013434343434343454345454345454545454345454545454343434545434345454345454545454543454543454345454545434545454345;CP=3;
 		{
 			name         => 'WH2',
 			comment      => 'temperature / humidity sensor',
@@ -2484,8 +2486,8 @@ our %ProtocolListSIGNALduino  = (
 			clockabs		=> 400,
 			clockpos		=> ['zero',1],
 			format			=> 'twostate',
-			preamble		=> 'P91#',			# prepend to converted message
-			length_min		=> '36',
+			preamble		=> 'P91#',
+			length_min		=> '35', # 36 - reconstructBit = 35
 			length_max		=> '36',
 			clientmodule	=> 'SD_UT',
 			reconstructBit		=> '1',
@@ -2709,6 +2711,7 @@ our %ProtocolListSIGNALduino  = (
 		"101"	=>	# PCA 301
 			{
 				name            => 'PCA 301',
+				comment         => 'Energy socket',
 				changed         => '20200124 new',
 				id              => '101',
 				knownFreqs      => '868.950',
@@ -2822,7 +2825,7 @@ our %ProtocolListSIGNALduino  = (
 			},
 		"107"	=>	# Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor Use with FSK
 				# https://forum.fhem.de/index.php/topic,109056.0.html
-				# MN;D=5100C6BF107F1FF8BAFFFFFF75A818CC;N=6;
+				# H: 31 Bv: 1.6  MN;D=5100C6BF107F1FF8BAFFFFFF75A818CC;N=6;
 			{
 				name            => 'WH51',
 				comment         => 'DP100, Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor',
@@ -2838,8 +2841,50 @@ our %ProtocolListSIGNALduino  = (
 				clientmodule    => 'SD_WS',
 				length_min      => '28',
 				method          => \&main::SIGNALduino_FSK_default,
+			},
+		"108"	=>  # BRESSER 5-in-1 Comfort Wetter Center
+				# https://forum.fhem.de/index.php/topic,78809.0.html
+				# T: 6.3  H: 70 W: 1 R: 31.2  MN;D=E9837FF76FEFEF9CFF8FEDFCFF167C80089010106300701203000002;N=7;R=215;  W108#7C8008901010630070120300
+				# T: 12.7 H: 46 W: 1 R: 7.6   MN;D=E5837FEB1FEFEFD8FEB989FFFF1A7C8014E010102701467600000002;N=7;R=215;  W108#7C8014E01010270146760000
+			{
+				name            => 'Bresser 5in1',
+				changed         => '20210422 new',
+				id              => '108',
+				knownFreqs      => '868.35',
+				N               => 7,
+				datarate        => '8220',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				#match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				preamble        => 'W108#',
+				clientmodule    => 'SD_WS',
+				length_min      => '52',
+				method          => \&main::SIGNALduino_Bresser_5in1,
+			
+			},
+		"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
+			# https://github.com/klohner/honeywell-wireless-doorbell#the-data-frame
+			# MU;P0=-381;P1=100;P2=260;P3=-220;P4=419;P5=-544;CP=1;R=248;D=010101010101010101010101010101023101023452310102310231010101023101010102310232310101010101010231010101010101010101010101010101010231010234523101023102310101010231010101023102323101010101010102310101010101010101010101010101010102310102345231010231023101010102310;e;
+			{
+				name            => 'Honeywell ActivLink',
+				comment         => 'Wireless doorbell and motion sensor (PIR)',
+				changed         => '20210420 new',
+				id              => '200',
+				knownFreqs      => '868.35',
+				one             => [2.6,-2.2],
+				zero            => [1 ,-3.8],
+				start           => [-5.4],
+				end             => [4.2],
+				clockabs        => 100,
+				clockpos        => ['zero',0],
+				format          => 'twostate',
+				#modulation      => '2-FSK',
+				preamble        => 'u200#',
+				#clientmodule    => '',
+				#modulematch     => '',
+				length_min      => '48',
+				length_max      => '48',
 			}
-		
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
 
