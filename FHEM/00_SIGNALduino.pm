@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 346 2021-04-18 17:00:00Z v3.4.6-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 346 2021-05-01 16:00:00Z v3.4.6-dev-Ralf9 $
 #
 # v3.4.6
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.6-dev_ralf_18.04.",
+	SDUINO_VERSION            => "v3.4.6-dev_ralf_01.05.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -1267,7 +1267,7 @@ sub SIGNALduino_parseResponse
 		$e = int($e);
 		my $m = ($arg * (2**28) / (26000000 * (2**$e))) - 256;
 		my $mr = round($m,0);
-		my $m = int($m);
+		$m = int($m);
 		my $datarate0 = ((256+$m)*(2**($e & 15 )))*26000000/(2**28);
 		my $m1 = $m + 1;
 		my $e1 = $e;
@@ -2585,6 +2585,17 @@ sub SIGNALduno_Dispatch
    }
 }
 
+
+# calculated RSSI and RSSI value and RSSI string (-77,' RSSI = -77')
+sub SIGNALduino_calcRSSI {
+  my $rssi = shift;
+  my $rssiStr = '';
+  $rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74));
+  $rssiStr = " RSSI = $rssi";
+  return ($rssi,$rssiStr);
+}
+
+
 sub
 SIGNALduino_Parse_MS
 {
@@ -2593,14 +2604,16 @@ SIGNALduino_Parse_MS
 	my $protocolid;
 	my $syncidx=$msg_parts{syncidx};			
 	my $clockidx=$msg_parts{clockidx};				
-	my $rawRssi=$msg_parts{rssi};
+	my $rssi=$msg_parts{rssi};
 	my $protocol=undef;
 	my $rawData=$msg_parts{rawData};
 	my %patternList;
-	my $rssi;
-	if (defined($rawRssi)) {
-		$rssi = ($rawRssi>=128 ? (($rawRssi-256)/2-74) : ($rawRssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+	my $rssiStr= '';
+	
+	if (defined($rssi)) {
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
+	
     #$patternList{$_} = $msg_parts{rawData}{$_] for keys %msg_parts{rawData};
 
 	#$patternList = \%msg_parts{pattern};
@@ -2788,11 +2801,7 @@ SIGNALduino_Parse_MS
 			$dmsg = "$dmsg".$postamble if (defined($postamble));
 			$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 			
-			if (defined($rssi)) {
-				Log3 $name, 4, "$name: Decoded MS Protocol id $id dmsg $dmsg length " . scalar @bit_msg . " RSSI = $rssi";
-			} else {
-				Log3 $name, 4, "$name: Decoded MS Protocol id $id dmsg $dmsg length " . scalar @bit_msg;
-			}
+			Log3 $name, 4, "$name: Decoded MS Protocol id $id dmsg $dmsg length " . scalar @bit_msg . $rssiStr;
 			
 			#my ($rcode,@retvalue) = SIGNALduino_callsub('preDispatchfunc',$ProtocolListSIGNALduino{$id}{preDispatchfunc},$name,$dmsg);
 			#next if (!$rcode);
@@ -2890,9 +2899,10 @@ sub SIGNALduino_Parse_MU
 	my $debug = AttrVal($name,"debug",0);
 	my $maxRepeat = AttrVal($name,"maxMuMsgRepeat", 4);
 	my $dummy = IsDummy($name);
+	my $rssiStr= '';
 	
 	if (defined($rssi)) {
-		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
 	
     Debug "$name: processing unsynced message\n" if ($debug);
@@ -3168,11 +3178,7 @@ sub SIGNALduino_Parse_MU
 					$dmsg = "$dmsg"."$ProtocolListSIGNALduino{$id}{postamble}" if (defined($ProtocolListSIGNALduino{$id}{postamble}));
 					$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 					
-					if (defined($rssi)) {
-						Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr . " RSSI = $rssi";
-					} else {
-						Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr;
-					}
+					Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr . $rssiStr;
 					
 					if (SIGNALduino_getProtoProp($id,'dispatchequals',0) eq 'true' || defined($hash->{rawListNr})) {
 						$lastDmsg = $dmsg;
@@ -3227,8 +3233,10 @@ SIGNALduino_Parse_MC
 	my $dmsg;
 	my $message_dispatched=0;
 	my $debug = AttrVal($name,"debug",0);
+	my $rssiStr= '';
+	
 	if (defined($rssi)) {
-		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
 	
 	if (!$clock) {
@@ -3263,12 +3271,8 @@ SIGNALduino_Parse_MC
 		if ( $clock >$ProtocolListSIGNALduino{$id}{clockrange}[0] and $clock <$ProtocolListSIGNALduino{$id}{clockrange}[1] and length($rawData)*4 >= $ProtocolListSIGNALduino{$id}{length_min} )
 		{
 			Debug "clock and min length matched"  if ($debug);
-
-			if (defined($rssi)) {
-				Log3 $name, 4, "$name: Found manchester Protocol id $id clock $clock RSSI $rssi -> $ProtocolListSIGNALduino{$id}{name}";
-			} else {
-				Log3 $name, 4, "$name: Found manchester Protocol id $id clock $clock -> $ProtocolListSIGNALduino{$id}{name}";
-			}
+			
+			Log3 $name, 4, "$name: Found manchester Protocol id $id clock $clock" . "$rssiStr -> $ProtocolListSIGNALduino{$id}{name}";
 			
 			my $polarityInvert = 0;
 			if (exists($ProtocolListSIGNALduino{$id}{polarity}) && ($ProtocolListSIGNALduino{$id}{polarity} eq 'invert'))
@@ -3318,12 +3322,7 @@ SIGNALduino_Parse_MC
 						#}
 						if (SDUINO_MC_DISPATCH_VERBOSE < 5 && (SDUINO_MC_DISPATCH_LOG_ID eq '' || SDUINO_MC_DISPATCH_LOG_ID eq $id))
 						{
-							if (defined($rssi)) {
-								Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg RSSI=$rssi";
-							} else
-							{
-								Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg";
-							}
+							Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg $rssiStr";
 						}
 						my $nrEqualDmsg = 0;
 						if ($rcode > 1) {
@@ -3352,8 +3351,10 @@ sub SIGNALduino_Parse_MN
 	my $N=$msg_parts{N};
 	my $dmsg;
 	my $debug = AttrVal($name,"debug",0);
+	my $rssiStr= '';
+	
 	if (defined($rssi)) {
-		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
 	my $hlen = length($rawData);
 	my $match;
@@ -3370,7 +3371,7 @@ sub SIGNALduino_Parse_MN
 		}
 			
 		if ($match eq "" || $rawData =~ m/$match/) {
-			Log3 $name, 4, "$name Parse_MN: Found $modulation Protocol id $id -> $ProtocolListSIGNALduino{$id}{name}";
+			Log3 $name, 4, "$name Parse_MN: Found $modulation Protocol id $id length $hlen" . "$rssiStr -> $ProtocolListSIGNALduino{$id}{name}";
 		}
 		else {
 			next;
@@ -4549,6 +4550,22 @@ sub SIGNALduino_postDemo_WS7053 {
 
 sub SIGNALduino_postDemo_Revolt {
 	my ($name, @bit_msg) = @_;
+	
+	my $protolength = scalar @bit_msg;
+	my $sum = 0;
+	my $checksum = oct( '0b' . ( join "", @bit_msg[ 88 .. 95 ] ) );
+	for ( my $b = 0 ; $b < 88 ; $b += 8 )
+	{	# build sum over first 11 bytes
+		$sum += oct( '0b' . ( join "", @bit_msg[ $b .. $b + 7 ] ) );
+	}
+	$sum &= 0xFF;
+	
+	if ($sum != $checksum) {
+		my $dmsg = SIGNALduino_b2h(join "", @bit_msg[ 0 .. 95 ] );
+		Log3 $name, 4, "$name: postDemo_Revolt, ERROR checksum mismatch, $sum != $checksum in msg $dmsg";
+		return 0, undef;
+	}
+	
 	my @new_bitmsg = splice @bit_msg, 0,88;
 	return 1,@new_bitmsg;
 }
@@ -5311,7 +5328,43 @@ sub SIGNALduino_KoppFreeControl
 	}
 }
 
-
+sub SIGNALduino_Bresser_5in1
+{
+	my ($name,$dmsg,$id) = @_;
+	my $d1;
+	my $d2;
+	my $bit;
+	my $bitsumRef;
+	my $bitadd = 0;
+	my $sumFlag = -1;
+	
+	for (my $i = 0; $i < 13; $i++) {
+		$d1 = hex(substr($dmsg,$i*2,2));
+		$d2 = hex(substr($dmsg,($i+13)*2,2));
+		if (($d1 + $d2) != 255) {
+			$sumFlag = $i;
+			last;
+		}
+		if ($i == 0) {
+			$bitsumRef = $d2;
+		}
+		else {
+			$bit = sprintf("%08b", $d2);
+			for (my $j = 0; $j < 8; $j++) {
+				$bitadd += substr($bit,$j,1);
+			}
+			#Log3 $name, 4, "$name Bresser: $bit $bitsum $d2 n=$bitadd";
+		}
+	}
+	if ($sumFlag != -1) {
+		return (-1, "Bresser 5in1: Checksum Error pos=$sumFlag");
+	}
+	if ($bitadd != $bitsumRef) {
+		return (-1, "Bresser 5in1: Bitsum Error bitsum=$bitadd ref=$bitsumRef");
+	}
+	$dmsg = substr($dmsg, 28, 24);
+	return (1,$dmsg);
+}
 
 # - - - - - - - - - - - -
 #=item SIGNALduino_filterSign()

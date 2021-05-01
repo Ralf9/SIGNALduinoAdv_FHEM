@@ -1,2 +1,2 @@
-UPD 2021_04_12_22:55:45 169599  FHEM/lib/signalduino_protocols.pm
-UPD 2021_04_18_17:15:00 241773  FHEM/00_SIGNALduino.pm
+UPD 2021_04_30_20:04:35 172323  FHEM/lib/signalduino_protocols.pm
+UPD 2021_05_01_16:47:58 242556  FHEM/00_SIGNALduino.pm

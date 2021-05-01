@@ -1,3 +1,9 @@
+01.05.2021
+  00_SIGNALduino.pm:
+  - Revolt ID 45: drops Revolt messages with invalid checksums
+  signalduino_protocols.pm:
+  - new protocol ID 108 for BRESSER 5-in-1 Comfort Wetter Center
+  - new protocol ID 200 for Honeywell ActivLink, wireless door bell, PIR Motion sensor
 18.04.2021
   00_SIGNALduino.pm:
   - add DEVIATN to get ccconf
