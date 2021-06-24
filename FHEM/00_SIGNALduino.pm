@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 346 2021-05-01 16:00:00Z v3.4.6-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 346 2021-06-24 20:00:00Z v3.4.7-dev-Ralf9 $
 #
 # v3.4.6
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.6-dev_ralf_01.05.",
+	SDUINO_VERSION            => "v3.4.7-dev_ralf_24.06.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -197,8 +197,8 @@ my $clientsSIGNALduino = ":IT:"
 			        	."FLAMINGO:"
 			        	."CUL_WS:"
 			        	."Revolt:"
-					." :"		# Zeilenumbruch
 			        	."FS10:"
+						." :"		# Zeilenumbruch
 			        	."CUL_FHTTK:"
 			        	."Siro:"
 						."FHT:"
@@ -210,6 +210,7 @@ my $clientsSIGNALduino = ":IT:"
 						."LaCrosse:"
 						."KOPP_FC:"
 						."PCA301:"
+						."SD_Rojaflex:"
 						."SD_Tool:"
 			      		."SIGNALduino_un:"
 					; 
@@ -231,7 +232,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|201)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -241,12 +242,13 @@ my %matchListSIGNALduino = (
      "24:FS20"    				=> "^81..(04|0c)..0101a001", 
      "25:CUL_EM"    				=> "^E0.................", 
      "26:Fernotron"  			=> '^P82#.*',
-     "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79|96|98)#.*',
+     "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79|96|98|112)#.*',
      "28:SD_Keeloq"				=> '^P(?:87|88)#.*',
      "29:SD_GT"					=> '^P49#[A-Fa-f0-9]+',
      "30:LaCrosse"				=> '^(\\S+\\s+9 |OK\\sWS\\s)',
      "31:KOPP_FC"				=> '^kr..................',
      "32:PCA301"				=> '^\\S+\\s+24',
+     "33:SD_Rojaflex"			=> '^P109#[A-Fa-f0-9]+',
      "90:SD_Tool"				=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
@@ -279,7 +281,8 @@ SIGNALduino_Initialize
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP32,ESP32cc1101,ESP8266,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,Maple_sduino_USB,Maple_sduino_serial,Maple_sduino_LAN,Maple_cul_USB,Maple_cul_serial"
+  					  ." hardware:ESP32,ESP8266,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,"
+					       ."Maple_sduino_USB,Maple_sduino_serial,Maple_sduino_LAN,Maple_cul_USB,Maple_cul_serial,Maple_cul_LAN"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
@@ -1627,7 +1630,7 @@ sub SIGNALduino_StartInit
 		#DevIo_SimpleWrite($hash, "V\n",2);
 		$hash->{DevState} = 'waitInit';
 		RemoveInternalTimer($hash);
-		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT + 20 * $hash->{initretry}, "SIGNALduino_CheckCmdResp", $hash, 0);
+		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT + 30 * $hash->{initretry}, "SIGNALduino_CheckCmdResp", $hash, 0);
 	}
 }
 
@@ -2967,11 +2970,39 @@ sub SIGNALduino_Parse_MU
 			Debug "Searching in patternList: ".Dumper(\%patternList) if($debug);
 
 			my @msgStartLst;
+			my @pstrAr = ('','','');
 			my $startStr=""; # Default match if there is no start pattern available
 			my $message_start=0 ;
 			my $startLogStr="";
 			
-			if (defined($ProtocolListSIGNALduino{$id}{start}))	# wenn start definiert ist, dann startStr ermitteln und in rawData suchen und in der rawData alles bis zum startStr abschneiden
+			if (defined($ProtocolListSIGNALduino{$id}{starti}))
+			{
+				if (defined($ProtocolListSIGNALduino{$id}{start2}) && scalar @{$ProtocolListSIGNALduino{$id}{start2}} >0)
+				{
+					if (($pstrAr[2]=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{start2}},\%patternList,\$rawData)) eq -1) {
+						Log3 $name, 5, "$name: start2 pattern(starti) for MU Protocol id $id not found, aborting" if ($dummy);
+						next;
+					}
+				}
+				if (($pstrAr[1]=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{one}},\%patternList,\$rawData)) eq -1)
+				{
+					Log3 $name, 5, "$name: one pattern(starti) for MU Protocol id $id not found, aborting" if ($dummy);
+					next;
+				}
+				if (defined($ProtocolListSIGNALduino{$id}{zero}) && scalar @{$ProtocolListSIGNALduino{$id}{zero}} >0)
+				{
+					if  (($pstrAr[0]=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{zero}},\%patternList,\$rawData)) eq -1) {
+						Log3 $name, 5, "$name: zero pattern(starti) for MU Protocol id $id not found, aborting" if ($dummy);
+						next;
+					}
+				}
+				foreach my $startStrIdx (@{$ProtocolListSIGNALduino{$id}{starti}}) {
+					$startStr .= $pstrAr[$startStrIdx];
+				}
+				Log3 $name, 5, "$name: startStr(starti) $startStr for MU Protocol id $id" if ($dummy || $debug);
+				#Debug "startStr(starti) id=$id is: $startStr" if ($debug);
+			}
+			elsif (defined($ProtocolListSIGNALduino{$id}{start}))	# wenn start definiert ist, dann startStr ermitteln und in rawData suchen und in der rawData alles bis zum startStr abschneiden
 			{
 				@msgStartLst = $ProtocolListSIGNALduino{$id}{start};
 				Debug "msgStartLst: ".Dumper(@msgStartLst)  if ($debug);
@@ -2982,7 +3013,9 @@ sub SIGNALduino_Parse_MU
 					next;
 				}
 				Debug "startStr is: $startStr" if ($debug);
-				
+			}
+			
+			if ($startStr ne '') {
 				$message_start = index($rawData, $startStr);
 				if ($message_start >= 0) {
 					$rawData = substr($rawData, $message_start);
@@ -3003,8 +3036,10 @@ sub SIGNALduino_Parse_MU
 			my $floatRegex ="";
 			my $protocListClock;
 			
-			if (($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{one}},\%patternList,\$rawData)) eq -1)
-			{
+			if ($pstrAr[1] ne '') {
+				$pstr = $pstrAr[1];
+			}
+			elsif (($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{one}},\%patternList,\$rawData)) eq -1) {
 				Log3 $name, 5, "$name: one pattern for MU Protocol id $id not found, aborting" if ($dummy);
 				next;
 			}
@@ -3028,13 +3063,21 @@ sub SIGNALduino_Parse_MU
 				$endPatternLookupHash{$pstr} = "1";
 			}
 			
-			if (defined($ProtocolListSIGNALduino{$id}{zero}) && scalar @{$ProtocolListSIGNALduino{$id}{zero}} >0)
+			$pstr = '';
+			if ($pstrAr[1] ne '') {  # wenn es ein one pstr gibt, dann wurden one und zero bereits ermittelt
+				if ($pstrAr[0] ne '') {
+					$pstr = $pstrAr[0];
+				}
+			}
+			elsif (defined($ProtocolListSIGNALduino{$id}{zero}) && scalar @{$ProtocolListSIGNALduino{$id}{zero}} >0)
 			{
 				if  (($pstr=SIGNALduino_PatternExists($hash,\@{$ProtocolListSIGNALduino{$id}{zero}},\%patternList,\$rawData)) eq -1)
 				{
 					Log3 $name, 5, "$name: zero pattern for MU Protocol id $id not found, aborting" if ($dummy);
 					next;
 				}
+			}
+			if ($pstr ne '') {
 				Debug "Found matched zero" if ($debug);
 				if ($clocksource eq "zero")		# clocksource zero, dann die clock aus zero holen
 				{
@@ -3839,7 +3882,8 @@ sub SIGNALduino_FW_saveWhitelist
 	else {
 		$wl_attr =~ s/,$//;			# Komma am Ende entfernen
 	}
-	$attr{$name}{whitelist_IDs} = $wl_attr;
+	#$attr{$name}{whitelist_IDs} = $wl_attr;
+	CommandAttr(undef,"$name whitelist_IDs $wl_attr");
 	Log3 $name, 3, "$name Whitelist save: $wl_attr";
 	SIGNALduino_IdList("x:$name", $wl_attr);
 }
@@ -5308,15 +5352,16 @@ sub SIGNALduino_KoppFreeControl
 {
 	my ($name,$dmsg,$id) = @_;
 	my $anz = hex(substr($dmsg,0,2)) + 1;
+	return (-1,"KoppFreeControl, hexData is to short")
+		if ( length($dmsg) < $anz * 2 );  # check double, in def length_min set
+	
 	my $blkck = 0xAA;
-	my $chk;
 	my $d;
-
 	for (my $i = 0; $i < $anz; $i++) {
 		$d = hex(substr($dmsg,$i*2,2));
 		$blkck ^= $d;
 	}
-	$chk = hex(substr($dmsg,$anz*2,2));
+	my $chk = hex(substr($dmsg,$anz*2,2));
 	
 	if ($blkck != $chk) {
 		#Log3 $name, 4, "$name KoppFreeControl: Error! dmsg=$dmsg checksumCalc=$blkck checksum=$chk";
@@ -5349,9 +5394,9 @@ sub SIGNALduino_Bresser_5in1
 			$bitsumRef = $d2;
 		}
 		else {
-			$bit = sprintf("%08b", $d2);
-			for (my $j = 0; $j < 8; $j++) {
-				$bitadd += substr($bit,$j,1);
+			while ($d2) {
+				$bitadd += $d2 & 1;
+				$d2 >>= 1;
 			}
 			#Log3 $name, 4, "$name Bresser: $bit $bitsum $d2 n=$bitadd";
 		}
