@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 345 2020-08-18 10:00:00Z v3.4.5-Ralf9 $
+# $Id: 00_SIGNALduino.pm 346 2021-05-01 16:00:00Z v3.4.6-dev-Ralf9 $
 #
-# v3.4.5
+# v3.4.6
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -9,7 +9,7 @@
 # It routes Messages serval Modules which are already integrated in FHEM. But there are also modules which comes with it.
 # N. Butzek, S. Butzek, 2014-2015
 # S.Butzek,Ralf9 2016-2019
-# Ralf9 2020
+# Ralf9 2020-2021
 
 package main;
 my $missingModulSIGNALduino="";
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.5-ralf_18.08.",
+	SDUINO_VERSION            => "v3.4.6-dev_ralf_01.05.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -49,6 +49,7 @@ use constant {
 
 my %ProtocolListSIGNALduino = %SD_Protocols::ProtocolListSIGNALduino;
 my $VersionProtocolList = \%SD_Protocols::VersionProtocolList;
+my %rfmode = %SD_Protocols::rfmode;
 
 #sub SIGNALduino_Attr(@);
 #sub SIGNALduino_HandleWriteQueue($);
@@ -65,9 +66,9 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "freeram"  => ["R", '^[0-9]+'],
   "raw"      => ["", '.*'],
   "uptime"   => ["t", '^[0-9]+' ],
-  "cmds"     => ["?", '.*Use one of[\? 0-9A-Za-z]+[\r\n]*$' ],
+  "cmds"     => ["?", '(.*Use one of[\? 0-9A-Za-z]+[\r\n]*$)|(CSmcmbl=)' ],
   "ping"     => ["P",'^OK$'],
-  "config"   => ["CG",'(^MS.*MU.*MC.*)|(ccmode=)'],
+  "config"   => ["CG",'(MS.*MU.*MC.*)|(ccmode=)'],
   "protocolIdToJson"   => ['none','none'],
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
@@ -95,6 +96,8 @@ my %sets = (
   "cc1101_patable_433" => '-10_dBm,-5_dBm,0_dBm,5_dBm,7_dBm,10_dBm',
   "cc1101_patable_868" => '-10_dBm,-5_dBm,0_dBm,5_dBm,7_dBm,10_dBm',
   "cc1101_reg"     => 'textFieldNL',
+  "cc1101_dataRate" => 'textFieldNL',
+  "cc1101_deviatn" => 'textFieldNL',
 );
 
 my %patable = (
@@ -207,7 +210,7 @@ my $clientsSIGNALduino = ":IT:"
 						."LaCrosse:"
 						."KOPP_FC:"
 						."PCA301:"
-						."SIGNALduino_TOOL:"
+						."SD_Tool:"
 			      		."SIGNALduino_un:"
 					; 
 
@@ -228,7 +231,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|26|29|30|34|46|68|69|76|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -244,7 +247,7 @@ my %matchListSIGNALduino = (
      "30:LaCrosse"				=> '^(\\S+\\s+9 |OK\\sWS\\s)',
      "31:KOPP_FC"				=> '^kr..................',
      "32:PCA301"				=> '^\\S+\\s+24',
-     "90:SIGNALduino_TOOL"		=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
+     "90:SD_Tool"				=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
 	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
 );
 
@@ -276,7 +279,7 @@ SIGNALduino_Initialize
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP_1M,ESP32,nano328,nanoCC1101,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101" #,Maple_sduino_USB,Maple_sduino_LAN,Maple_cul_USB"
+  					  ." hardware:ESP32,ESP32cc1101,ESP8266,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,Maple_sduino_USB,Maple_sduino_serial,Maple_sduino_LAN,Maple_cul_USB,Maple_cul_serial"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
@@ -289,6 +292,7 @@ SIGNALduino_Initialize
 					  ." rawmsgEvent:1,0"
 					  ." cc1101_frequency"
 					  ." doubleMsgCheck_IDs"
+					  ." sendSlowRF_A_IDs"
 					  ." suppressDeviceRawmsg:1,0"
 					  ." development:0$dev"
 					  ." noMsgVerbose:0,1,2,3,4,5"
@@ -377,6 +381,15 @@ SIGNALduino_Define
   $hash->{Clients} = $clientsSIGNALduino;
   $hash->{MatchList} = \%matchListSIGNALduino;
   $hash->{DeviceName} = $dev;
+  
+  my $rfmodelist = "";
+  #$rfmodelist .= 'test1,test2,';
+  foreach my $rf (sort keys %rfmode) {
+     $rfmodelist .= $rf . ",";
+  }
+  
+  $rfmodelist =~ s/,$//;
+  $hash->{rfmodesets}{rfmode} = $rfmodelist;
   
   my $ret=undef;
   
@@ -473,6 +486,7 @@ SIGNALduino_Set
   #Log3 $hash, 3, "SIGNALduino_Set called with params @a";
 
   my $hasCC1101 = 0;
+  my $hasFSK = 0;
   my $CC1101Frequency = "433";
   my $mVer = 3;		# 4 = Maple
   if ($hash->{version}) {
@@ -484,21 +498,30 @@ SIGNALduino_Set
 	}
 	if ($hash->{version} =~ m/V\s4\./) {	# MapleCul oder MapleSduino
 		$mVer = 4;
+		$hasFSK = 1;
+	}
+	elsif ($hash->{version} =~ m/V\s3\.3\.4/) {
+		$hasFSK = 1;
 	}
   }
   
   my %my_sets = %sets;
   #Log3 $hash, 3, "SIGNALduino_Set addionals set commands: ".Dumper(%{$hash->{additionalSets}});
-  #Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
+  #Log3 $hash, 3, "SIGNALduino_Set addionals rfmode set commands: ".Dumper(%{$hash->{rfmodesets}});
   #Log3 $hash, 3, "SIGNALduino_Set global set commands: ".Dumper(%sets);
 
   %my_sets = ( %my_sets,  %{$hash->{additionalSets}} ) if ( defined($hash->{additionalSets}) );
+  %my_sets = ( %my_sets,  %{$hash->{rfmodesets}} ) if ( defined($hash->{rfmodesets}) );
+  
+  #Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
   
   if (!defined($my_sets{$a[1]})) {
     my $arguments = ' ';
     foreach my $arg (sort keys %my_sets) {
       next if ($arg =~ m/cc1101/ && $hasCC1101 == 0);
-      next if ($my_sets{$arg} ne "" && $arg ne "flash" && IsDummy($hash->{NAME}));
+      next if ($my_sets{$arg} ne "" && $arg ne "flash" && $arg ne "LaCrossePairForSec" && IsDummy($hash->{NAME}));
+      next if ($arg eq "rfmode" && $hasFSK == 0);
+      next if ($arg eq "LaCrossePairForSec" && !IsDummy($hash->{NAME}) && $hasFSK == 0);
       if ($arg =~ m/patable/) {
         next if (substr($arg, -3) ne $CC1101Frequency);
       }
@@ -536,14 +559,15 @@ SIGNALduino_Set
     my @deviceName = split('@', $hash->{DeviceName});
     my $port = $deviceName[0];
 	my $hardware=AttrVal($name,"hardware","");
-	my $baudrate=$hardware eq "uno" ? 115200 : 57600;
+	my $baudrate=57600;
+	if (($hardware =~ m/optiboot/) || $hardware eq "uno") {
+		$baudrate=115200;
+		$hardware =~ s/_optiboot$//;
+	}
     my $defaultHexFile = "./FHEM/firmware/$hash->{TYPE}_$hardware.hex";
     my $logFile = AttrVal("global", "logdir", "./log/") . "$hash->{TYPE}-Flash.log";
     return "Please define your hardware! (attr $name hardware <model of your receiver>) " if ($hardware eq "");
 	return "ERROR: argument failed! flash [hexFile|url]" if (!$args[0]);
-	
-	
-	
 
     #Log3 $hash, 3, "SIGNALduino_Set choosen flash option: $args[0] of available: ".Dumper($my_sets{flash});
     
@@ -557,12 +581,7 @@ SIGNALduino_Set
 			$account = $channel;
 		}
 		my ($tags, undef) = split("__", $args[0]);
-		my $ghurl = "https://api.github.com/repos/$account/<REPONAME>/releases/tags/$tags";
-		if ($hardware =~ /ESP/) {
-			$ghurl =~ s/<REPONAME>/SIGNALESP/ ;
-		} else {
-			$ghurl =~ s/<REPONAME>/SIGNALDuino/ ; 
-		}
+		my $ghurl = "https://api.github.com/repos/$account/SIGNALDuino/releases/tags/$tags";
 		Log3 $hash, 3, "$name: SIGNALduino_Set flash $tags try to fetch release $ghurl";
 		
 	    my $http_param = {
@@ -602,16 +621,15 @@ SIGNALduino_Set
 	Log3 $name, 3, "$name: filename $hexFile provided, trying to flash";
     return "Usage: set $name flash [filename]\n\nor use the hexFile attribute" if($hexFile !~ m/^(\w|\/|.)+$/);
 
-	# Only for Arduino , not for ESP
-	if ($hardware =~ m/(?:nano|mini|radino)/)
+	# Only for Arduino , not for ESP or MapleMini
+	if ($hardware =~ m/(?:nano|mini|radino|uno)/)
 	{
-		
 		my $flashCommand;
 	    if( !defined( $attr{$name}{flashCommand} ) ) {		# check defined flashCommand from user | not, use standard flashCommand | yes, use user flashCommand
 				Log3 $name, 5, "$hash->{TYPE} $name: flashCommand is not defined. standard used to flash.";
 			if ($hardware eq "radinoCC1101") {																	# radinoCC1101 Port not /dev/ttyUSB0 --> /dev/ttyACM0
 				$flashCommand = "avrdude -c avr109 -b [BAUDRATE] -P [PORT] -p atmega32u4 -vv -D -U flash:w:[HEXFILE] 2>[LOGFILE]";
-			} elsif ($hardware ne "ESP_1M" && $hardware ne "ESP32" && $hardware ne "radinoCC1101") {			# nano, nanoCC1101, miniculCC1101, promini
+			} else {
 				$flashCommand = "avrdude -c arduino -b [BAUDRATE] -P [PORT] -p atmega328p -vv -U flash:w:[HEXFILE] 2>[LOGFILE]";
 			}
 		} else {
@@ -649,7 +667,7 @@ SIGNALduino_Set
 	      }
 	
 	      DevIo_CloseDev($hash);
-	      $hash->{STATE} = "FIRMWARE UPDATE running";
+	      readingsSingleUpdate($hash,'state','FIRMWARE UPDATE running',1);
 	      $log .= "$name closed\n";
 	
 	      my $avrdude = $flashCommand;
@@ -660,13 +678,24 @@ SIGNALduino_Set
 	      $avrdude =~ s/\Q[LOGFILE]\E/$logFile/g;
 	
 	      $log .= "command: $avrdude\n\n";
-	      `$avrdude`;
+	      # `$avrdude`;
+	      qx($avrdude);
 	
 	      local $/=undef;
 	      if (-e $logFile) {
 	        open FILE, $logFile;
 	        my $logText = <FILE>;
 	        close FILE;
+	        if ($logText =~ m/flash verified/) {
+	          Log3 $name, 3, "$name: avrdude, Firmware update was successfull";
+	          readingsSingleUpdate($hash,'state','FIRMWARE UPDATE successfull',1);
+	          FW_directNotify("FILTER=$name", "#FHEMWEB:WEB", "FW_okDialog('avrdude, Firmware update was successfull')", '');
+	        } else {
+	          readingsSingleUpdate($hash,'state','FIRMWARE UPDATE with error',1);
+	          Log3 $name, 3, "$name: avrdude, ERROR: avrdude exited with error";
+	          FW_directNotify("FILTER=$name", "#FHEMWEB:WEB", "FW_okDialog('ERROR: avrdude exited with error, for details see last flashlog.')", '');
+	          $log .= 'ERROR: avrdude exited with error';
+	        }
 	        $log .= "--- AVRDUDE ---------------------------------------------------------------------------------\n";
 	        $log .= $logText;
 	        $log .= "--- AVRDUDE ---------------------------------------------------------------------------------\n\n";
@@ -674,7 +703,6 @@ SIGNALduino_Set
 	      else {
 	        $log .= "WARNING: avrdude created no log file\n\n";
 	      }
-	
 	    }
 	    else {
 	      $log .= "\n\nNo flashCommand found. Please define this attribute.\n\n";
@@ -687,11 +715,12 @@ SIGNALduino_Set
 			Log3 $name, 3, "$name; flashCommand=$flashCommand";
 	    }
 	    $log .= "$name opened\n";
-		
+	    $hash->{helper}{avrdudelogs} = $log;
 	    return;
 	} else
 	{
-		return "Sorry, Flashing your ESP via Module is currently not supported.";
+		FW_directNotify("FILTER=$name", "#FHEMWEB:WEB", "FW_okDialog('<u>ERROR:</u><br>Sorry, flashing your $hardware is currently not supported.<br>The file is only downloaded in /opt/fhem/FHEM/firmware.')", '');
+		return "Sorry, Flashing your ESP or Maple via Module is currently not supported.";
 	}
 	
   } elsif ($cmd =~ m/reset/i) {
@@ -753,6 +782,43 @@ SIGNALduino_Set
 	Log3 $name, 3, "$name: Setting patable $paFreq $arg $pa";
 	SIGNALduino_AddSendQueue($hash,$pa);
 	SIGNALduino_WriteInit($hash);
+  } elsif( $cmd eq "dataRate" ) {
+	if ($arg >= 600 and $arg <= 500000) {
+		SIGNALduino_AddSendQueue($hash,"C10");
+		$hash->{getcmd}->{cmd} = "dataRate";
+		$hash->{getcmd}->{arg} = $arg;
+	}
+	else {
+		return "$name: set datarate $arg out of range (0.6 - 500kBaud)";
+	}
+  } elsif( $cmd eq "deviatn" ) {
+	my $deviatn;
+	my $bits;
+	my $devlast = 0;
+	my $bitlast = 0;
+	OUTDEVLOOP:
+	for (my $e=0; $e<8; $e++) {
+		for (my $m=0; $m<8; $m++) {
+			$deviatn = (8+$m)*(2**$e) *26000/(2**17);
+			$bits = $m + ($e << 4);
+			if ($arg > $deviatn) {
+				$devlast = $deviatn;
+				$bitlast = $bits;
+			}
+			else {
+				if (($deviatn - $arg) < ($arg - $devlast)) {
+					$devlast = $deviatn;
+					$bitlast = $bits;
+				}
+				last OUTDEVLOOP;
+			}
+		}
+	}
+	my $hexbits = sprintf("%02x",$bitlast);
+	my $devstr =  sprintf("% 5.3f",$devlast);
+	Log3 $name, 3, "$name: Setting deviatn (15) to $hexbits = $devstr kHz";
+	SIGNALduino_AddSendQueue($hash,"W17$hexbits");
+	SIGNALduino_WriteInit($hash);
   } elsif( $cmd eq "reg" ) {
 	## check for four hex digits
 	my @nonHex = grep (!/^[0-9A-Fa-f]{4}$/,@a[0..$#a]) ;
@@ -774,13 +840,18 @@ SIGNALduino_Set
     return "Usage: set $name LaCrossePairForSec <seconds_active> [ignore_battery]" if(!$arg || $a[0] !~ m/^\d+$/ || ($a[1] && $a[1] ne "ignore_battery") );
     $hash->{LaCrossePair} = $a[1]?2:1;
     InternalTimer(gettimeofday()+$a[0], "SIGNALduino_RemoveLaCrossePair", $hash, 0);
-
-  
+  } elsif( $cmd eq "rfmode" ) {
+    my $rfcw = $rfmode{$arg};
+    Log3 $name, 5, "$name: rfmode msg=$arg $rfcw";
+    $hash->{getcmd}->{cmd} = "rfmode";
+    $hash->{getcmd}->{arg} = $arg;
+    SIGNALduino_AddSendQueue($hash,$rfcw);
   } elsif( $cmd eq "sendMsg" ) {
 	Log3 $name, 5, "$name: sendmsg msg=$arg";
 	
 	# Split args in serval variables
 	my ($protocol,$data,$repeats,$clock,$frequency,$datalength,$dataishex);
+	my $slowrfA = '';
 	my $n=0;
 	foreach my $s (split "#", $arg) {
 	    my $c = substr($s,0,1);
@@ -801,6 +872,10 @@ SIGNALduino_Set
 	}
 	return "$name: sendmsg, unknown protocol: $protocol" if (!exists($ProtocolListSIGNALduino{$protocol}));
 
+	if (defined($hash->{sendAslowrfID}{$protocol})) {
+		$slowrfA = 'A';
+	}
+	
 	$repeats=1 if (!defined($repeats));
 
 	if (exists($ProtocolListSIGNALduino{$protocol}{frequency}) && $hasCC1101 && !defined($frequency)) {
@@ -840,11 +915,12 @@ SIGNALduino_Set
 
 		if ($intro ne "" || $outro ne "")
 		{
-			$intro = "SC;R=$repeats;" . $intro;
+			$intro = "SC$slowrfA;R=$repeats;" . $intro;
 			$repeats = 0;
+			$slowrfA = '';
 		}
 
-		$sendData = $intro . "SM;" . ($repeats > 0 ? "R=$repeats;" : "") . "C=$clock;D=$data;" . $outro . $frequency; #	SM;R=2;C=400;D=AFAFAF;
+		$sendData = $intro . "SM$slowrfA;" . ($repeats > 0 ? "R=$repeats;" : "") . "C=$clock;D=$data;" . $outro . $frequency; #	SM;R=2;C=400;D=AFAFAF;
 		Log3 $name, 5, "$name: sendmsg Preparing manchester protocol=$protocol, repeats=$repeats, clock=$clock data=$data";
 	} else {
 		if ($protocol == 3 || substr($data,0,2) eq "is") {
@@ -907,7 +983,7 @@ SIGNALduino_Set
 			$SignalData.=$signalHash{$bitconv{$bit}}; ## Add the signal to our data string
 		}
 		$SignalData.=$signalHash{end} if (exists($signalHash{end}));
-		$sendData = "SR;R=$repeats;$pattern$SignalData;$frequency";
+		$sendData = "SR$slowrfA;R=$repeats;$pattern$SignalData;$frequency";
 	}
 
 	
@@ -946,7 +1022,7 @@ SIGNALduino_Get
      foreach my $arg (sort keys %gets) {
         next if ($arg =~ m/^cc/ && $hasCC1101 == 0);
         next if ($arg ne "raw" && $arg ne "protocolIdToJson" && $arg ne "zAvailableFirmware" && IsDummy($name));
-        if ($arg ne "raw" && $arg ne "ccreg" && $arg ne "cmdBank" && $arg ne "protocolIdToJson") {
+        if ($arg ne "raw" && $arg ne "cmds" && $arg ne "ccreg" && $arg ne "cmdBank" && $arg ne "protocolIdToJson") {
            $arg .= ":noArg";
         }
         $arguments.= $arg . " ";
@@ -976,9 +1052,11 @@ SIGNALduino_Get
   	if ($channel ne "stable" && $channel ne "testing") {
   	    $account = $channel;
   	}
-	my $hardware=AttrVal($name,"hardware","nano");
+	#my $hardware=AttrVal($name,"hardware","nano");
+	$hash->{asyncOut}=$hash->{CL};
   	SIGNALduino_querygithubreleases($hash, $account);
-	return "$a[1]: \n\nFetching $channel firmware versions for $hardware from github\n";
+	#return "$a[1]: \n\nFetching $channel firmware versions for $hardware from github\n";
+	return;
   }
   elsif ($a[1] eq "protocolIdToJson")
   {
@@ -1174,9 +1252,55 @@ sub SIGNALduino_parseResponse
 		$ob = sprintf("%02x", $ob+$bits);
 		$msg = "Setting MDMCFG4 (10) to $ob = $bw KHz";
 		Log3 $name, 3, "$name/msg parseResponse bWidth: Setting MDMCFG4 (10) to $ob = $bw KHz";
+		$retReading = $msg;
 		delete($hash->{getcmd});
 		SIGNALduino_AddSendQueue($hash,"W12$ob");
 		SIGNALduino_WriteInit($hash);
+	}
+	elsif($cmd eq "dataRate") {
+		my $val = hex(substr($msg,6));
+		my $arg = $hash->{getcmd}->{arg};
+		my $ob = $val & 0xf0;
+		
+		my $e = $arg * (2**20) / 26000000;
+		$e = log($e) / log(2);
+		$e = int($e);
+		my $m = ($arg * (2**28) / (26000000 * (2**$e))) - 256;
+		my $mr = round($m,0);
+		$m = int($m);
+		my $datarate0 = ((256+$m)*(2**($e & 15 )))*26000000/(2**28);
+		my $m1 = $m + 1;
+		my $e1 = $e;
+		if ($m1 == 256) {
+			$m1 = 0;
+			$e1++;
+		}
+		my $datarate1 = ((256+$m1)*(2**($e1 & 15 )))*26000000/(2**28);
+		
+		my $datastr;
+		if ($mr == $m) {
+			$datastr = sprintf("%.2f* (%.2f) Baud",$datarate0, $datarate1);
+		}
+		else {
+			$datastr = sprintf("(%.2f) %.2f* Baud",$datarate0, $datarate1);
+			$m = $m1;
+			$e = $e1;
+		}
+		my $mhex = sprintf("%02x",$m);
+		$ob = sprintf("%02x", $ob+$e);
+		$msg = "Setting MDMCFG4/3 (10 11) to $ob $mhex = $datastr";
+		Log3 $name, 3, "$name/msg parseResponse dataRate $arg: $msg";
+		$retReading = $msg;
+		delete($hash->{getcmd});
+		SIGNALduino_AddSendQueue($hash,"W12$ob");
+		SIGNALduino_AddSendQueue($hash,"W13$mhex");
+		SIGNALduino_WriteInit($hash);
+	}
+	elsif($cmd eq "rfmode") {
+		Log3 $name, 3, "$name/msg parseResponse rfmode: $msg";
+		$retReading = $msg;
+		$retReading =~ s/CW([A-Fa-f0-9]+.)+//;
+		$retReading = $hash->{getcmd}->{arg} . ' => ' . $retReading;
 	}
 	elsif($cmd eq "ccpatable") {
 		my $CC1101Frequency = "433";
@@ -1246,7 +1370,7 @@ sub SIGNALduino_parseCcconf
 	my $msg = shift;
 	my (undef,$str) = split('=', $msg);
 	my $var;
-	my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"1B"=>1,"1D"=>1 );
+	my %r = ( "0D"=>1,"0E"=>1,"0F"=>1,"10"=>1,"11"=>1,"12"=>1,"15"=>1,"1B"=>1,"1D"=>1 );
 	my $ccconfFSK="";
 	my $modFlag = 0;
 	foreach my $a (sort keys %r) {
@@ -1254,7 +1378,12 @@ sub SIGNALduino_parseCcconf
 		$r{$a} = hex($var);
 	}
 	my $mod_format = $modformat[($r{"12"}>>4)&7];
-	$ccconfFSK = "Modulation:$mod_format (SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7] . ")";
+	my $deviatnStr = "";
+	if ($mod_format =~ m/FSK/) {
+		my $deviatn = (8+($r{"15"}&7))*(2**(($r{"15"}>>4)&7)) *26000/(2**17);
+		$deviatnStr = sprintf(" DEVIATN:%.3fkHz",$deviatn);
+	}
+	$ccconfFSK = "Modulation:$mod_format (SYNC_MODE:" . $SYNC_MODE[$r{"12"}&7] . ")" . $deviatnStr;
 	if ($mod_format ne $modformat[3]) {
 		$mod_format = "";
 		$modFlag = 1;
@@ -1526,7 +1655,7 @@ sub SIGNALduino_CheckCmdResp
 			SIGNALduino_CloseDevice($hash);
 		}
 		elsif($ver =~ m/^V 3\.1\./) {
-			$msg = "$name: Version of your arduino is not compatible, pleas flash new firmware. (device closed) Got for V:  $ver";
+			$msg = "$name: Version of your arduino is not compatible, please flash new firmware. (device closed) Got for V:  $ver";
 			readingsSingleUpdate($hash, "state", "unsupported firmware found", 1);
 			Log3 $name, 1, $msg;
 			$hash->{DevState} = 'INACTIVE';
@@ -1536,7 +1665,7 @@ sub SIGNALduino_CheckCmdResp
 		  my $initflag = 0;
 		  if ($hash->{DevState} ne 'waitBankInfo') {
 			readingsSingleUpdate($hash, "state", "opened", 1);
-			if ($ver =~ m/\((b.*)|(R: .*)\)/) {
+			if ($ver =~ m/cc1101.*\(((b.*)|(R: .*)\))/) {
 				if ($ver =~ m/\((b.*)\)/) {
 					Log3 $name, 3, "$name/init: firmwareversion with ccBankSupport found -> send b?";
 					SIGNALduino_SimpleWrite($hash, "b?");
@@ -1552,8 +1681,13 @@ sub SIGNALduino_CheckCmdResp
 				RemoveInternalTimer($hash);
 				InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduino_CheckCmdResp", $hash, 0);
 			}
-			else {	# firmware hat keine EEPROM Baenke
-				Log3 $name, 3, "$name/init: firmwareversion without ccBankSupport found";
+			else {	# firmware hat keine EEPROM Baenke oder kein cc1101
+				if ($ver =~ m/cc1101/) {
+					Log3 $name, 3, "$name/init: firmwareversion without ccBankSupport found";
+				}
+				else {
+					Log3 $name, 3, "$name/init: firmwareversion without cc1101 found";
+				}
 				for my $radio ('a'..'d') {	# delete radio ccconf internals
 					delete($hash->{$radio . '_ccconf'});
 					delete($hash->{$radio . '_ccconfFSK'});
@@ -1899,8 +2033,11 @@ SIGNALduino_Read
 		elsif ($getcmd eq 'ri') {
 			$regexp = 'mac =.*ip =';
 		}
-		elsif ($getcmd eq 'bWidth') {
+		elsif ($getcmd eq 'bWidth' or $getcmd eq 'dataRate') {
 			$regexp = '^C.* = .*';
+		}
+		elsif ($getcmd eq 'rfmode') {
+			$regexp = '^CW|ccFactoryReset';
 		}
 		else {
 			if (exists($gets{$getcmd})) {
@@ -2352,7 +2489,10 @@ sub SIGNALduno_Dispatch
 	if (IsDummy($name) && defined($hash->{rawListNr})) {	# wenn es das Internal rawListNr gibt, dann wird die Nr per dispatch an das Modul SIGNALduino_TOOL uebergeben
 		$rssi = "" if (!defined($rssi));
 		$dmsg = lc($dmsg) if ($id eq '74');
-		$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $dmsg;
+		if (substr($rmsg,0,2) ne 'MC') {
+			$nrEqualDmsg = "";
+		}
+		$dmsg = "pt$id#" . $hash->{rawListNr} . "#" . $nrEqualDmsg . "#" . $dmsg;
 		Log3 $name, 4, "$name Dispatch: $dmsg, $rssi dispatch";
 		Dispatch($hash, $dmsg, undef);  ## Dispatch zum Modul SIGNALduino_TOOL
 		return;
@@ -2445,6 +2585,17 @@ sub SIGNALduno_Dispatch
    }
 }
 
+
+# calculated RSSI and RSSI value and RSSI string (-77,' RSSI = -77')
+sub SIGNALduino_calcRSSI {
+  my $rssi = shift;
+  my $rssiStr = '';
+  $rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74));
+  $rssiStr = " RSSI = $rssi";
+  return ($rssi,$rssiStr);
+}
+
+
 sub
 SIGNALduino_Parse_MS
 {
@@ -2453,14 +2604,16 @@ SIGNALduino_Parse_MS
 	my $protocolid;
 	my $syncidx=$msg_parts{syncidx};			
 	my $clockidx=$msg_parts{clockidx};				
-	my $rawRssi=$msg_parts{rssi};
+	my $rssi=$msg_parts{rssi};
 	my $protocol=undef;
 	my $rawData=$msg_parts{rawData};
 	my %patternList;
-	my $rssi;
-	if (defined($rawRssi)) {
-		$rssi = ($rawRssi>=128 ? (($rawRssi-256)/2-74) : ($rawRssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+	my $rssiStr= '';
+	
+	if (defined($rssi)) {
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
+	
     #$patternList{$_} = $msg_parts{rawData}{$_] for keys %msg_parts{rawData};
 
 	#$patternList = \%msg_parts{pattern};
@@ -2648,11 +2801,7 @@ SIGNALduino_Parse_MS
 			$dmsg = "$dmsg".$postamble if (defined($postamble));
 			$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 			
-			if (defined($rssi)) {
-				Log3 $name, 4, "$name: Decoded MS Protocol id $id dmsg $dmsg length " . scalar @bit_msg . " RSSI = $rssi";
-			} else {
-				Log3 $name, 4, "$name: Decoded MS Protocol id $id dmsg $dmsg length " . scalar @bit_msg;
-			}
+			Log3 $name, 4, "$name: Decoded MS Protocol id $id dmsg $dmsg length " . scalar @bit_msg . $rssiStr;
 			
 			#my ($rcode,@retvalue) = SIGNALduino_callsub('preDispatchfunc',$ProtocolListSIGNALduino{$id}{preDispatchfunc},$name,$dmsg);
 			#next if (!$rcode);
@@ -2750,9 +2899,10 @@ sub SIGNALduino_Parse_MU
 	my $debug = AttrVal($name,"debug",0);
 	my $maxRepeat = AttrVal($name,"maxMuMsgRepeat", 4);
 	my $dummy = IsDummy($name);
+	my $rssiStr= '';
 	
 	if (defined($rssi)) {
-		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
 	
     Debug "$name: processing unsynced message\n" if ($debug);
@@ -3028,11 +3178,7 @@ sub SIGNALduino_Parse_MU
 					$dmsg = "$dmsg"."$ProtocolListSIGNALduino{$id}{postamble}" if (defined($ProtocolListSIGNALduino{$id}{postamble}));
 					$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 					
-					if (defined($rssi)) {
-						Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr . " RSSI = $rssi";
-					} else {
-						Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr;
-					}
+					Log3 $name, 4, "$name: decoded matched MU Protocol id $id dmsg $dmsg length $bit_msg_length" . $repeatStr . $rssiStr;
 					
 					if (SIGNALduino_getProtoProp($id,'dispatchequals',0) eq 'true' || defined($hash->{rawListNr})) {
 						$lastDmsg = $dmsg;
@@ -3087,8 +3233,10 @@ SIGNALduino_Parse_MC
 	my $dmsg;
 	my $message_dispatched=0;
 	my $debug = AttrVal($name,"debug",0);
+	my $rssiStr= '';
+	
 	if (defined($rssi)) {
-		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
 	
 	if (!$clock) {
@@ -3123,12 +3271,8 @@ SIGNALduino_Parse_MC
 		if ( $clock >$ProtocolListSIGNALduino{$id}{clockrange}[0] and $clock <$ProtocolListSIGNALduino{$id}{clockrange}[1] and length($rawData)*4 >= $ProtocolListSIGNALduino{$id}{length_min} )
 		{
 			Debug "clock and min length matched"  if ($debug);
-
-			if (defined($rssi)) {
-				Log3 $name, 4, "$name: Found manchester Protocol id $id clock $clock RSSI $rssi -> $ProtocolListSIGNALduino{$id}{name}";
-			} else {
-				Log3 $name, 4, "$name: Found manchester Protocol id $id clock $clock -> $ProtocolListSIGNALduino{$id}{name}";
-			}
+			
+			Log3 $name, 4, "$name: Found manchester Protocol id $id clock $clock" . "$rssiStr -> $ProtocolListSIGNALduino{$id}{name}";
 			
 			my $polarityInvert = 0;
 			if (exists($ProtocolListSIGNALduino{$id}{polarity}) && ($ProtocolListSIGNALduino{$id}{polarity} eq 'invert'))
@@ -3178,14 +3322,13 @@ SIGNALduino_Parse_MC
 						#}
 						if (SDUINO_MC_DISPATCH_VERBOSE < 5 && (SDUINO_MC_DISPATCH_LOG_ID eq '' || SDUINO_MC_DISPATCH_LOG_ID eq $id))
 						{
-							if (defined($rssi)) {
-								Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg RSSI=$rssi";
-							} else
-							{
-								Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg";
-							}
+							Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg $rssiStr";
 						}
-						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
+						my $nrEqualDmsg = 0;
+						if ($rcode > 1) {
+							$nrEqualDmsg = $rcode;
+						}
+						SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,$nrEqualDmsg);
 						$message_dispatched=1;
 					}
 				} else {
@@ -3208,8 +3351,10 @@ sub SIGNALduino_Parse_MN
 	my $N=$msg_parts{N};
 	my $dmsg;
 	my $debug = AttrVal($name,"debug",0);
+	my $rssiStr= '';
+	
 	if (defined($rssi)) {
-		$rssi = ($rssi>=128 ? (($rssi-256)/2-74) : ($rssi/2-74)); # todo: passt dies so? habe ich vom 00_cul.pm
+		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
 	my $hlen = length($rawData);
 	my $match;
@@ -3226,7 +3371,7 @@ sub SIGNALduino_Parse_MN
 		}
 			
 		if ($match eq "" || $rawData =~ m/$match/) {
-			Log3 $name, 4, "$name Parse_MN: Found $modulation Protocol id $id -> $ProtocolListSIGNALduino{$id}{name}";
+			Log3 $name, 4, "$name Parse_MN: Found $modulation Protocol id $id length $hlen" . "$rssiStr -> $ProtocolListSIGNALduino{$id}{name}";
 		}
 		else {
 			next;
@@ -3249,6 +3394,7 @@ sub SIGNALduino_Parse_MN
 			my ($rcode,$res) = $method->($name,$rawData,$id);
 			if ($rcode != -1) {
 				$dmsg = $res;
+				$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 				Log3 $name, 4, "$name ParseMN: ID=$id dmsg=$dmsg";
 				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
 			}
@@ -3512,6 +3658,21 @@ SIGNALduino_Attr
 			else {
 				Log3 $name, 3, "$name delete Attr: doubleMsgCheck_IDs";
 				delete $hash->{DoubleMsgIDs};
+			}
+		}
+	}
+	elsif ($aName eq "sendSlowRF_A_IDs")
+	{
+		if (defined($aVal)) {
+			if (length($aVal)>0) {
+				Log3 $name, 3, "$name Attr: sendSlowRF_A_IDs enabled: $aVal";
+				my %sendAslowrfID = map { $_ => 1 } split(",", $aVal);
+				$hash->{sendAslowrfID} = \%sendAslowrfID;
+				#print Dumper $hash->{sendAslowrfID};
+			}
+			else {
+				Log3 $name, 3, "$name delete Attr: sendSlowRF_A_IDs";
+				delete $hash->{sendAslowrfID};
 			}
 		}
 	}
@@ -4389,6 +4550,22 @@ sub SIGNALduino_postDemo_WS7053 {
 
 sub SIGNALduino_postDemo_Revolt {
 	my ($name, @bit_msg) = @_;
+	
+	my $protolength = scalar @bit_msg;
+	my $sum = 0;
+	my $checksum = oct( '0b' . ( join "", @bit_msg[ 88 .. 95 ] ) );
+	for ( my $b = 0 ; $b < 88 ; $b += 8 )
+	{	# build sum over first 11 bytes
+		$sum += oct( '0b' . ( join "", @bit_msg[ $b .. $b + 7 ] ) );
+	}
+	$sum &= 0xFF;
+	
+	if ($sum != $checksum) {
+		my $dmsg = SIGNALduino_b2h(join "", @bit_msg[ 0 .. 95 ] );
+		Log3 $name, 4, "$name: postDemo_Revolt, ERROR checksum mismatch, $sum != $checksum in msg $dmsg";
+		return 0, undef;
+	}
+	
 	my @new_bitmsg = splice @bit_msg, 0,88;
 	return 1,@new_bitmsg;
 }
@@ -4686,14 +4863,15 @@ sub	SIGNALduino_Hideki
 	if ($mcbitnum == 89) {
 		my $bit0 = substr($bitData,0,1);
 		$bit0 = $bit0 ^ 1;
-		Log3 $name, 4, "$name hideki: L=$mcbitnum add bit $bit0 at begin $bitData";
 		$bitData = $bit0 . $bitData;
+		Log3 $name, 4, "$name hideki: L=$mcbitnum add bit $bit0 at begin $bitData";
 	}
     Debug "$name: search in $bitData \n" if ($debug);
 	my $message_start = index($bitData,"10101110");
 	if ($message_start >= 0 )   # 0x75 but in reverse order
 	{
 		#Log3 $name, 3, "$name: receive hideki protocol inverted";
+		#Log3 $name, 3, "$name: msgstart: $message_start data=$bitData";
 		Debug "$name: Hideki protocol detected \n" if ($debug);
 
 		# Todo: Mindest Laenge fuer startpunkt vorspringen 
@@ -4813,6 +4991,19 @@ sub SIGNALduino_SomfyRTS
 	my $flag = 0;
 	if (defined($mcbitnum)) {
 		Log3 $name, 4, "$name: Somfy bitdata: $bitData ($mcbitnum)";
+		if ($id eq '43.1') {
+			if ($mcbitnum == 57 || ($mcbitnum == 81 && substr($bitData,0,1) eq '0'))  {
+				$bitData = substr($bitData, 1, $mcbitnum - 1);
+				Log3 $name, 4, "$name: Somfy bitdata: _$bitData (" . length($bitData) . "). Bit am Anfang entfernt";
+			} elsif ($mcbitnum > 80) {
+				$bitData = substr($bitData, 0, 80); # Bits am Ende entfernen
+			}
+			my $encData = SIGNALduino_b2h($bitData);
+
+			#Log3 $name, 4, "$name: Somfy RTS protocol enc: $encData";
+			return (1, $encData);
+		}
+		
 		if ($mcbitnum <= 60) {
 			if (substr($bitData, 0, 4) eq '1010') {
 				$flag = 1;	# ok
@@ -5009,6 +5200,13 @@ sub SIGNALduino_CalculateCRC
 
 # xFSK method
 
+sub SIGNALduino_FSK_default
+{
+	my ($name,$dmsg,$id) = @_;
+	
+	return (1,$dmsg);
+}
+
 sub SIGNALduino_LaCrosse
 {
 	my ($name,$dmsg,$id) = @_;
@@ -5130,7 +5328,43 @@ sub SIGNALduino_KoppFreeControl
 	}
 }
 
-
+sub SIGNALduino_Bresser_5in1
+{
+	my ($name,$dmsg,$id) = @_;
+	my $d1;
+	my $d2;
+	my $bit;
+	my $bitsumRef;
+	my $bitadd = 0;
+	my $sumFlag = -1;
+	
+	for (my $i = 0; $i < 13; $i++) {
+		$d1 = hex(substr($dmsg,$i*2,2));
+		$d2 = hex(substr($dmsg,($i+13)*2,2));
+		if (($d1 + $d2) != 255) {
+			$sumFlag = $i;
+			last;
+		}
+		if ($i == 0) {
+			$bitsumRef = $d2;
+		}
+		else {
+			$bit = sprintf("%08b", $d2);
+			for (my $j = 0; $j < 8; $j++) {
+				$bitadd += substr($bit,$j,1);
+			}
+			#Log3 $name, 4, "$name Bresser: $bit $bitsum $d2 n=$bitadd";
+		}
+	}
+	if ($sumFlag != -1) {
+		return (-1, "Bresser 5in1: Checksum Error pos=$sumFlag");
+	}
+	if ($bitadd != $bitsumRef) {
+		return (-1, "Bresser 5in1: Bitsum Error bitsum=$bitadd ref=$bitsumRef");
+	}
+	$dmsg = substr($dmsg, 28, 24);
+	return (1,$dmsg);
+}
 
 # - - - - - - - - - - - -
 #=item SIGNALduino_filterSign()
@@ -5498,7 +5732,10 @@ sub SIGNALduino_githubParseHttpResponse
     my ($param, $err, $data) = @_;
     my $hash = $param->{hash};
     my $name = $hash->{NAME};
+    my $ret = '';
+    my $channel=AttrVal($name,"updateChannelFW","stable");
     my $hardware=AttrVal($name,"hardware",undef);
+    $hardware =~ s/_optiboot$//;
     if ($hardware eq "nano") {
        $hardware = "nano328";
     }
@@ -5523,7 +5760,7 @@ sub SIGNALduino_githubParseHttpResponse
 			my @fwreleases;
 			if (ref($json_array) eq "ARRAY") {
 				foreach my $item( @$json_array ) { 
-					next if (AttrVal($name,"updateChannelFW","stable") eq "stable" && $item->{prerelease});
+					next if ($channel eq "stable" && $item->{prerelease});
 
 					#Debug " item = ".Dumper($item);
 					
@@ -5531,6 +5768,8 @@ sub SIGNALduino_githubParseHttpResponse
 					{
 						#Log3 $name, 5, "$name queryReleases: hardware=$hardware name=$asset->{name}";
 						next if ($asset->{name} !~ m/$hardware/i);
+						$ret .= $asset->{name} . "\n";
+						#Log3 $name, 5, "$name queryReleases: hardware=$hardware name=$asset->{name}";
 						$releaselist.=$item->{tag_name}."__".substr($item->{created_at},0,10)."," ;		
 						last;
 					}
@@ -5570,8 +5809,31 @@ sub SIGNALduino_githubParseHttpResponse
     # Damit ist die Abfrage zuende.
     # Evtl. einen InternalTimer neu schedulen
     FW_directNotify("#FHEMWEB:$FW_wname", "location.reload('true')", "");
+    if (defined($hash->{asyncOut})) {
+		$ret = "Fetching $channel firmware versions for $hardware from github\n\n" . $ret;
+		$hash->{ret} = $ret;
+		InternalTimer(gettimeofday() + 0.1, "SIGNALduino_asyncOutput", $hash, 0);
+		#my $ao = asyncOutput( $hash->{asyncOut}, $ret );
+		#delete($hash->{asyncOut});
+	}
+	#InternalTimer(gettimeofday() + 1, "SIGNALduino_location_reload", $hash, 0);
+	#Log3 $name, 5, "$name: SIGNALduino_githubParseHttpResponse done:";
 	return 0;
 }
+
+sub SIGNALduino_asyncOutput
+{
+	my ($hash) = @_;
+	my $ao = asyncOutput( $hash->{asyncOut}, $hash->{ret} );
+	delete($hash->{ret});
+	delete($hash->{asyncOut});
+}
+
+#sub SIGNALduino_location_reload
+#{
+#    FW_directNotify("#FHEMWEB:$FW_wname", "location.reload('true')", "");
+#}
+
 
 1;
 
@@ -5987,7 +6249,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<tr><td>
 	Der <a href="https://wiki.fhem.de/wiki/SIGNALduino">SIGNALduino</a> ist basierend auf einer Idee von "mdorenka" und ver&ouml;ffentlicht im <a href="http://forum.fhem.de/index.php/topic,17196.0.html">FHEM Forum</a>.<br>
 
-	Mit der OpenSource-Firmware (<a href="https://github.com/RFD-FHEM/SIGNALDuino/releases">SIGNALDuino</a> und <a href="https://github.com/RFD-FHEM/SIGNALESP/releases">SIGNALESP</a>) ist dieser f&auml;hig zum Empfangen und Senden verschiedener Protokolle auf 433 und 868 Mhz.
+	Mit der OpenSource-Firmware (<a href="https://github.com/Ralf9/SIGNALDuino/releases">SIGNALDuino</a>) ist dieser f&auml;hig zum Empfangen und Senden verschiedener Protokolle auf 433 und 868 Mhz.
 	<br><br>
 	Folgende Ger&auml;te werden zur Zeit unterst&uuml;tzt:
 	<br><br>
@@ -6052,9 +6314,10 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="SIGNALduinoset"></a>
 	<b>SET</b>
 	<ul>
-		<li>LaCrossePairForSec</li>
+		<a name="LaCrossePairForSec"></a>
+		<li>LaCrossePairForSec<br>
 		(NUR bei Verwendung eines cc110x Funk-Moduls)<br>
-		Aktivieren Sie die automatische Erstellung neuer LaCrosse-Sensoren für "x" Sekunden. Wenn ignore_battery nicht angegeben wird, werden nur Sensoren erstellt, die das Flag 'Neue Batterie' senden.<br><br>
+		Aktivieren Sie die automatische Erstellung neuer LaCrosse-Sensoren für "x" Sekunden. Wenn ignore_battery nicht angegeben wird, werden nur Sensoren erstellt, die das Flag 'Neue Batterie' senden.</li><br>
 		<li>cc1101_freq / cc1101_bWidth / cc1101_patable / cc1101_rAmpl / cc1101_sens<br>
 		(NUR bei Verwendung eines cc110x Funk-Moduls)<br><br>
 		Stellt die SIGNALduino-Frequenz / Bandbreite / PA-Tabelle / Empf&auml;nger-Amplitude / Empfindlichkeit ein.<br>
@@ -6163,10 +6426,14 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="reset"></a>
 	<li>reset<br>
 	&Ouml;ffnet die Verbindung zum Ger&auml;t neu und initialisiert es.</li><br>
+	<a name="rfmode"></a>
+	<li>rfmode<br>
+	Damit kann ein rfmode ausgew&auml;hlt werden, es werden dann die dazu notwendigen Register zum sduino mit dem CW Befehl gesendet.<br>
+	Bei slowRf wird ein cc1101 Factoryreset durchgef&uuml;hrt</li><br>
 	<a name="sendMsg"></a>
 	<li>sendMsg<br>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
-	Alternativ ist es auch moeglich, die zu sendenden Daten in hexadezimaler Form zu uebergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
+	Alternativ ist es auch moeglich, die zu sendenden Daten in hexadezimaler Form zu &uuml;bergeben. Dazu muss ein 0x vor den Datenteil geschrieben werden.
 	<br><br>
 	Bitte beachte, dieses Kommando funktioniert nur fuer MU oder MS Protokolle nach dieser Vorgehensweise:
 		<br><br>
@@ -6176,7 +6443,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 			<li>P<protocol id>#binarydata#R<anzahl der wiederholungen>#C<optional taktrate>   (#C is optional) 
 			<br>Beispiel binarydata: <code>set sduino sendMsg P0#0101#R3#C500</code>
 			<br>Wird eine sende Kommando fuer die Bitfolge 0101 anhand der protocol id 0 erzeugen. Als Takt wird 500 verwendet.
-			<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;<br></li></ul><br>
+			<br>SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=03020302;</li></ul><br>
 			<ul><li>P<protocol id>#0xhexdata#R<anzahl der wiederholungen>#C<optional taktrate>    (#C is optional) 
 			<br>Beispiel 0xhexdata: <code>set sduino sendMsg P29#0xF7E#R4</code>
 			<br>Wird eine sende Kommando fuer die Hexfolge F7E anhand der protocol id 29 erzeugen. Die Nachricht soll 4x gesenset werden.
@@ -6197,17 +6464,17 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="ccconf"></a>
 	<li>ccconf<br>
    	Liest s&auml;mtliche radio-chip (cc1101) Register (Frequenz, Bandbreite, etc.) aus und zeigt die aktuelle Konfiguration an.<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger)
+	(NUR bei Verwendung eines cc1101 Funk-Moduls)
    	</li><br>
 	<a name="ccpatable"></a>
 	<li>ccpatable<br>
    	Liest die cc1101 PA Tabelle aus (power amplification for RF sending).<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger)
+	(NUR bei Verwendung eines cc1101 Funk-Moduls)
    	</li><br>
 	<a name="ccreg"></a>
 	<li>ccreg<br>
    	Liest das cc1101 Register aus (99 liest alle aus).<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger)
+	(NUR bei Verwendung eines cc1101 Funk-Moduls)
 	</li><br>
 	<a name="close"></a>
 	<li>close<br>
@@ -6215,13 +6482,19 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a name="cmdBank"></a>
 	<li>cmdBank<br>
-	Damit kann eine Info über die EEPROM Speicherb&auml;ke ausgegeben werden oder die Speicherb&auml;ke den cc1101 zugeordnet werden<br>
-	<A-D> damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
-	(NUR bei Verwendung eines cc1101 Empf&auml;nger und EEPROM Speicherb&auml;ke)
+	(NUR bei Verwendung eines cc110x Funk-Moduls und EEPROM Speicherb&auml;nke)<br>
+	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden.<br>
+	<code>s   - </code>damit wird eine &Uuml;bersicht von allen B&auml;nken ausgegeben.<br>
+	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert.<br>
+	Nur beim Maple:<br>
+	<code>r   - </code>damit wird von allen cc1101 eine Bankinfo ausgegeben.<br>
+	<code>A-D - </code>damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
+	
 	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
-	Abh&auml;ngig von der installierten Firmware besitzt der SIGNALduino verschiedene Befehle. Bitte beachten Sie den Quellcode der Firmware Ihres SIGNALduino, um die Antwort dieses Befehls zu interpretieren.
+	Abh&auml;ngig von der installierten Firmware besitzt der SIGNALduino verschiedene Befehle.<br>
+	S - Zeigt die ConfigSet Variablen an.
 	</li><br>
 	<a name="config"></a>
 	<li>config<br>
@@ -6357,6 +6630,11 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="rawmsgEvent"></a>
 	<li>rawmsgEvent<br>
 	Bei der Einstellung "1", l&ouml;sen empfangene Rohnachrichten Ereignisse aus.
+	</li><br>
+	<a name="sendSlowRF_A_IDs"></a>
+	<li>sendSlowRF_A_IDs<br>
+	Nur für MapleSduino Firmware ab V 4.12<br>
+	Hier k&ouml;nnen komma getrennt die protocolId angegeben bei denen das cc1101 Modul A zu senden verwendet wird.
 	</li><br>
 	<a name="suppressDeviceRawmsg"></a>
 	<li>suppressDeviceRawmsg<br>

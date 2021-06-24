@@ -1,8 +1,48 @@
+01.05.2021
+  00_SIGNALduino.pm:
+  - Revolt ID 45: drops Revolt messages with invalid checksums
+  signalduino_protocols.pm:
+  - new protocol ID 108 for BRESSER 5-in-1 Comfort Wetter Center
+  - new protocol ID 200 for Honeywell ActivLink, wireless door bell, PIR Motion sensor
+18.04.2021
+  00_SIGNALduino.pm:
+  - add DEVIATN to get ccconf
+  - add set cc1101_dataRate
+  - add set cc1101_deviatn
+12.04.2021
+  signalduino_protocols.pm:
+  - new protocol ID 78 for BeSmart S4 remote control
+  - improved cc1101 reg setings for Kopp Free Control
+
+16.01.2021
+  00_SIGNALduino.pm - add attribute "sendSlowRF_A_IDs"
+08.01.2021
+ signalduino_protocols.pm - update protocol ID 24 + 56
+ 00_SIGNALduino.pm:
+ - Anpassungen für den Standard Fix für Somfy Nachrichten mit der Protocol ID 43.1
+ - Bei "get cmds" können nun auch mit dem Parameter "S" die ConfigSet Variablen angezeigt werden
+ - Anpassungen für den MapleSduino mit einem einfachen Empfänger, z.B. dem RXB6
+ - "Device specific help" ergänzt
+
+29.11.2020
+ 00_SIGNALduino.pm und signalduino_protocols.pm
+ - add id 43.1, ohne verbessertem msg fix, für Somfy Wandsender deren msg nicht mit A anfangen
+03.11.2020
+ 00_SIGNALduino.pm        - add "set rfmode" 
+ signalduino_protocols.pm - add list of rfmode
+06.10.2020
+ 00_SIGNALduino.pm        - add preamble to Parse_MN
+ signalduino_protocols.pm - new protocol ID 107 for ECOWITT / FineOffset WH51
+05.10.2020
+ 00_SIGNALduino.pm - set flash improved
+04.10.2020
+ signalduino_protocols.pm - new protocol ID 106 for GT-TMBBQ-01
+19.08.2020
+ 00_SIGNALduino.pm - update SomfyRTS message fix
 12.12.2017
  14_SD_WS07.pm implementing correction factor temperature and humidity. logs revised
 02.12.2017
  14_Hideki.pm implementing Hideki SecondChecksum
-
 22.11.2017
  Fix max length (Proto 51) is to small (#79929 #msg719499)
 21.11.2017
