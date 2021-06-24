@@ -86,7 +86,7 @@ sub listfiles2{
             }
         }
 
-        open(my $fh, '>:raw', 'controls_dev_ralf9_signalduino.txt');
+        open(my $fh, '>:raw', 'controls_ralf9_signalduino.txt');
         
         foreach my $l (sort @lines){
             print $l;
