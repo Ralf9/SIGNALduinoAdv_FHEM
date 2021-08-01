@@ -1,3 +1,18 @@
+24.06.2021
+  00_SIGNALduino.pm:
+  - wenn bei der Protocollist Overview die whitelist gespeichert wird, dann erscheint nun bei Save config ein rotes ?
+  - beim Attribut hardware einige Einträge für den Maple zugefügt
+  - bei der parse_MU Routine gibts nun für lange start Einträge in der signalduino_protocols.pm einen neuen Eintrag starti
+  signalduino_protocols.pm:
+  - update ID 31
+  - ID 42,80,85,89 -> starti für optimierte Verarbeitung von langen start Arrays zugefügt
+  - neue Protokoll IDs
+    109 Rojaflex Rolläden
+    110 ADE WS1907 Wetterstation mit Funk-Regenmesser
+    111 Water Tank Level Monitor TS-FT002
+    112 AVANTEK DB-LE - Wireless doorbell & LED night light
+    201 Well-Light TR401 Funksteckdosen
+
 01.05.2021
   00_SIGNALduino.pm:
   - Revolt ID 45: drops Revolt messages with invalid checksums
