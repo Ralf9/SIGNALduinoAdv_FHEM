@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 346 2021-06-24 20:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 346 2021-04-30 20:00:00Z v3.4.6-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.7-dev_ralf_24.06.'
+		"version" => 'v3.4.6-ralf_30.04.'
 		);
 
 our %rfmode = (
