@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 346 2021-05-01 16:00:00Z v3.4.6-Ralf9 $
+# $Id: 00_SIGNALduino.pm 347 2021-08-01 15:00:00Z v3.4.7-dev-Ralf9 $
 #
-# v3.4.6
+# v3.4.7
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,8 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.6-ralf_01.05.",
-
+	SDUINO_VERSION            => "v3.4.7-dev_ralf_01.08.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -233,7 +232,7 @@ my %matchListSIGNALduino = (
      "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
      "15:SOMFY"					=> '^Ys[0-9A-F]+',
      "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|201)#.*',	# universal - more devices with different protocols
+     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114)#.*',	# universal - more devices with different protocols
      "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
      "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
      "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
@@ -282,7 +281,7 @@ SIGNALduino_Initialize
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP32,ESP8266,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,"
+  					  ." hardware:ESP32_sduino_devkitV1,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,"
 					       ."Maple_sduino_USB,Maple_sduino_serial,Maple_sduino_LAN,Maple_cul_USB,Maple_cul_serial,Maple_cul_LAN"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
@@ -901,6 +900,7 @@ SIGNALduino_Set
 	my $cnt=0;
 	
 	my $sendData;
+	## modulation ASK/OOK - MC
 	if (exists($ProtocolListSIGNALduino{$protocol}{format}) && $ProtocolListSIGNALduino{$protocol}{format} eq 'manchester')
 	{
 		#$clock = (map { $clock += $_ } @{$ProtocolListSIGNALduino{$protocol}{clockrange}}) /  2 if (!defined($clock));
@@ -926,6 +926,13 @@ SIGNALduino_Set
 
 		$sendData = $intro . "SM$slowrfA;" . ($repeats > 0 ? "R=$repeats;" : "") . "C=$clock;D=$data;" . $outro . $frequency; #	SM;R=2;C=400;D=AFAFAF;
 		Log3 $name, 5, "$name: sendmsg Preparing manchester protocol=$protocol, repeats=$repeats, clock=$clock data=$data";
+	
+	## Format of RX and TX data = normal, use FIFOs for RX and TX
+	} elsif (exists $ProtocolListSIGNALduino{$protocol}{cc1101FIFOmode}) {
+		my $ccN = $ProtocolListSIGNALduino{$protocol}{N};
+		Log3 $name, 5, "$name: sendmsg Preparing cc1101 FIFO send, protocol=$protocol, repeats=$repeats, N=$ccN, data=$data";
+		$sendData = 'SN;' . ($repeats > 0 ? "R=$repeats;" : '') . "N=$ccN;D=$data;" # SN;R=1;N=9;D=08C11484498ABCDE;
+	## modulation ASK/OOK - MS MU
 	} else {
 		if ($protocol == 3 || substr($data,0,2) eq "is") {
 			if (substr($data,0,2) eq "is") {
@@ -1421,7 +1428,35 @@ sub SIGNALduino_parseCcBankInfo
 	my %parts;
 	
 	if ($msg =~ m/Bank__.*  Radio_ /) {
-		$msg =~ s/  /\n/g;
+		my @msg_bankinfo_parts = split(/  /,$msg);	# Split message parts by "  " (double space)
+		my $i = -1;
+		foreach my $bankmsg (@msg_bankinfo_parts)
+		{
+			$i++;
+			if ($bankmsg =~ m/N_____/) {
+				last;
+			}
+		}
+		if ($i != -1) {
+			#Log3 $hash, 3, "parseCcBankInfo: $msg_bankinfo_parts[$i]";
+			my @Nparts = split(/ /,$msg_bankinfo_parts[$i]);
+			foreach my $n (@Nparts)
+			{
+				if (length($n) == 1) {
+					if (ord($n) > 57) {
+						$n = ord($n) - 48;
+					}
+					else {
+						$n = ' ' . $n;
+					}
+					#Log3 $hash, 3, "parseCcBankInfo:+$n+";
+				}
+			}
+			$msg_bankinfo_parts[$i] = join ("", @Nparts);
+			#Log3 $hash, 3, "parseCcBankInfo: $msg_bankinfo_parts[$i]";
+		}
+		$msg = join ("\n", @msg_bankinfo_parts);
+		#$msg =~ s/  /\n/g;
 		$msg = "\n\n" . $msg;
 		return $msg;
 	}
@@ -2228,100 +2263,106 @@ sub SIGNALduino_inTol
 }
 
 
- # - - - - - - - - - - - -
- #=item SIGNALduino_PatternExists()
- #This functons, needs reference to $hash, @array of values to search and %patternList where to find the matches.
-# 
+############################# package main
+#=item SIGNALduino_PatternExists()
+# This functons, needs reference to $hash, @array of values to search and %patternList where to find the matches.
+#
 # Will return -1 if pattern is not found or a string, containing the indexes which are in tolerance and have the smallest gap to what we searched
 # =cut
 
-
 # 01232323242423       while ($message =~ /$pstr/g) { $count++ }
 
+sub SIGNALduino_PatternExists {
+  my ($hash,$search,$patternList,$data) = @_;
+  #my %patternList=$arg3;
+  #Debug 'plist: '.Dumper($patternList) if($debug);
+  #Debug 'searchlist: '.Dumper($search) if($debug);
 
-sub SIGNALduino_PatternExists
-{
-	my ($hash,$search,$patternList,$data) = @_;
-	#my %patternList=$arg3;
-	#Debug "plist: ".Dumper($patternList) if($debug); 
-	#Debug "searchlist: ".Dumper($search) if($debug);
+  my $debug = AttrVal($hash->{NAME},'debug',0);
+  my $i=0;
+  my @indexer;
+  my @sumlist;
+  my %plist=();
 
-	my $valid=1;
-	my @pstr;
-	my $debug = AttrVal($hash->{NAME},"debug",0);
-	
-	my $i=0;
-	
-	my $maxcol=0;
-	
-	foreach my $searchpattern (@{$search}) # z.B. [1, -4] 
-	{
-		#my $patt_id;
-		# Calculate tolernace for search
-		#my $tol=abs(abs($searchpattern)>=2 ?$searchpattern*0.3:$searchpattern*1.5);
-		my $tol=abs(abs($searchpattern)>3 ? abs($searchpattern)>16 ? $searchpattern*0.18 : $searchpattern*0.3 : 1);  #tol is minimum 1 or higer, depending on our searched pulselengh
-		
+  for my $searchpattern (@{$search})    # z.B. [1, -4]
+  {
+    next if (exists $plist{$searchpattern});
 
-		Debug "tol: looking for ($searchpattern +- $tol)" if($debug);		
-		
-		my %pattern_gap ; #= {};
-		# Find and store the gap of every pattern, which is in tolerance
-		%pattern_gap = map { $_ => abs($patternList->{$_}-$searchpattern) } grep { abs($patternList->{$_}-$searchpattern) <= $tol} (keys %$patternList);
-		if (scalar keys %pattern_gap > 0) 
-		{
-			Debug "index => gap in tol (+- $tol) of pulse ($searchpattern) : ".Dumper(\%pattern_gap) if($debug);
-			# Extract fist pattern, which is nearst to our searched value
-			my @closestidx = (sort {$pattern_gap{$a} <=> $pattern_gap{$b}} keys %pattern_gap);
-			
-			my $idxstr="";
-			my $r=0;
-			
-			while (my ($item) = splice(@closestidx, 0, 1)) 
-			{
-				$pstr[$i][$r]=$item; 
-				$r++;
-				Debug "closest pattern has index: $item" if($debug);
-			}
-			$valid=1;
-		} else {
-			# search is not found, return -1
-			return -1;
-			#last;	
-		}
-		$i++;
-		#return ($valid ? $pstr : -1);  # return $pstr if $valid or -1
+    # Calculate tolernace for search
+    #my $tol=abs(abs($searchpattern)>=2 ?$searchpattern*0.3:$searchpattern*1.5);
+    my $tol=abs(abs($searchpattern)>3 ? abs($searchpattern)>16 ? $searchpattern*0.18 : $searchpattern*0.3 : 1);  #tol is minimum 1 or higer, depending on our searched pulselengh
 
-		
-		#foreach $patt_id (keys %$patternList) {
-			#Debug "$patt_id. chk ->intol $patternList->{$patt_id} $searchpattern $tol"; 
-			#$valid =  SIGNALduino_inTol($patternList->{$patt_id}, $searchpattern, $tol);
-			#if ( $valid) #one pulse found in tolerance, search next one
-			#{
-			#	$pstr="$pstr$patt_id";
-			#	# provide this index for further lookup table -> {$patt_id =  $searchpattern}
-			#	Debug "pulse found";
-			#	last ; ## Exit foreach loop if searched pattern matches pattern in list
-			#}
-		#}
-		#last if (!$valid);  ## Exit loop if a complete iteration has not found anything
-	}
-	my @results = ('');
-	
-	foreach my $subarray (@pstr)
-	{
-	    @results = map {my $res = $_; map $res.$_, @$subarray } @results;
-	}
-			
-	foreach my $search (@results)
-	{
-		Debug "looking for substr $search" if($debug);
-			
-		return $search if (index( ${$data}, $search) >= 0);
-	}
-	
-	return -1;
-	
-	#return ($valid ? @results : -1);  # return @pstr if $valid or -1
+    Debug "tol: looking for ($searchpattern +- $tol)" if($debug);
+
+    my %pattern_gap ; #= {};
+    # Find and store the gap of every pattern, which is in tolerance
+    %pattern_gap = map { $_ => abs($patternList->{$_}-$searchpattern) } grep { abs($patternList->{$_}-$searchpattern) <= $tol} (keys %$patternList);
+    if (scalar keys %pattern_gap > 0)
+    {
+      Debug "index => gap in tol (+- $tol) of pulse ($searchpattern) : ".Dumper(\%pattern_gap) if($debug);
+      # Extract fist pattern, which is nearst to our searched value
+      my @closestidx = (sort {$pattern_gap{$a} <=> $pattern_gap{$b}} keys %pattern_gap);
+
+      $plist{$searchpattern} = 1;
+      push @indexer, $searchpattern; 
+      push @sumlist, [@closestidx];  
+    } else {
+      # search is not found, return -1
+      return -1;
+    }
+    $i++;
+  }
+
+  sub cartesian_product {
+    use List::Util qw(reduce);
+    reduce {
+      [ map {
+        my $item = $_;
+        map [ @$_, $item ], @$a
+      } @$b ]
+    } [[]], @_
+  }
+  my @res = cartesian_product @sumlist;
+  Debug qq[sumlists is: ].Dumper @sumlist if($debug);
+  Debug qq[res is: ].Dumper $res[0] if($debug);
+  Debug qq[indexer is: ].Dumper \@indexer if($debug);
+
+  OUTERLOOP:
+  for my $i (0..$#{$res[0]})
+  {
+
+    ## Check if we have same patternindex for different values and skip this invalid ones
+    my %count;  
+    for (@{$res[0][$i]}) 
+    { 
+      $count{$_}++; 
+      next OUTERLOOP if ($count{$_} > 1)
+    };
+    
+    # Create a mapping table to exchange the values later on
+    for (my $x=0;$x <= $#indexer;$x++)
+    {
+      $plist{$indexer[$x]}  = $res[0][$i][$x]; 
+    }
+    Debug qq[plist is for this check ].Dumper(\%plist) if($debug);
+
+    # Create our searchstring with our mapping table
+    my @patternVariant= @{$search};
+    for my $v (@patternVariant)
+    {
+      #Debug qq[value before is: $v ] if($debug);
+      $v = $plist{$v};
+      #Debug qq[after: $v ] if($debug);
+
+    }
+    Debug qq[patternVariant is ].Dumper(\@patternVariant) if($debug);
+    my $search_pattern = join '', @patternVariant;
+
+    (index ($$data, $search_pattern) > -1) ? return $search_pattern : next;
+    
+  }
+  return -1;  
+
 }
 
 #SIGNALduino_MatchSignalPattern{$hash,@array, %hash, @array, $scalar}; not used >v3.1.3
@@ -3408,7 +3449,7 @@ sub SIGNALduino_Parse_MN
 		$match = SIGNALduino_getProtoProp($id,"match","");
 		
 		if (!defined($N)) {		# die empfangenen FSK Nachrichten enthalten keine N Nr
-			next if (SIGNALduino_getProtoProp($id,"defaultNoN","") ne "1");	# Abbruch
+			next if (SIGNALduino_getProtoProp($id,"defaultNoN","") ne "1" && scalar(@{$hash->{mnIdList}}) > 1);  # Abbruch
 		}
 		else {
 			next if ($N ne SIGNALduino_getProtoProp($id,"N",""));	# Abbruch wenn N Nr nicht uebereinstimmt
@@ -3996,7 +4037,7 @@ sub SIGNALduino_IdList
 		{
 			push (@mcIdList, $id);
 		}
-		elsif (exists $ProtocolListSIGNALduino{$id}{modulation})
+		elsif (exists $ProtocolListSIGNALduino{$id}{cc1101FIFOmode})
 		{
 			push (@mnIdList, $id);
 		}
@@ -5412,6 +5453,56 @@ sub SIGNALduino_Bresser_5in1
 	return (1,$dmsg);
 }
 
+
+sub lfsr_digest16 {
+    my ($dmsg, $len, $gen, $key) = @_;
+    my $sum = 0;
+    my $data;
+	
+    for (my $k = 0; $k < $len; $k++) {
+        $data = hex(substr($dmsg,$k*2,2));
+        for (my $i = 7; $i >= 0; $i--) {
+            if (($data >> $i) & 1) {
+                $sum ^= $key;
+                $sum &= 0xFFFF;
+            }
+            if ($key & 1) {
+                $key = ($key >>1) ^ $gen;
+                $key &= 0xFFFF;
+            }
+            else {
+                $key = ($key >>1);
+            }
+        }
+    }
+    return $sum;
+}
+
+sub SIGNALduino_Bresser_5in1_neu
+{
+	my ($name,$dmsg,$id) = @_;
+	
+	my $digest = lfsr_digest16(substr($dmsg,4), 15, 0x8810, 0x5412);
+	my $digestHex = sprintf('%04X',$digest);
+	my $digestRef = substr($dmsg,0,4);
+	
+	if ($digestHex ne $digestRef) {
+		return (-1, "Bresser 5in1_neu: crc Error crc=$digestHex crcRef=$digestRef");
+	}
+	
+	my $sum = 0;
+	for (my $i = 2; $i < 18; $i++) {
+		$sum += hex(substr($dmsg, $i * 2, 2));
+	}
+	$sum &= 0xFF;
+	if ($sum != 0xFF) {
+		return (-1, "Bresser 5in1_neu: sum Error sum=$sum != 255");
+	}
+	Log3 $name, 5, "$name Bresser_5in1_neu: dmsg=$dmsg crc=$digestHex ok, sum ok";
+	
+	return (1, substr($dmsg, 4, 30));
+}
+
 # - - - - - - - - - - - -
 #=item SIGNALduino_filterSign()
 #This functons, will act as a filter function. It will remove the sign from the pattern, and compress message and pattern
@@ -5659,11 +5750,11 @@ sub SIGNALduino_FW_getProtocolList
 		{
 			$msgtype = "MC";
 		}
-		elsif (exists $ProtocolListSIGNALduino{$id}{modulation})
+		elsif (exists ($ProtocolListSIGNALduino{$id}{cc1101FIFOmode}))
 		{
 			$msgtype = "MN";
 		}
-		elsif (exists $ProtocolListSIGNALduino{$id}{sync})
+		elsif (exists ($ProtocolListSIGNALduino{$id}{sync}))
 		{
 			$msgtype = "MS";
 		}
@@ -5730,6 +5821,13 @@ sub SIGNALduino_FW_getProtocolList
 				}
 				if (exists($ProtocolListSIGNALduino{$id}{N})) {
 					$comment .= ", N=" . $ProtocolListSIGNALduino{$id}{N};
+				}
+				$comment .= ")";
+			}
+			elsif (exists($ProtocolListSIGNALduino{$id}{modulation})) {
+				$comment .= " (modulation=" . $ProtocolListSIGNALduino{$id}{modulation};
+				if (length($knownFreqs) > 2) {
+					$comment .= ", " . $knownFreqs . "MHz";
 				}
 				$comment .= ")";
 			}
