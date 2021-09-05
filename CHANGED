@@ -1,3 +1,16 @@
+04.09.2021
+  00_SIGNALduino.pm:
+  - Zur FileLog notify Reduzierung bei showLastFileLog den Fakelog Eintrag entfernt (Forum Thread #122372)
+  - Für die neuen Protokolle WS1080, TX22, TX38, WH24, WH25, W136 convert und Prüfsummenroutinen zugefügt
+  signalduino_protocols.pm:
+  - neuer set rfmode für WH24_WH25 und W136
+  - neue Protokoll IDs
+    201 WS1080
+    202 TX22
+    203 TX38
+    204 WH24 WH65A/B
+    205 WH25
+    206 W136
 01.08.2021
   00_SIGNALduino.pm:
   - SIGNALduino_PatternExists wurde von Sidey überarbeitet um hohe CPU Last und Speicherverbrauch zu umgehen.

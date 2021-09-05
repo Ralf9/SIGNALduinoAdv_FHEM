@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 347 2021-08-01 15:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 347 2021-09-04 20:00:00Z v3.4.7-dev-Ralf9 $
 #
 # v3.4.7
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.7-dev_ralf_01.08.",
+	SDUINO_VERSION            => "v3.4.7-dev_ralf_04.09.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -3789,27 +3789,20 @@ sub SIGNALduino_FW_Detail {
   
   my $hash = $defs{$name};
   
-  my @dspec=devspec2array("DEF=.*fakelog");
-  my $lfn = $dspec[0];
+  #my @dspec=devspec2array("DEF=.*fakelog");
+  #my $lfn = $dspec[0];
   my $fn=$defs{$name}->{TYPE}."-Flash.log";
   
   my $ret = "<div class='makeTable wide'><span>Information menu</span>
 <table class='block wide' id='SIGNALduinoInfoMenue' nm='$hash->{NAME}' class='block wide'>
 <tr class='even'>";
 
-
   if (-s AttrVal("global", "logdir", "./log/") .$fn)
-  { 
-	  my $flashlogurl="$FW_ME/FileLog_logWrapper?dev=$lfn&type=text&file=$fn";
-	  
-	  $ret .= "<td>";
-	  $ret .= "<a href=\"$flashlogurl\">Last Flashlog<\/a>";
-	  $ret .= "</td>";
-	  #return $ret;
+  {
+	  $ret.="<td><a href='#showLastFlashlog' id='showLastFlashlog'>Last Flashlog</a></td>";
+	  #$ret .= "<a href=\"$flashlogurl\">Last Flashlog<\/a>";
   }
 
-  my $protocolURL="$FW_ME/FileLog_logWrapper?dev=$lfn&type=text&file=$fn";
-  
   $ret.="<td><a href='#showProtocolList' id='showProtocolList'>Display protocollist</a></td>";
   $ret.="<td><a href='#SD_dispChanges' id='SD_dispChanges'>Display protocollist changes since days</a>";
   $ret.="<INPUT type=\"text\" name=\"dispChanges\" id=\"SD_dispChangesDays\" value=\"200\" maxlength=\"3\" size=\"3\">";
@@ -3818,6 +3811,11 @@ sub SIGNALduino_FW_Detail {
   $ret.= '</tr></table></div>
   
 <script>
+$( "#showLastFlashlog" ).click(function(e) {
+	e.preventDefault();
+	FW_cmd(FW_root+\'?cmd={SIGNALduino_FW_getLastFlashlog("'.$FW_detail.'")}&XHR=1\', function(data){SD_dispLastFlashlog(data)});
+});
+
 $( "#showProtocolList" ).click(function(e) {
 	var dispChanged = -1;
 	e.preventDefault();
@@ -3829,6 +3827,23 @@ $( "#SD_dispChanges" ).click(function(e) {
 	e.preventDefault();
 	FW_cmd(FW_root+\'?cmd={SIGNALduino_FW_getProtocolList("'.$FW_detail.'","\'+dispChanged+\'")}&XHR=1\', function(data){SD_dispChanges(data)});
 });
+
+function SD_dispLastFlashlog(txt)
+{
+  var div = $("<div id=\"SD_LastFlashlog\">");
+  $(div).html(txt);
+  $("body").append(div);
+  $(div).dialog({
+    dialogClass:"no-close", modal:true, width:"auto", closeOnEscape:true, 
+    maxWidth:$(window).width()*0.9, maxHeight:$(window).height()*0.9,
+    title: "last Flashlog",
+    buttons: [
+      {text:"close", click:function(){
+        $(this).dialog("close");
+        $(div).remove();
+      }}]
+  });
+}
 
 function SD_plistWindow(txt)
 {
@@ -5254,7 +5269,7 @@ sub SIGNALduino_CalculateCRC16
 	return $crc16;
 }
 
-sub SIGNALduino_CalculateCRC
+sub SIGNALduino_CalculateCRC_LaCrosse
 {
 	my ($dmsg,$len) = @_;
 	my $i;
@@ -5264,7 +5279,7 @@ sub SIGNALduino_CalculateCRC
 	my $res = 0;
 	my @data = ();
 
-	for ($i=0; $i<5; $i++ ) {
+	for ($i=0; $i<=$len; $i++ ) {
 		push(@data,hex(substr($dmsg,$i*2,2)));
 	}
 	#Debug "data=@data\n";
@@ -5274,7 +5289,7 @@ sub SIGNALduino_CalculateCRC
     for ($i = 0; $i < 8; $i++) {
       $tmp = ($res ^ $val) & 0x80;
       $res <<= 1;
-      $res = $res & 0xFF;
+      $res &= 0xFF;
       if ($tmp != 0) {
         $res ^= 0x31;
       }
@@ -5282,6 +5297,52 @@ sub SIGNALduino_CalculateCRC
     }
   }
   return ($res, $data[$len]);
+}
+
+sub SIGNALduino_CalculateCRC_TX38
+{
+	my $dmsg = shift;
+	my $tmp;
+	my $val;
+	my $res = 0;
+	my $bitNum=0;
+	
+	for (my $j = 0; $j < 3; $j++) {
+		$val = hex(substr($dmsg,$j*2,2));
+		for (my $i = 0; $i < 8; $i++) {
+			if ($bitNum < 20) {
+				$tmp = ($res ^ $val) & 0x80;
+				$res <<= 1;
+				$res &= 0xFF;
+				if ($tmp != 0) {
+					$res ^= 0x31;
+				}
+				$val <<= 1;
+			}
+			$bitNum++;
+		}
+	}
+	return $res;
+}
+
+sub SIGNALduino_CalculateCRC
+{
+	my ($len, @data) = @_;
+	my $res = 0;
+
+  for (my $j = 0; $j < $len; $j++) {
+    $res ^= $data[$j];
+    for (my $i = 0; $i < 8; $i++) {
+      if ($res & 0x80) {
+        $res = ($res << 1) ^ 0x31;
+      }
+      else {
+        $res = ($res << 1)
+      }
+      $res &= 0xFF;
+    }
+  }
+  return $res;
 }
 
 # xFSK method
@@ -5323,7 +5384,7 @@ sub SIGNALduino_LaCrosse
 	#my $hash = $defs{$name};
 	#$hash->{LaCrossePair} = 2;
 	
-	my ($calccrc,$crc) = SIGNALduino_CalculateCRC($dmsg,4);
+	my ($calccrc,$crc) = SIGNALduino_CalculateCRC_LaCrosse($dmsg,4);
 	
 	if ($calccrc !=$crc) {
 		#Log3 $name, 4, "$name LaCrosse_convert: Error! dmsg=$dmsg checksumCalc=$calccrc checksum=$crc";
@@ -5331,8 +5392,9 @@ sub SIGNALduino_LaCrosse
 	}
 	
 	my $addr = ((hex(substr($dmsg,0,2)) & 0x0F) << 2) | ((hex(substr($dmsg,2,2)) & 0xC0) >> 6);
-	my $temperature = ( ( ((hex(substr($dmsg,2,2)) & 0x0F) * 100) + (((hex(substr($dmsg,4,2)) & 0xF0) >> 4) * 10) + (hex(substr($dmsg,4,2)) & 0x0F) ) / 10) - 40;
-	return (-1,"LaCrosse_convert: temp=$temperature") if ($temperature >= 60 || $temperature <= -40);
+	#my $temperature = ( ( ((hex(substr($dmsg,2,2)) & 0x0F) * 100) + (((hex(substr($dmsg,4,2)) & 0xF0) >> 4) * 10) + (hex(substr($dmsg,4,2)) & 0x0F) ) / 10) - 40;
+	my $temperature = ( ( (hex(substr($dmsg,3,1)) * 100) + (hex(substr($dmsg,4,1)) * 10) + hex(substr($dmsg,5,1) ) ) / 10) - 40;
+	return (-1,"LaCrosse_convert Error temp=$temperature (out of Range)") if ($temperature >= 60 || $temperature <= -40);
 
 	my $humidity = hex(substr($dmsg,6,2));
 	my $batInserted = ((hex(substr($dmsg,2,2)) & 0x20) << 2);
@@ -5503,6 +5565,260 @@ sub SIGNALduino_Bresser_5in1_neu
 	return (1, substr($dmsg, 4, 30));
 }
 
+sub AddWord
+{
+	my $value = shift;
+	
+	my $res = ' ' . (($value >> 8) & 0xFF)  . ' ' . ($value & 0xFF);
+	
+	return $res;
+}
+
+sub SIGNALduino_WS1080
+{
+	my ($name,$dmsg,$id) = @_;
+	
+	my @data = ();
+	
+	for (my $i=0; $i<9; $i++ ) {
+		push(@data,hex(substr($dmsg,$i*2,2)));
+	}
+	my $crc = SIGNALduino_CalculateCRC(9, @data);
+	my $crcRef = hex(substr($dmsg,18,2));
+	if ($crc != $crcRef) {
+		return (-1, "WS1080_convert: crc Error crc=$crc crcRef=$crcRef");
+	}
+	Log3 $name, 4, "$name WS1080_convert: dmsg=$dmsg crc=$crc ok";
+	
+	my $addr = hex(substr($dmsg,1,2));
+	my $sign = ($data[1] >> 3) & 1;
+	my $temp = (($data[1] & 0x07) << 8) | $data[2];
+	if ($sign) {
+		$temp = -$temp;
+	}
+	my $hum = $data[3] & 0x7F;
+	return (-1,"WS1080_convert: Error temp=".($temp/10)." hum=$hum (out of Range)") if ($temp >= 600 || $temp <= -400 || $hum > 99);
+	
+	my $WindSpeed = $data[4] * 3.4;
+	my $WindGust = $data[5] * 3.4;
+	my $rain = ((($data[6] & 0x0F) << 8) | $data[7]) * 0.6;
+	my $WindDirection = 225 * ($data[8] & 0x0F);
+	
+	my $dmsgMod = "OK WS $addr 3";
+	$dmsgMod .= AddWord($temp+1000) . " $hum";
+	$dmsgMod .= AddWord(round($rain,0));
+	$dmsgMod .= AddWord($WindDirection);
+	$dmsgMod .= AddWord(round($WindSpeed,0)) . AddWord(round($WindGust,0));
+	$dmsgMod .= ' 0'; # no flags
+	
+	return (1,$dmsgMod);
+}
+
+sub SIGNALduino_TX22
+{
+	my ($name,$dmsg,$pid) = @_;
+	
+	my $byte1 = hex(substr($dmsg,2,2));
+	my $ct = $byte1 & 7;
+	return (-1,"LaCrosse_TX22_convert: count=$ct (out of range 1-5)") if ($ct < 1 || $ct > 5);
+	my $frameLength = 3 + 2 * $ct;
+	return (-1,"LaCrosse_TX22_convert: dmsg=$dmsg frameLength=$frameLength ist too short") if (length($dmsg) < $frameLength*2);
+	#Log3 $name, 5, "$name TX22: dmsg=$dmsg ct=$ct byte1=$byte1 frameLength=$frameLength len=" . length($dmsg);
+	my ($crc,$crcRef) = SIGNALduino_CalculateCRC_LaCrosse($dmsg, $frameLength-1);
+	if ($crc != $crcRef) {
+		return (-1,"LaCrosse_TX22_convert: crc Error dmsg=$dmsg crc=$crc crcRef=$crcRef");
+	}
+
+	my $addr = hex(substr($dmsg,1,2)) >> 2;
+	my $NewBatteryFlag = $byte1 & 0x20;
+	my $ErrorFlag = $byte1 & 0x10;
+	my $LowBatteryFlag = $byte1 & 8;
+	my $temp = ' 255 255';
+	my $hum = ' 255';
+	my $rain = ' 255 255';
+	my $WindDirection = ' 255 255';
+	my $WindSpeed = ' 255 255';
+	my $WindGust = ' 255 255';
+	for (my $i = 0;  $i < $ct; $i++) {
+		my $type = hex(substr($dmsg,4+$i*4, 1));
+		my $q1 = hex(substr($dmsg,5+$i*4, 1));
+		my $q2 = hex(substr($dmsg,6+$i*4, 1));
+		my $q3 = hex(substr($dmsg,7+$i*4, 1));
+		#Log3 $name, 5, "$name TX22: i=$i type=$type q=$q1 $q2 $q3";
+		if ($type == 0) {
+			$temp = ($q1*100 + $q2*10 + $q3) -400;
+			return (-1,"LaCrosse_TX22_convert: Error temp=".($temp/10)." (out of Range)") if ($temp >= 600 || $temp <= -400);
+			$temp = AddWord($temp+1000);
+		}
+		elsif ($type == 1) {
+			$hum = $q2*10 + $q3;
+			return (-1,"LaCrosse_TX22_convert: Error hum=$hum (out of Range)") if ($hum > 99);
+			$hum = " $hum";
+		}
+		elsif ($type == 2) {
+			$rain = $q1*256 + $q2*16 + $q3;
+			$rain = AddWord($rain*2);
+		}
+		elsif ($type == 3) {
+			$WindDirection = AddWord($q1*225);
+			$WindSpeed = AddWord($q2*16 + $q3);
+		}
+		elsif ($type == 4) {
+			$WindGust = AddWord($q2*16 + $q3);
+		}
+	}
+	my $flags = 0;
+	if ($NewBatteryFlag) {
+		$flags = 1;
+	}
+	if ($ErrorFlag) {
+		$flags += 2;
+	}
+	if ($LowBatteryFlag) {
+		$flags += 4;
+	}
+	
+	my $dmsgMod = "OK WS $addr 1" . $temp . $hum . $rain . $WindDirection . $WindSpeed . $WindGust . " $flags";
+	
+	Log3 $name, 4, "$name LaCrosse_TX22_convert: dmsg=$dmsg addr=$addr count=$ct crc=$crc ok";
+	
+	return (1,$dmsgMod);
+}
+
+sub SIGNALduino_TX38
+{
+	my ($name,$dmsg,$pid) = @_;
+	
+	my $crc = SIGNALduino_CalculateCRC_TX38($dmsg);
+	my $crcRef = hex(substr($dmsg,5,2));
+	if ($crc != $crcRef) {
+		return (-1, "LaCrosse_TX38_convert: crc Error crc=$crc crcRef=$crcRef");
+	}
+	Log3 $name, 4, "$name LaCrosse_TX38_convert: dmsg=$dmsg crc=$crc ok";
+	
+	my $addr = hex(substr($dmsg,0,2)) & 0x3F;
+	my $byte1 = hex(substr($dmsg,2,2));
+	my $NewBatteryFlag = $byte1 & 0x80;
+	my $LowBatteryFlag = $byte1 & 0x40;
+	my $temp = (($byte1 & 0x3F) * 16 + hex(substr($dmsg,4,1))) - 400;
+	return (-1,"LaCrosse_TX38_convert: Error temp=". ($temp/10) ." (out of Range)") if ($temp >= 600 || $temp <= -400);
+	
+	my $hum = $LowBatteryFlag == 0x40 ? 234 : 106;
+	
+	my $dmsgMod = "OK 9 $addr ";
+	$dmsgMod .= (1 + $NewBatteryFlag);
+	$dmsgMod .= AddWord($temp+1000) . " $hum";
+	
+	return (1,$dmsgMod);
+}
+
+sub SIGNALduino_WH24
+{
+	my ($name,$dmsg,$id) = @_;
+
+	my @data = ();
+	my $crcLen = 16;
+	my $sumLen = 17;
+	my $len = 16;
+	
+	if (length($dmsg) > 32) {
+		$len = $sumLen;
+	}
+	for (my $i=0; $i<$len; $i++ ) {
+		push(@data,hex(substr($dmsg,$i*2,2)));
+	}
+	
+	my $crc = SIGNALduino_CalculateCRC($crcLen-1, @data);
+	my $crcRef = $data[$crcLen-1];
+	if ($crc != $crcRef) {
+		return (-1, "WH24: crc Error crc=$crc crcRef=$crcRef");
+	}
+	
+	my $checksumTxt = '';
+	if ($len == $sumLen) {
+		my $checksum = 0;
+		for (my $i=0; $i<$sumLen-1; $i++ ) {
+			$checksum += $data[$i];
+		}
+		$checksum &= 0xFF;
+		my $checksumRef = $data[$sumLen-1];
+		if ($checksum != $checksumRef) {
+			return (-1, "WH24: checksum Error checksum=$checksum checksumRef=$checksumRef");
+		}
+		$checksumTxt = "checksum=$checksum ok";
+	}
+	else {
+		$checksumTxt = "no checksum";
+	}
+	Log3 $name, 4, "$name WH24: dmsg=$dmsg crc=$crc ok, $checksumTxt";
+	
+	return (1, substr($dmsg, 0, 30));
+}
+
+sub SIGNALduino_WH25
+{
+	my ($name,$dmsg,$id) = @_;
+
+	my $checksum = 0;
+	my $bitsum = 0;
+	my $byte;
+	
+	for (my $i=0; $i<=5; $i++ ) {
+		$byte = hex(substr($dmsg,$i*2,2));
+		$checksum += $byte;
+		$bitsum ^= $byte;
+	}
+	$checksum &= 0xFF;
+	#$bitsum = ($bitsum << 4) | ($bitsum << 4);  # Swap nibbles
+	my $checksumRef = hex(substr($dmsg,12,2));
+	my $bitsumRef = hex(substr($dmsg,12,2));
+	if ($checksum != $checksumRef) {
+		return (-1, "WH25: checksum Error checksum=$checksum checksumRef=$checksumRef");
+	}
+	#if ($bitsum != $bitsumRef) {
+	#	return (-1, "WH25: bitsum Error bitsum=$bitsum bitsumRef=$bitsumRef");
+	#}
+	$bitsum = sprintf('%02X',$bitsum);
+	Log3 $name, 4, "$name WH25: dmsg=$dmsg checksum=$checksum ok, bitsum=0x$bitsum";
+	
+	return (1, $dmsg);
+}
+
+
+sub SIGNALduino_CalculateCRC_W136
+{
+	my $dmsg = shift;
+	my $crc = 0xFF;
+	my $data1;
+
+	for (my $n = 0; $n < 21; $n++) {
+		$data1 = hex(substr($dmsg,$n*2,2));
+		for (my $i = 0; $i < 8; $i++) {
+			my $tmp = ($crc ^ $data1) & 0x01;
+			$crc >>= 1;
+			if ($tmp) {
+				$crc ^= 0x8C;
+			}
+			$data1 >>= 1;
+		}
+	}
+	return $crc;
+}
+
+sub SIGNALduino_W136
+{
+	my ($name,$dmsg,$id) = @_;
+
+	my $crc = SIGNALduino_CalculateCRC_W136($dmsg);
+	my $crcRef = hex(substr($dmsg,42,2));
+	if ($crc != $crcRef) {
+		return (-1, "W136: crc Error crc=$crc crcRef=$crcRef");
+	}
+	Log3 $name, 4, "$name W136: dmsg=$dmsg crc=$crc ok";
+	
+	return (1, $dmsg);
+}
+
 # - - - - - - - - - - - -
 #=item SIGNALduino_filterSign()
 #This functons, will act as a filter function. It will remove the sign from the pattern, and compress message and pattern
@@ -5656,6 +5972,29 @@ sub SIGNALduino_getProtocolList
 	return \%ProtocolListSIGNALduino
 }
 
+
+sub SIGNALduino_FW_getLastFlashlog
+{
+	my $name = shift;
+	
+	my $filename = AttrVal("global", "logdir", "./log/") . "$defs{$name}->{TYPE}-Flash.log";
+	my $ret;
+	my $openflag = 1;
+	open my $fh, "<", $filename or $openflag = 0;
+	if ($openflag) {
+		$ret = do { local $/; <$fh> };
+		#$ret = FW_htmlEscape($ret);
+		$ret = "<pre>$ret</pre>";
+		$ret =~ s/\n/<br>/g;
+		Log3 $name, 4, "getLastFlashlog: filename=$filename";
+		close $fh;
+	}
+	else {
+		$ret = "$filename not found";
+	}
+	
+	return $ret;
+}
 
 sub SIGNALduino_FW_getProtocolList
 {
