@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 347 2021-08-01 15:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 347 2021-09-04 20:00:00Z v3.4.7-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.7-dev_ralf_01.08.'
+		"version" => 'v3.4.7-dev_ralf_04.09.'
 		);
 
 our %rfmode = (
@@ -77,13 +77,15 @@ our %rfmode = (
 	"Lacrosse_mode2_9579"    => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1182,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D02,3E03,404d,4132,425f,4349,4454,452b,4600',
 	"PCA301_mode3_6631"      => 'CW0001,0246,0307,042D,05D4,06FF,0700,0802,0D21,0E6B,0FD0,1088,110B,1206,1322,14F8,1553,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D03,3E03,4050,4143,4241,435f,4433,4530,4631,4700',
 	"KOPP_FC_4785"           => 'CW0001,0246,0304,04AA,0554,060F,07E0,0800,0D21,0E65,0FCA,10C7,1183,1216,1373,14F8,1540,170C,1829,1936,1B07,1C40,1D91,2211,23E9,242A,2500,261F,3D04,3E02,404b,416f,4270,4370,445f,4546,4643,4700',
-	"WS1600_TX22_mode5_8842" => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1165,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D05,3E03,404d,4135,425f,4349,4454,452b,4600',
+	"WS1600_TX22_mode5_8842" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1165,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D05,3E03,404d,4135,425f,4349,4454,452b,4600',
 	"DP100_WH51_17241"       => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0FE8,1009,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D06,3E03,4057,4148,4235,4331,4400',
-	"bresser_5in1_8220"      => 'CW0001,0246,0306,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4535,4631,4700',
-	"bresser_6in1_8220"      => 'CW0001,0246,0304,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4536,4631,4700',
+	"Bresser_5in1_8220"      => 'CW0001,0246,0306,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4535,4631,4700',
+	"Bresser_6in1_8220"      => 'CW0001,0246,0304,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4536,4631,4700',
 	"HoneywActivL_SlowRf_FSK"=> 'CW000D,022D,0307,04D3,0591,063D,0704,0832,0D21,0E65,0FE8,1087,11F8,1200,1323,14B9,1550,1700,1818,1914,1B43,1C00,1D91,2211,23E9,242A,2500,2611,3D00,3E00,4048,4177,4253,436C,446F,4577,4652,4746',
 	"Rojaflex_433_GFSK"      => 'CW0001,0246,0302,04D3,0591,06FF,0700,0805,0D10,0EB0,0F71,10C8,1193,1213,1322,14F8,1535,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D08,3E04,4052,416f,426a,4361,4466,456c,4665,4778',
-	"Avantek_433_FSK"        => 'CW0001,0246,0301,0408,0569,06FF,0780,0802,0D10,0EAA,0F56,108A,11F8,1202,1322,14F8,1551,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D09,3E04,4041,4176,4261,436e,4474,4565,466b,4700'
+	"Avantek_433_FSK"        => 'CW0001,0246,0301,0408,0569,06FF,0780,0802,0D10,0EAA,0F56,108A,11F8,1202,1322,14F8,1551,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D09,3E04,4041,4176,4261,436e,4474,4565,466b,4700',
+	"WH24_WH25_17241"        => 'CW0001,0246,0304,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,4057,4148,4232,4334,4457,4548,4632,4735',
+	"W136_4798"              => 'CW0001,0246,0305,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D0A,3E04,4057,4131,4233,4336,4400'
 	);
 
 our %ProtocolListSIGNALduino  = (
@@ -2703,6 +2705,9 @@ our %ProtocolListSIGNALduino  = (
 				length_max      => '24',
 			},
 		"100"	=>	# Lacrosse, Mode 1 - IT+
+					# MN;D=91C635424AAAAA0000B32587;R=41;
+					# MN;D=97C589508DAAAA00003124C8;R=204;
+					# MN;D=91C6323F50AAAA000065796B;R=39;  T: 23.2 H: 63  OK 9 7 1 4 208 63
 			{
 				name            => 'Lacrosse mode 1',
 				changed         => '20200104 new',
@@ -3002,7 +3007,8 @@ our %ProtocolListSIGNALduino  = (
 			},
 		"114"	=>	# Well-Light TR401
 			# https://forum.fhem.de/index.php/topic,121103.0.html
-			# P114#B1F  MU;P0=1264;P1=-782;P3=-1561;P4=566;P5=-23639;P7=-425;CP=4;R=239;D=701010103434343434543410343410101034343434345434103434101010343434343454341034341010103434343434543410343410101034343434345434103434101010343434343454341034341010103434343434543;e;
+			# P114#B1F TR401_0_2 off MU;P0=1264;P1=-782;P3=-1561;P4=566;P5=-23639;P7=-425;CP=4;R=239;D=701010103434343434543410343410101034343434345434103434101010343434343454341034341010103434343434543410343410101034343434345434103434101010343434343454341034341010103434343434543;e;
+			# P114#31F TR401_0_2 on  MU;P0=-1426;P1=599;P2=-23225;P3=-748;P4=1281;P5=372;P6=111;P7=268;CP=1;R=235;D=0121343401013434340101010101252621343401013434340101010101252705012134340101343434010101010125;p;
 			{
 				name            => 'Well-Light',
 				comment         => 'remote control TR401',
@@ -3041,8 +3047,7 @@ our %ProtocolListSIGNALduino  = (
 				clientmodule    => 'SD_WS',
 				length_min      => '36',
 				method          => \&main::SIGNALduino_Bresser_5in1_neu,
-			},	
-				
+			},
 		"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
 			# https://github.com/klohner/honeywell-wireless-doorbell#the-data-frame
 			# MU;P0=-381;P1=100;P2=260;P3=-220;P4=419;P5=-544;CP=1;R=248;D=010101010101010101010101010101023101023452310102310231010101023101010102310232310101010101010231010101010101010101010101010101010231010234523101023102310101010231010101023102323101010101010102310101010101010101010101010101010102310102345231010231023101010102310;e;
@@ -3065,6 +3070,110 @@ our %ProtocolListSIGNALduino  = (
 				#modulematch     => '',
 				length_min      => '48',
 				length_max      => '48',
+			},
+		"201"	=>	# WS 1080
+			{
+				name            => 'WS1080',
+				changed         => '20210904 new',
+				id              => '201',
+				knownFreqs      => '868.3',
+				N               => 1,
+				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^A.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'LaCrosse',
+				length_min      => '20',
+				method        => \&main::SIGNALduino_WS1080,
+			},
+		"202"	=>	# TX22
+			{
+				name            => 'TX22',
+				changed         => '20210904 new',
+				id              => '202',
+				knownFreqs      => '868.3',
+				N               => 5,
+				datarate        => '8842',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^A.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'LaCrosse',
+				length_min      => '10',
+				method        => \&main::SIGNALduino_TX22,
+			},
+		"203"	=>	# TX38
+			{
+				name            => 'TX38',
+				changed         => '20210904 new',
+				id              => '203',
+				knownFreqs      => '868.3',
+				N               => 1,
+				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^[C-F].*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				clientmodule    => 'LaCrosse',
+				length_min      => '8',
+				method        => \&main::SIGNALduino_TX38,
+			},
+
+		"204"	=>	# WH24 WH65A/B
+			{
+				name            => 'WH24 WH65A/B',
+				changed         => '20210904 new',
+				id              => '204',
+				knownFreqs      => '868.3',
+				N               => 1,
+				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^24.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				preamble        => 'W204#',
+				clientmodule    => 'SD_WS',
+				length_min      => '32',
+				method        => \&main::SIGNALduino_WH24,
+			},
+		"205"	=>	# WH25
+			{
+				name            => 'WH25',
+				changed         => '20210904 new',
+				id              => '205',
+				knownFreqs      => '868.3',
+				N               => 1,
+				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^E.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				preamble        => 'W205#',
+				clientmodule    => 'SD_WS',
+				length_min      => '14',
+				method        => \&main::SIGNALduino_WH25,
+			},
+		"206"	=>	# W136
+			{
+				name            => 'W136',
+				changed         => '20210904 new',
+				id              => '206',
+				knownFreqs      => '868.3',
+				N               => 10,
+				datarate        => '4798',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^....1A.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				preamble        => 'W206#',
+				clientmodule    => 'SD_WS',
+				length_min      => '44',
+				method        => \&main::SIGNALduino_W136,
 			}
 		
 		########################################################################
