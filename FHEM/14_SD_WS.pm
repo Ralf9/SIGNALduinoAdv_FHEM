@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2021-09-08 15:09:03Z elektron-bbs $
+# $Id: 14_SD_WS.pm 21666 2021-09-17 15:09:03Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -46,6 +46,7 @@ use warnings;
 
 # Forward declarations
 sub SD_WS_LFSR_digest8_reflect;
+sub SD_WS_Sanity_checks;
 sub SD_WS_bin2dec;
 sub SD_WS_binaryToNumber;
 sub SD_WS_WH2CRCCHECK;
@@ -61,6 +62,7 @@ sub SD_WS_Initialize {
                       "model:E0001PA,S522,TX-EZ6,other " .
                       "max-deviation-temp:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
                       "max-deviation-hum:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
+                      "max-deviation-rain:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
                       "$readingFnAttributes ";
   $hash->{AutoCreate} =
   {
@@ -129,6 +131,7 @@ sub SD_WS_Parse {
   my $blen = $hlen * 4;
   my $bitData = unpack("B$blen", pack("H$hlen", $rawData));
   my $bitData2;
+  my $defaultMaxDeviation = 1;
   my $model;  # wenn im elsif Abschnitt definiert, dann wird der Sensor per AutoCreate angelegt
   my $SensorTyp;
   my $id;
@@ -139,6 +142,7 @@ sub SD_WS_Parse {
   my $rawTemp;
   my $temp;
   my $temp2;
+  my $noTempCheck;
   my $hum;
   my $windspeed;
   my $winddir;
@@ -192,7 +196,7 @@ sub SD_WS_Parse {
         sensortype => 'PV-8644',
         model      =>  'SD_WS71_T',
         prematch   => sub {my $msg = shift; return 1 if ($msg =~ /^5[A-F0-9]{6}F[A-F0-9]{2}/); },                     # prematch
-        crcok      => sub {return 1; },                     # crc is unknown
+        #crcok      => sub {return 1; },                     # crc is unknown
         id         => sub {my (undef,$bitData) = @_; return SD_WS_binaryToNumber($bitData,4,11); },                   # id
         temp       => sub {my (undef,$bitData) = @_; return ((SD_WS_binaryToNumber($bitData,12,23) - 2448) / 10); },  # temp
         channel    => sub {my (undef,$bitData) = @_; return SD_WS_binaryToNumber($bitData,26,27); },                  # channel
@@ -360,7 +364,7 @@ sub SD_WS_Parse {
         model      => 'SD_WS_51_TH',
         prematch   => sub {my $msg = shift; return 1 if ($msg =~ /^[0-9A-F]{9}[1-3]$/);}, # 10 nibbles, 9 hex chars, only channel 1-3
         # prematch   => sub {my $msg = shift; return 1 if ($msg =~ /^[0-9A-F]{10}$/);}, # 10 nibbles, all hex chars
-        crcok      => sub {return 1;  },  # crc is unknown
+        #crcok      => sub {return 1;  },  # crc is unknown
         id         => sub {my (undef,$bitData) = @_; return substr($rawData,0,2);}, # long-id in hex
         sendmode   => sub {my (undef,$bitData) = @_; return substr($bitData,12,1) eq "1" ? "manual" : "auto";},
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,13,1) eq "1" ? "low" : "ok";},
@@ -558,7 +562,7 @@ sub SD_WS_Parse {
                             $tempraw /= 10.0;
                             return $tempraw;
                           },
-        crcok      => sub {return 1;},    # crc test method is so far unknown
+        #crcok      => sub {return 1;},    # crc test method is so far unknown
       } ,
     85 =>
       {
@@ -581,7 +585,7 @@ sub SD_WS_Parse {
         sensortype => 'TFA 30.3222.02',
         model      => 'SD_WS_85_THW',
         prematch   => sub {my $msg = shift; return 1 if ($msg =~ /^[0-9A-F]{16}/); },   # min 16 nibbles
-        crcok      => sub {return 1;},    # crc test method is so far unknown
+        #crcok      => sub {return 1;},    # crc test method is so far unknown
         id         => sub {my (undef,$bitData) = @_; return substr($rawData,1,5); },    # 0952CF012B1021DF0
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,24,1) eq "0" ? "ok" : "low";},
         channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,26,27) + 1 ); },   # unknown
@@ -632,7 +636,7 @@ sub SD_WS_Parse {
         channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,10,11) + 1); },
         temp       => sub {my (undef,$bitData) = @_; return ((SD_WS_binaryToNumber($bitData,12,23) - 500) / 10.0); },
         hum        => sub {my (undef,$bitData) = @_; return SD_WS_binaryToNumber($bitData,24,31); },
-        crcok      => sub {return 1;},    # crc test method is so far unknown
+        #crcok      => sub {return 1;},    # crc test method is so far unknown
       } ,
     94 => {
         # Sensor sends Bit 0 as "0", Bit 1 as "110"
@@ -661,9 +665,9 @@ sub SD_WS_Parse {
             Log3 $iohash, 3, "$name: SD_WS_Parse $model ERROR - BCD of temperature ($rawtemp100 $rawtemp10 $rawtemp1)";
             return;
           };
-          my $temp = ($rawtemp100 * 10 + $rawtemp10 + $rawtemp1 / 10) * ( substr($_[1],10,1) == 1 ? -1.0 : 1.0);
+          return ($rawtemp100 * 10 + $rawtemp10 + $rawtemp1 / 10) * ( substr($_[1],10,1) == 1 ? -1.0 : 1.0);
         },
-        crcok      => sub {return 1;},    # crc test method is so far unknown
+        #crcok      => sub {return 1;},    # crc test method is so far unknown
     },
     106 => {
         # BBQ temperature sensor MODELL: GT-TMBBQ-01s (Sender), GT-TMBBQ-01e (Empfaenger)
@@ -678,13 +682,14 @@ sub SD_WS_Parse {
         model      => 'SD_WS_106_T',
         prematch   => sub { return 1; }, # no precheck known
         id         => sub { my ($rawData,undef) = @_; return substr($rawData,0,2); },
+        noTempCheck => sub { return 1; },
         temp       => sub { my (undef,$bitData) = @_;
                             $rawTemp =  SD_WS_binaryToNumber($bitData,8,21);
                             my $tempFh = $rawTemp / 20 - 90; # Grad Fahrenheit
                             Log3 $name, 4, "$name: SD_WS_106_T tempraw = $rawTemp, temp = $tempFh Fahrenheit";
                             return (round((($tempFh - 32) * 5 / 9) , 1)); # Grad Celsius
                           },
-        crcok      => sub {return 1;}, # CRC test method does not exist
+        #crcok      => sub {return 1;}, # CRC test method does not exist
     } ,
     108 => {
         # https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_5in1.c
@@ -872,6 +877,7 @@ sub SD_WS_Parse {
         model      => 'SD_WS_113_T',
         prematch   => sub { return 1; }, # no precheck known
         id         => sub { my ($rawData,undef) = @_; return substr($rawData,0,2); },
+        noTempCheck => sub { return 1; },
         temp       => sub { my (undef,$bitData) = @_;
                             $rawTemp =  SD_WS_binaryToNumber($bitData,12,13) * 256 + SD_WS_binaryToNumber($bitData,16,23);
                             my $tempFh = $rawTemp - 90; # Grad Fahrenheit
@@ -884,7 +890,7 @@ sub SD_WS_Parse {
                             Log3 $name, 4, "$name: SD_WS_113_T tempraw2 = $rawTemp, temp2 = $tempFh Grad Fahrenheit";
                             return (round((($tempFh - 32) * 5 / 9) , 0)); # Grad Celsius
                           },
-        crcok      => sub {return 1;}, # Check could not be determined yet.
+        #crcok      => sub {return 1;}, # Check could not be determined yet.
     } ,
     115 => {
         # https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_6in1.c
@@ -1096,7 +1102,7 @@ sub SD_WS_Parse {
     {
       if ($sign)
       {
-        $temp = 0 - $temp
+        $temp = 0 - $temp;
       }
     }
 
@@ -1150,6 +1156,8 @@ sub SD_WS_Parse {
          #* id is a random id that is generated when the sensor starts
          #* temp is 12 bit signed magnitude scaled by 10 celcius
          #* humi is 8 bit relative humidity percentage
+         #*
+         #* https://github.com/merbanan/rtl_433/blob/master/src/devices/fineoffset.c
          #* Based on reverse engineering with gnu-radio and the nice article here:
          #*  http://lucsmall.com/2012/04/29/weather-station-hacking-part-2/
          # 0x4A/74 0x70/112 0xEF/239 0xFF/255 0x97/151 | Sensor ID: 0x4A7 | 255% | 239 | OK
@@ -1269,14 +1277,18 @@ sub SD_WS_Parse {
       Log3 $iohash, 4, "$name: SD_WS_Parse $rawData protocolid $protocol ($SensorTyp) - ERROR prematch" ;
       return "";
     }
-    my $retcrc=$decodingSubs{$protocol}{crcok}->( $rawData,$bitData );
-    if (!$retcrc) {
-      Log3 $iohash, 4, "$name: SD_WS_Parse $rawData protocolid $protocol ($SensorTyp) - ERROR CRC";
-      return "";
+    if (exists($decodingSubs{$protocol}{crcok})) {
+      my $retcrc=$decodingSubs{$protocol}{crcok}->( $rawData,$bitData );
+      if (!$retcrc) {
+        Log3 $iohash, 4, "$name: SD_WS_Parse $rawData protocolid $protocol ($SensorTyp) - ERROR CRC";
+        return "";
+      }
+      $defaultMaxDeviation = 5;
     }
     $id = $decodingSubs{$protocol}{id}->( $rawData,$bitData );
     $temp = $decodingSubs{$protocol}{temp}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp}));
     $temp2 = $decodingSubs{$protocol}{temp2}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp2}));
+    $noTempCheck = $decodingSubs{$protocol}{noTempCheck}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{noTempCheck}));
     $hum = $decodingSubs{$protocol}{hum}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{hum}));
     $windspeed = $decodingSubs{$protocol}{windspeed}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{windspeed}));
     ($winddir,$winddirtxt) = $decodingSubs{$protocol}{winddir}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{winddir}));
@@ -1338,60 +1350,108 @@ sub SD_WS_Parse {
   return "" if(IsIgnored($name));
 
   if (defined $temp) {
-    if (($temp < -30 || $temp > 70) && $protocol ne '106' && $protocol ne '113') { # not forBBQ temperature sensor GT-TMBBQ-01s and Wireless Grill Thermometer GFGT 433 B1
+    if (($temp < -30 || $temp > 70) && !defined($noTempCheck)) { # not forBBQ temperature sensor GT-TMBBQ-01s and Wireless Grill Thermometer GFGT 433 B1
       Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode - ERROR temperature $temp";
       return "";  
     }
   }
   if (defined $hum) {
-    if ($hum > 100) {
+    if ($hum > 99) {
       Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode - ERROR humidity $hum";
       return "";  
+    }
+    elsif ($hum == 0) {
+      $hum = undef;
     }
   }
 
   # Sanity checks
-  if($def && $protocol ne '106' && $protocol ne '113') { # not forBBQ temperature sensor GT-TMBBQ-01s and Wireless Grill Thermometer GFGT 433 B1
-    my $timeSinceLastUpdate = abs(ReadingsAge($name, "state", 0));
+  if($def && !defined($noTempCheck)) { # not forBBQ temperature sensor GT-TMBBQ-01s and Wireless Grill Thermometer GFGT 433 B1
     # temperature
-    if (defined($temp) && defined(ReadingsVal($name, "temperature", undef))) {
-      my $diffTemp = 0;
-      my $oldTemp = ReadingsVal($name, "temperature", undef);
-      my $maxdeviation = AttrVal($name, "max-deviation-temp", 1);       # default 1 K
-      if ($temp > $oldTemp) {
-        $diffTemp = ($temp - $oldTemp);
-      } else {
-        $diffTemp = ($oldTemp - $temp);
+    if (defined($temp) && defined(ReadingsVal($name, 'temperature', undef))) {
+      my $maxdeviation = AttrVal($name, 'max-deviation-temp', $defaultMaxDeviation);
+      if (SD_WS_Sanity_checks($ioname, $name, 'temperature', 'temp', $temp, 1, $maxdeviation) == -1) {
+        my $valErr = ReadingsVal($name, 'tempErr', undef);
+        if (!defined($valErr)) {
+          readingsSingleUpdate($hash, 'tempErr', $temp, 0); # fehlerhafte Temperatur merken
+          return "";
+        }
+        else {  # die vorherige Temperatur war fehlerhaft -> Differenz zur vorherigen Temperatur pruefen
+          if (SD_WS_Sanity_checks($ioname, $name, 'tempErr', 'tempErr', $temp, 1, $maxdeviation) == -1) {
+            readingsSingleUpdate($hash, 'tempErr', $temp, 0);
+            return "";
+          }
+          else {  # temp ok
+            readingsDelete($hash, "tempErr");
+          }
+        }
       }
-      $diffTemp = sprintf("%.1f", $diffTemp);       
-      Log3 $name, 4, "$ioname: $name old temp $oldTemp, age $timeSinceLastUpdate, new temp $temp, diff temp $diffTemp";
-      my $maxDiffTemp = $timeSinceLastUpdate / 60 + $maxdeviation;      # maxdeviation + 1.0 Kelvin/Minute
-      $maxDiffTemp = sprintf("%.1f", $maxDiffTemp + 0.05);              # round 0.1
-      Log3 $name, 4, "$ioname: $name max difference temperature $maxDiffTemp K";
-      if ($diffTemp > $maxDiffTemp) {
-        Log3 $name, 3, "$ioname: $name ERROR - Temp diff too large (old $oldTemp, new $temp, diff $diffTemp)";
-        return "";
+      else { # temp ok
+        if (defined(ReadingsVal($name, 'tempErr', undef))) {
+          readingsDelete($hash, "tempErr");
+        }
       }
     }
     # humidity
-    if (defined($hum) && defined(ReadingsVal($name, "humidity", undef))) {
-      my $diffHum = 0;
-      my $oldHum = ReadingsVal($name, "humidity", undef);
-      my $maxdeviation = AttrVal($name, "max-deviation-hum", 1);        # default 1 %
-      if ($hum > $oldHum) {
-        $diffHum = ($hum - $oldHum);
-      } else {
-        $diffHum = ($oldHum - $hum);
+    if (defined($hum) && defined(ReadingsVal($name, 'humidity', undef))) {
+      my $maxdeviation = AttrVal($name, 'max-deviation-hum', $defaultMaxDeviation);
+      if (SD_WS_Sanity_checks($ioname, $name, 'humidity', 'hum', $hum, 0, $maxdeviation) == -1) {
+        my $valErr = ReadingsVal($name, 'humErr', undef);
+        if (!defined($valErr)) {
+          readingsSingleUpdate($hash, 'humErr', $hum, 0); # fehlerhafte humidity merken
+          return "";
+        }
+        else {  # die vorherige humidity war fehlerhaft -> Differenz zur vorherigen humidity pruefen
+          if (SD_WS_Sanity_checks($ioname, $name, 'humErr', 'humErr', $hum, 0, $maxdeviation) == -1) {
+            readingsSingleUpdate($hash, 'humErr', $hum, 0);
+            return "";
+          }
+          else {  # hum ok
+            readingsDelete($hash, "humErr");
+          }
+        }
       }
-      $diffHum = sprintf("%.1f", $diffHum);       
-      Log3 $name, 4, "$ioname: $name old hum $oldHum, age $timeSinceLastUpdate, new hum $hum, diff hum $diffHum";
-      my $maxDiffHum = $timeSinceLastUpdate / 60 + $maxdeviation;       # $maxdeviation + 1.0 %/Minute
-      $maxDiffHum = sprintf("%1.f", $maxDiffHum + 0.5);                 # round 1
-      Log3 $name, 4, "$ioname: $name max difference humidity $maxDiffHum %";
-      if ($diffHum > $maxDiffHum) {
-        Log3 $name, 3, "$ioname: $name ERROR - Hum diff too large (old $oldHum, new $hum, diff $diffHum)";
-        return "";
+      else { # hum ok
+        if (defined(ReadingsVal($name, 'humErr', undef))) {
+          readingsDelete($hash, "humErr");
+        }
       }
+    }
+    # rain
+    if (defined($rain) && defined(ReadingsVal($name, 'rain', undef))) {
+      my $rainOffset = ReadingsVal($name, ".rainOffset", 0);
+      my $maxdeviation = AttrVal($name, 'max-deviation-rain', $defaultMaxDeviation);
+      if (SD_WS_Sanity_checks($ioname, $name, 'rain', 'rain', $rain, 0, $maxdeviation) == -1) {
+        my $valErr = ReadingsVal($name, 'rainErr', undef);
+        if (!defined($valErr)) {
+          readingsSingleUpdate($hash, 'rainErr', $rain, 0); # fehlerhafte rain merken
+          return "";
+        }
+        else {  # die vorherige rain war fehlerhaft -> Differenz zur vorherigen rain pruefen
+          if (SD_WS_Sanity_checks($ioname, $name, 'rainErr', 'rainErr', $rain, 0, $maxdeviation) == -1) {
+            readingsSingleUpdate($hash, 'rainErr', $rain, 0);
+            return "";
+          }
+          else {  # rain ok
+            readingsDelete($hash, "rainErr");
+            my $lastRain = ReadingsVal($name, "rain", 0);
+            # wenn der aktuelle Wert < letzter Wert ist, dann fand ein reset statt
+            # die Differenz "letzer Wert - aktueller Wert" wird dann als offset für zukünftige Ausgaben zu rain addiert
+            # offset wird auch im Reading ".rain_offset" gespeichert
+            if ($rain < $lastRain) {
+              $rainOffset += $lastRain;
+              readingsSingleUpdate($hash, '.rainOffset', $rainOffset, 0);
+              Log3 $hash, 3, "$ioname: $name reset rain, rain: $rain lastrain: $lastRain, new rainOffset: $rainOffset";
+            }
+          }
+        }
+      }
+      else { # rain ok
+        if (defined(ReadingsVal($name, 'rainErr', undef))) {
+          readingsDelete($hash, "rainErr");
+        }
+      }
+      $rain_total = $rain + $rainOffset;
     }
   }
 
@@ -1408,30 +1468,33 @@ sub SD_WS_Parse {
   #my $state = (($temp > -60 && $temp < 70) ? "T: $temp":"T: xx") . (($hum > 0 && $hum < 100) ? " H: $hum":"");
   my $state = "";
   if (defined($temp)) {
-    $state .= "T: $temp"
+    $state .= "T: $temp";
   }
   if (defined($temp2)) {
     $state .= ' ' if (length($state) > 0);
     $state .= "T2: $temp2";
   }
-  if (defined($hum) && ($hum > 0 && $hum < 100)) {
-    $state .= " H: $hum"
+  if (defined($hum)) {
+    $state .= " " if (length($state) > 0); # es gibt auch Sensoren ohne Temp
+    $state .= "H: $hum";
   }
   if (defined($windspeed)) {
     $state .= " " if (length($state) > 0);
-    $state .= "W: $windspeed"
+    $state .= "Ws: $windspeed";
+  }
+  if (defined($windgust)) {
+    $state .= " Wg: $windgust";
+  }
+  if (defined($winddirtxt)) {
+    $state .= " Wd: $winddirtxt";
   }
   if (defined($rain_total)) {
     $state .= " " if (length($state) > 0);
-    $state .= "R: $rain_total"
-  }
-  if (defined($rain)) {
-    $state .= " " if (length($state) > 0);
-    $state .= "R: $rain"
+    $state .= "R: $rain_total";
   }
   if (defined($distance)) {
     $state .= " " if (length($state) > 0);
-    $state .= "D: $distance"
+    $state .= "D: $distance";
   }
   ### protocol 33 has different bits per sensor type
   if ($protocol eq "33") {
@@ -1450,9 +1513,9 @@ sub SD_WS_Parse {
 
   readingsBeginUpdate($hash);
   readingsBulkUpdate($hash, "state", $state);
-  readingsBulkUpdate($hash, "temperature", $temp)  if (defined($temp) && (($temp > -60 && $temp < 70 ) || $protocol eq '106' || $protocol eq '113'));
-  readingsBulkUpdate($hash, "temperature2", $temp2)  if (defined($temp2) && (($temp2 > -60 && $temp < 70 ) || $protocol eq '113'));
-  readingsBulkUpdate($hash, "humidity", $hum)  if (defined($hum) && ($hum > 0 && $hum < 100 )) ;
+  readingsBulkUpdate($hash, "temperature", $temp)  if (defined($temp));
+  readingsBulkUpdate($hash, "temperature2", $temp2)  if (defined($temp2) && (($temp2 > -60 && $temp < 70 ) || defined($noTempCheck)));
+  readingsBulkUpdate($hash, "humidity", $hum)  if (defined($hum));
   readingsBulkUpdate($hash, 'windSpeed', $windspeed)  if (defined($windspeed)) ;
   readingsBulkUpdate($hash, 'windDirectionDegree', $winddir)  if (defined($winddir)) ;
   readingsBulkUpdate($hash, 'windDirectionText', $winddirtxt)  if (defined($winddirtxt)) ;
@@ -1504,6 +1567,22 @@ sub SD_WS_LFSR_digest8_reflect {
   }
   $sum = $sum & 0xff;
   return $sum;
+}
+
+#############################
+sub SD_WS_Sanity_checks {
+  my ($ioname, $name, $readingName, $valName, $val, $roundpos, $maxdeviation) = @_;
+  my $timeSinceLastUpdate = abs(ReadingsAge($name, $readingName, 0));
+  my $oldVal = ReadingsVal($name, $readingName, undef);
+  my $diffVal = abs($val - $oldVal);
+  $diffVal = sprintf("%.1f", $diffVal);
+  my $maxDiffVal = round($timeSinceLastUpdate / 60 + $maxdeviation, $roundpos);    # maxdeviation + 1.0 val/Minute
+  Log3 $name, 4, "$ioname: $name old $valName $oldVal, new $valName $val, diff $valName $diffVal, max diff $maxDiffVal, age $timeSinceLastUpdate";
+  if ($diffVal > $maxDiffVal) {
+    Log3 $name, 3, "$ioname: $name ERROR - $valName diff too large (old $oldVal, new $val, diff $diffVal, age $timeSinceLastUpdate)";
+    return -1;
+  }
+  return 0;
 }
 
 #############################
