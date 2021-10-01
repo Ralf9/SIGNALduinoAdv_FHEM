@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2021-09-27 19:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2021-10-01 19:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -65,6 +65,7 @@ sub SD_WS_Initialize {
                       "max-deviation-temp:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
                       "max-deviation-hum:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
                       "max-deviation-rain:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
+                      "dp100-wh51-ad0 dp100-wh51-ad100 ".
                       "$readingFnAttributes ";
   $hash->{AutoCreate} =
   {
@@ -1522,13 +1523,31 @@ sub SD_WS_Parse {
       return "";  
     }
   }
-  if (defined $hum && $protocol ne '107') {
-    if ($hum > 99) {
-      Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode - ERROR humidity $hum";
-      return "";  
+  if (defined $hum) {
+    if ($protocol ne '107') {
+      if ($hum > 99) {
+        Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode - ERROR humidity $hum";
+        return "";  
+      }
+      elsif ($hum == 0) {
+        $hum = undef;
+      }
     }
-    elsif ($hum == 0) {
-      $hum = undef;
+    else { # protocol 107 (Soil Moisture Sensor)
+      my $ad0 = AttrVal($name, 'dp100-wh51-ad0', undef);
+      my $ad100 = AttrVal($name, 'dp100-wh51-ad100', undef);
+      if (defined $ad0 && defined $ad100 && defined $ad) {
+        my $calHum;
+        if ($ad <= $ad0) {
+          $calHum = 0;
+        }
+        else {
+          $calHum = ($ad - $ad0) * 100 / ($ad100 - $ad0);
+          $calHum = round($calHum, 0);
+        }
+        Log3 $name, 4, "$name: SD_WS_Parse protocol 107 hum=$hum calhum=$calHum ad=$ad ad0=$ad0 ad100=$ad100";
+        $hum = $calHum;
+      }
     }
   }
 
