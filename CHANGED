@@ -1,3 +1,12 @@
+14.10.2021
+  00_SIGNALduino.pm:
+  - beim Attribut Hardware culV3 zugefügt
+  - "Device specific help" ergänzt
+  - Es können nun bei FSK bei einer ProtocolID mehrere cc1101 konfig Nummern (N) angegeben werden
+10.10.2021
+  signalduino_protocols.pm:
+  - bei den rfmode Bezeichnungen Bx (die Anzahl der Bytes die empfangen werden) und Nx (Nummerierung der cc1101 konfig) ergänzt
+  - bei FSK Protokollen "length_min" und "N" ergänzt
 04.09.2021
   00_SIGNALduino.pm:
   - Zur FileLog notify Reduzierung bei showLastFileLog den Fakelog Eintrag entfernt (Forum Thread #122372)

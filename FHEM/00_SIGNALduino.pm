@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 347 2021-09-04 20:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 347 2021-10-14 19:00:00Z v3.4.7-dev-Ralf9 $
 #
 # v3.4.7
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.7-dev_ralf_04.09.",
+	SDUINO_VERSION            => "v3.4.7-dev_ralf_14.10.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -281,7 +281,7 @@ SIGNALduino_Initialize
 					  ." hexFile"
                       ." initCommands"
                       ." flashCommand"
-  					  ." hardware:ESP32_sduino_devkitV1,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,"
+  					  ." hardware:ESP32_sduino_devkitV1,ESP8266cc1101,nano328,nano328_optiboot,nanoCC1101,nanoCC1101_optiboot,miniculCC1101,3v3prominiCC1101,promini,radinoCC1101,uno,culV3CC1101,"
 					       ."Maple_sduino_USB,Maple_sduino_serial,Maple_sduino_LAN,Maple_cul_USB,Maple_cul_serial,Maple_cul_LAN"
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
@@ -929,7 +929,7 @@ SIGNALduino_Set
 	
 	## Format of RX and TX data = normal, use FIFOs for RX and TX
 	} elsif (exists $ProtocolListSIGNALduino{$protocol}{cc1101FIFOmode}) {
-		my $ccN = $ProtocolListSIGNALduino{$protocol}{N};
+		my $ccN = $ProtocolListSIGNALduino{$protocol}{N}[0];
 		Log3 $name, 5, "$name: sendmsg Preparing cc1101 FIFO send, protocol=$protocol, repeats=$repeats, N=$ccN, data=$data";
 		$sendData = 'SN;' . ($repeats > 0 ? "R=$repeats;" : '') . "N=$ccN;D=$data;" # SN;R=1;N=9;D=08C11484498ABCDE;
 	## modulation ASK/OOK - MS MU
@@ -3452,7 +3452,15 @@ sub SIGNALduino_Parse_MN
 			next if (SIGNALduino_getProtoProp($id,"defaultNoN","") ne "1" && scalar(@{$hash->{mnIdList}}) > 1);  # Abbruch
 		}
 		else {
-			next if ($N ne SIGNALduino_getProtoProp($id,"N",""));	# Abbruch wenn N Nr nicht uebereinstimmt
+			#next if ($N ne SIGNALduino_getProtoProp($id,"N",""));	# Abbruch wenn N Nr nicht uebereinstimmt
+			my $nFlag = 0;
+			foreach my $p (@{$ProtocolListSIGNALduino{$id}{N}}) {
+				if ($N == $p) {
+					$nFlag = 1;
+				}
+				#Log3 $name, 4, "$name Parse_MN: ID=$id N=$N Np=$p";
+			}
+			next if $nFlag == 0;
 		}
 			
 		if ($match eq "" || $rawData =~ m/$match/) {
@@ -5743,9 +5751,12 @@ sub SIGNALduino_WH24
 		$checksum &= 0xFF;
 		my $checksumRef = $data[$sumLen-1];
 		if ($checksum != $checksumRef) {
-			return (-1, "WH24: checksum Error checksum=$checksum checksumRef=$checksumRef");
+			#return (-1, "WH24: checksum Error checksum=$checksum checksumRef=$checksumRef");
+			$checksumTxt = "checksum=$checksum checksumRef=$checksumRef";
 		}
-		$checksumTxt = "checksum=$checksum ok";
+		else {
+			$checksumTxt = "checksum=$checksum ok";
+		}
 	}
 	else {
 		$checksumTxt = "no checksum";
@@ -6158,8 +6169,11 @@ sub SIGNALduino_FW_getProtocolList
 				if (length($knownFreqs) > 2) {
 					$comment .= ", " . $knownFreqs . "MHz";
 				}
+				if (exists($ProtocolListSIGNALduino{$id}{length_min})) {
+					$comment .= ", Bmin=" . $ProtocolListSIGNALduino{$id}{length_min} / 2;
+				}
 				if (exists($ProtocolListSIGNALduino{$id}{N})) {
-					$comment .= ", N=" . $ProtocolListSIGNALduino{$id}{N};
+					$comment .= ", N=" . join (' ', @{$ProtocolListSIGNALduino{$id}{N}});
 				}
 				$comment .= ")";
 			}
@@ -6912,7 +6926,11 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a name="rfmode"></a>
 	<li>rfmode<br>
 	Damit kann ein rfmode ausgew&auml;hlt werden, es werden dann die dazu notwendigen Register zum sduino mit dem CW Befehl gesendet.<br>
-	Bei slowRf wird ein cc1101 Factoryreset durchgef&uuml;hrt</li><br>
+	Bei slowRf wird ein cc1101 Factoryreset durchgef&uuml;hrt<br>
+	Die FSK-Bezeichung hat den folgenden Aufbau: "Name_Bx_Nx_Datarate"<br>
+	- Bx: die Anzahl der Bytes die empfangen werden<br>
+	- Nx: Nummerierung der cc1101 konfig<br>
+	- Bei gleicher Nummerierung werden auch rfmode Eintr&auml;ge mit kleinerer Byteanzahl (Bx) verarbeitet</li><br>
 	<a name="sendMsg"></a>
 	<li>sendMsg<br>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
@@ -6969,10 +6987,11 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden.<br>
 	<code>s   - </code>damit wird eine &Uuml;bersicht von allen B&auml;nken ausgegeben.<br>
 	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert.<br>
-	Nur beim Maple:<br>
+	Nur beim Maple oder ESP32:<br>
 	<code>r   - </code>damit wird von allen cc1101 eine Bankinfo ausgegeben.<br>
 	<code>A-D - </code>damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
-	
+	<code>A-D<0-9> - </code>damit wird ein cc1101 (A-D) mit einer Speicherbank (0-9) initialisiert. z.B. mit A3 wird das das erste cc1101 Modul A mit der Speicherbank 3 initalisiert.<br>
+	<code>           </code>mit nachgestelltem W wird es im EEPROM gespeichert.<br>
 	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
