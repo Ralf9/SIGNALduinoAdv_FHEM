@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 347 2021-09-25 23:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 347 2021-10-10 18:00:00Z v3.4.7-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,25 +68,25 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.7-dev_ralf_25.09.'
+		"version" => 'v3.4.7-dev_ralf_10.10.'
 		);
 
 our %rfmode = (
-	"SlowRF_ccFactoryReset"  => 'e',
-	"Lacrosse_mode1_17241"   => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,404d,4131,425f,4349,4454,452b,4600',
-	"Lacrosse_mode2_9579"    => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1182,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D02,3E03,404d,4132,425f,4349,4454,452b,4600',
-	"PCA301_mode3_6631"      => 'CW0001,0246,0307,042D,05D4,06FF,0700,0802,0D21,0E6B,0FD0,1088,110B,1206,1322,14F8,1553,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D03,3E03,4050,4143,4241,435f,4433,4530,4631,4700',
-	"KOPP_FC_4785"           => 'CW0001,0246,0304,04AA,0554,060F,07E0,0800,0D21,0E65,0FCA,10C7,1183,1216,1373,14F8,1540,170C,1829,1936,1B07,1C40,1D91,2211,23E9,242A,2500,261F,3D04,3E02,404b,416f,4270,4370,445f,4546,4643,4700',
-	"WS1600_TX22_mode5_8842" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1165,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D05,3E04,404d,4135,425f,4349,4454,452b,4600',
-	"DP100_WH51_WH57_868_17241" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0FE8,1009,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D06,3E04,4057,4148,4235,4331,4457,4548,4635,4737',
-    "DP100_WH51_WH57_433_17241" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D10,0EB0,0F71,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D06,3E04,4057,4148,4235,4331,4457,4548,4635,4737',
-	"Bresser_5in1_8220"      => 'CW0001,0246,0306,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4535,4631,4700',
-	"Bresser_6in1_8220"      => 'CW0001,0246,0304,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4536,4631,4700',
-	"HoneywActivL_SlowRf_FSK"=> 'CW000D,022D,0307,04D3,0591,063D,0704,0832,0D21,0E65,0FE8,1087,11F8,1200,1323,14B9,1550,1700,1818,1914,1B43,1C00,1D91,2211,23E9,242A,2500,2611,3D00,3E00,4048,4177,4253,436C,446F,4577,4652,4746',
-	"Rojaflex_433_GFSK"      => 'CW0001,0246,0302,04D3,0591,06FF,0700,0805,0D10,0EB0,0F71,10C8,1193,1213,1322,14F8,1535,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D08,3E04,4052,416f,426a,4361,4466,456c,4665,4778',
-	"Avantek_433_FSK"        => 'CW0001,0246,0301,0408,0569,06FF,0780,0802,0D10,0EAA,0F56,108A,11F8,1202,1322,14F8,1551,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D09,3E04,4041,4176,4261,436e,4474,4565,466b,4700',
-	"WH24_WH25_17241"        => 'CW0001,0246,0304,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,4057,4148,4232,4334,4457,4548,4632,4735',
-	"W136_4798"              => 'CW0001,0246,0305,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D0A,3E04,4057,4131,4233,4336,4400'
+    "SlowRF_ccFactoryReset"  => 'e',
+    "Lacrosse_mode1__B12_N1_17241"   => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,404d,4131,425f,4349,4454,452b,4600',
+    "Lacrosse_mode2__B12_N2_9579"    => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1182,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D02,3E03,404d,4132,425f,4349,4454,452b,4600',
+    "PCA301_mode3__B32_N3_6631"      => 'CW0001,0246,0307,042D,05D4,06FF,0700,0802,0D21,0E6B,0FD0,1088,110B,1206,1322,14F8,1553,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D03,3E03,4050,4143,4241,435f,4433,4530,4631,4700',
+    "KOPP_FC__B20_N4_4785"           => 'CW0001,0246,0304,04AA,0554,060F,07E0,0800,0D21,0E65,0FCA,10C7,1183,1216,1373,14F8,1540,170C,1829,1936,1B07,1C40,1D91,2211,23E9,242A,2500,261F,3D04,3E02,404b,416f,4270,4370,445f,4546,4643,4700',
+    "WS1600_TX22_mode5__B16_N5_8842" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1165,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D05,3E04,404d,4135,425f,4349,4454,452b,4600',
+ "DP100_WH51_WH57_868__B16_N6_17241" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D21,0E66,0F1A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D06,3E04,4057,4148,4235,4331,4457,4548,4635,4737',
+ "DP100_WH51_WH57_433__B16_N16_17241" => 'CW0001,0246,0303,042D,05D4,06FF,0700,0802,0D10,0EB0,0F71,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D10,3E04,4057,4148,4235,4331,4457,4548,4635,4737',
+    "Bresser_5in1__B28_N7_8220"      => 'CW0001,0246,0306,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4535,4631,4700',
+    "Bresser_6in1__B20_N7_8220"      => 'CW0001,0246,0304,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4536,4631,4700',
+    "HoneywActivL__SlowRf_FSK"       => 'CW000D,022D,0307,04D3,0591,063D,0704,0832,0D21,0E65,0FE8,1087,11F8,1200,1323,14B9,1550,1700,1818,1914,1B43,1C00,1D91,2211,23E9,242A,2500,2611,3D00,3E00,4048,4177,4253,436C,446F,4577,4652,4746',
+    "Rojaflex_433__B12_N8_GFSK"      => 'CW0001,0246,0302,04D3,0591,06FF,0700,0805,0D10,0EB0,0F71,10C8,1193,1213,1322,14F8,1535,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D08,3E04,4052,416f,426a,4361,4466,456c,4665,4778',
+    "Avantek_433__B8_N9_FSK"         => 'CW0001,0246,0301,0408,0569,06FF,0780,0802,0D10,0EAA,0F56,108A,11F8,1202,1322,14F8,1551,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D09,3E04,4041,4176,4261,436e,4474,4565,466b,4700',
+    "WH24_WH25__B20_N1_17241"        => 'CW0001,0246,0304,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,4057,4148,4232,4334,4457,4548,4632,4735',
+    "W136__B24_N10_4798"             => 'CW0001,0246,0305,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D0A,3E04,4057,4131,4233,4336,4400'
 	);
 
 our %ProtocolListSIGNALduino  = (
@@ -2714,7 +2714,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20200104 new',
 				id              => '100',
 				knownFreqs      => '868.3',
-				N               => 1,
+				N               => [1,6],
 				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
@@ -2722,9 +2722,13 @@ our %ProtocolListSIGNALduino  = (
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'LaCrosse',
+				length_min      => '10',     # 5 Byte
 				method        => \&main::SIGNALduino_LaCrosse,
 			},
 		"101"	=>	# PCA 301
+					# https://wiki.fhem.de/wiki/PCA301_Funkschaltsteckdose_mit_Energieverbrauchsmessung
+					# MN;D=020503B7A100AAAAAAAA54D5AA18590B66A88797465D50AED898482A1E80E8CC;N=3;R=252;  addr: 03B7A1 state: on channel: 2
+					# MN;D=020403B7A10101A7000031ECAAA9615CF878C1E17E3CDF4882A8D0045204CB0D;N=3;R=252;  addr: 03B7A1 state: on channel: 2 power: 42.3 statusRequest
 			{
 				name            => 'PCA 301',
 				comment         => 'Energy socket',
@@ -2732,14 +2736,14 @@ our %ProtocolListSIGNALduino  = (
 				id              => '101',
 				knownFreqs      => '868.950',
 				dispatchequals	=>  'true',
-				N               => 3,
+				N               => [3],
 				datarate        => '6620.41',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
 				cc1101FIFOmode  => '1',       # use FIFOs for RX and TX
 				#match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'PCA301',
-				length_min      => '24',
+				length_min      => '24',      # 12 Byte 
 				method        => \&main::SIGNALduino_PCA301,
 			},
 		"102"	=>	# Kopp
@@ -2748,7 +2752,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20200104 new',
 				id              => '102',
 				knownFreqs      => '868.3',
-				N               => 4,
+				N               => [4],
 				datarate        => '4785.5',
 				sync            => 'AA54',
 				modulation      => 'GFSK',
@@ -2758,18 +2762,23 @@ our %ProtocolListSIGNALduino  = (
 				method        => \&main::SIGNALduino_KoppFreeControl,
 			},
 		"103"	=>	# Lacrosse mode 2 - IT+
+					# https://forum.fhem.de/index.php/topic,106278.msg1048506.html#msg1048506 @Ralf9
+					# ID=103, addr=40 temp=19.2 hum=47 bat=0 batInserted=0   MN;D=9A05922F8180046818480800;N=2;
+					# https://forum.fhem.de/index.php/topic,106594.msg1034378.html#msg1034378 @Ralf9
+					# ID=103, addr=52 temp=21.5 hum=47 bat=0 batInserted=0   MN;D=9D06152F5484791062004090;N=2;
 			{
 				name            => 'Lacrosse mode 2',
 				changed         => '20200228 new',
 				id              => '103',
 				knownFreqs      => '868.3',
-				N               => 2,
+				N               => [2],
 				datarate        => '9.579',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'LaCrosse',
+				length_min      => '10',     # 5 Byte
 				method        => \&main::SIGNALduino_LaCrosse,
 			},
 		"104"	=>	# Remote control TR60C-1 with touch screen from Satellite Electronic (Zhongshan) Ltd., Importer Westinghouse Lighting for ceiling fan Bendan
@@ -2850,8 +2859,8 @@ our %ProtocolListSIGNALduino  = (
 				comment         => 'DP100, Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor',
 				changed         => '20201005 new',
 				id              => '107',
-				knownFreqs      => '433.92 | 868.35',
-				N               => 6,
+				knownFreqs      => '433.92 | 868.37',
+				N               => [6,16],
 				datarate        => '17257.69',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
@@ -2859,7 +2868,7 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^51.*',  # Family code 0x51 (ECOWITT/FineOffset WH51)
 				preamble        => 'W107#',
 				clientmodule    => 'SD_WS',
-				length_min      => '28',
+				length_min      => '28',  # 14 Byte
 				method          => \&main::SIGNALduino_FSK_default,
 			},
 		"108"	=>  # BRESSER 5-in-1 Wetter Center
@@ -2872,7 +2881,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210422 new',
 				id              => '108',
 				knownFreqs      => '868.35',
-				N               => 7,
+				N               => [7],
 				datarate        => '8220',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
@@ -2880,7 +2889,7 @@ our %ProtocolListSIGNALduino  = (
 				#match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W108#',
 				clientmodule    => 'SD_WS',
-				length_min      => '52',
+				length_min      => '52',      # 26 Byte
 				method          => \&main::SIGNALduino_Bresser_5in1,
 			},
 		"109" =>  ## Rojaflex HSR-1, HSR-5, HSR-15, HSTR-5, HSTR-15, RHSM1
@@ -2895,7 +2904,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210504 new',
 				id              => '109',
 				knownFreqs      => '433.92',
-				N               => 8,
+				N               => [8],
 				datarate        => '9992.60',
 				sync            => 'D391D391',
 				modulation      => 'GFSK',
@@ -2903,7 +2912,7 @@ our %ProtocolListSIGNALduino  = (
 				cc1101FIFOmode  => '1',     # use FIFOs for RX and TX
 				preamble        => 'P109#',
 				clientmodule    => 'SD_Rojaflex',
-				length_min      => '18',
+				length_min      => '18',    # 9 Byte
 				#length_max      => '18',
 				method          => \&main::SIGNALduino_FSK_default,
 			},
@@ -2974,15 +2983,14 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210607 new',
 				id              => '112',
 				knownFreqs      => '433.3',
-				N               => 9,
+				N               => [9],
 				datarate        => '50.087',
 				sync            => '0869',
 				modulation      => '2-FSK',
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				preamble        => 'P112#',
 				clientmodule    => 'SD_BELL',
-				#length_min      => '16',
-				#length_max      => '16',
+				length_min      => '9',
 				method          => \&main::SIGNALduino_FSK_default,
 			},
 		"113" =>  ## Wireless Grill Thermometer, Model name: GFGT 433 B1, WDJ7036, FCC ID: 2AJ9O-GFGT433B1, 
@@ -3038,7 +3046,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210730 new',
 				id              => '115',
 				knownFreqs      => '868.35',
-				N               => 7,
+				N               => [7],
 				datarate        => '8220',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
@@ -3046,7 +3054,7 @@ our %ProtocolListSIGNALduino  = (
 				#match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W115#',
 				clientmodule    => 'SD_WS',
-				length_min      => '36',
+				length_min      => '36',      # 18 Byte
 				method          => \&main::SIGNALduino_Bresser_5in1_neu,
 			},
 		"116"	=>	# Fine Offset/ECOWITT/MISOL WH57, froggit DP60
@@ -3060,7 +3068,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210825 new',
 				id              => '116',
 				knownFreqs      => '433.92 | 868.35',
-				N               => 6,
+				N               => [6],
 				datarate        => '17257.69',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
@@ -3068,7 +3076,7 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^57.*',  # Family code 0x57
 				preamble        => 'W116#',
 				clientmodule    => 'SD_WS',
-				length_min      => '18',
+				length_min      => '18',     # 9 Byte
 				method          => \&main::SIGNALduino_FSK_default,
 			},
 			"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
@@ -3100,7 +3108,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210904 new',
 				id              => '201',
 				knownFreqs      => '868.3',
-				N               => 1,
+				N               => [1,6],
 				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
@@ -3108,7 +3116,7 @@ our %ProtocolListSIGNALduino  = (
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^A.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'LaCrosse',
-				length_min      => '20',
+				length_min      => '20',     # 10 Byte
 				method        => \&main::SIGNALduino_WS1080,
 			},
 		"202"	=>	# TX22
@@ -3117,14 +3125,14 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210904 new',
 				id              => '202',
 				knownFreqs      => '868.3',
-				N               => 5,
+				N               => [5],
 				datarate        => '8842',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^A.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'LaCrosse',
-				length_min      => '10',
+				length_min      => '10',     # 5 Byte
 				method        => \&main::SIGNALduino_TX22,
 			},
 		"203"	=>	# TX38
@@ -3133,7 +3141,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210904 new',
 				id              => '203',
 				knownFreqs      => '868.3',
-				N               => 1,
+				N               => [1,6],
 				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
@@ -3141,7 +3149,7 @@ our %ProtocolListSIGNALduino  = (
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^[C-F].*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				clientmodule    => 'LaCrosse',
-				length_min      => '8',
+				length_min      => '8',      # 4 Byte
 				method        => \&main::SIGNALduino_TX38,
 			},
 
@@ -3151,7 +3159,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210904 new',
 				id              => '204',
 				knownFreqs      => '868.3',
-				N               => 1,
+				N               => [1,6],
 				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
@@ -3160,16 +3168,16 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^24.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W204#',
 				clientmodule    => 'SD_WS',
-				length_min      => '32',
+				length_min      => '32',     # 16 Byte
 				method        => \&main::SIGNALduino_WH24,
 			},
 		"205"	=>	# WH25
 			{
-				name            => 'WH25',
+				name            => 'WH25 WH25A',
 				changed         => '20210904 new',
 				id              => '205',
 				knownFreqs      => '868.3',
-				N               => 1,
+				N               => [1,6],
 				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
@@ -3178,7 +3186,7 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^E.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W205#',
 				clientmodule    => 'SD_WS',
-				length_min      => '14',
+				length_min      => '14',     # 7 Byte
 				method        => \&main::SIGNALduino_WH25,
 			},
 		"206"	=>	# W136
@@ -3187,7 +3195,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20210904 new',
 				id              => '206',
 				knownFreqs      => '868.3',
-				N               => 10,
+				N               => [10],
 				datarate        => '4798',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
@@ -3195,7 +3203,7 @@ our %ProtocolListSIGNALduino  = (
 				match           => '^....1A.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W206#',
 				clientmodule    => 'SD_WS',
-				length_min      => '44',
+				length_min      => '44',     # 22 Byte
 				method        => \&main::SIGNALduino_W136,
 			}
 		
