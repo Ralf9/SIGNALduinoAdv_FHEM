@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 347 2021-10-14 19:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 347 2021-11-18 20:00:00Z v3.4.7-dev-Ralf9 $
 #
 # v3.4.7
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.7-dev_ralf_14.10.",
+	SDUINO_VERSION            => "v3.4.7-dev_ralf_18.11.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -39,6 +39,7 @@ use constant {
 	SDUINO_WRITEQUEUE_NEXT    => 0.3,
 	SDUINO_WRITEQUEUE_TIMEOUT => 2,
 	SDUINO_recAwNotMatch_Max  => 10,
+	SDUINO_parseRespMaxReading => 130,
 	
 	SDUINO_DISPATCH_VERBOSE     => 5,      # default 5
 	SDUINO_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
@@ -2125,8 +2126,13 @@ SIGNALduino_Read
 			else {
 				my $reading;
 				($rmsg, $reading) = SIGNALduino_parseResponse($hash,$getcmd,$rmsg);
-				if (length($reading) > 0 && length($reading) < 130) {
+				if (length($reading) > 0) {
+					if (length($reading) > SDUINO_parseRespMaxReading) {
+						$reading = substr($reading, 0, SDUINO_parseRespMaxReading);
+					}
 					readingsSingleUpdate($hash, $getcmd, $reading, 0);
+					my $ev = $getcmd . ':: ' . $reading;
+					DoTrigger($name, $ev, 0);
 				}
 				if (defined($hash->{getcmd}->{asyncOut})) {
 					#Log3 $name, 4, "$name/msg READ: asyncOutput";
