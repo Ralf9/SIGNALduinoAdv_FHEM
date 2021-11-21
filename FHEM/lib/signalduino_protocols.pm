@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 347 2021-10-10 18:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 347 2021-11-18 20:00:00Z v3.4.7-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.7-dev_ralf_10.10.'
+		"version" => 'v3.4.7-dev_ralf_18.11.'
 		);
 
 our %rfmode = (
@@ -2853,9 +2853,10 @@ our %ProtocolListSIGNALduino  = (
 			},
 		"107"	=>	# Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor Use with FSK
 				# https://forum.fhem.de/index.php/topic,109056.0.html
-				# H: 31 Bv: 1.6  MN;D=5100C6BF107F1FF8BAFFFFFF75A818CC;N=6;
+				# H: 31 Bv: 1.6 ad: 186 id: 00C6BF MN;D=5100C6BF107F1FF8BAFFFFFF75A818CC;N=6;
+				# H: 12 Bv: 1.3 ad: 112 id: 010310 MN;D=51010310ED7F0C007000000086D3204D;N=16;R=58;
 			{
-				name            => 'WH51',
+				name            => 'WH51 DP100',
 				comment         => 'DP100, Fine Offset WH51, ECOWITT WH51, MISOL/1 Soil Moisture Sensor',
 				changed         => '20201005 new',
 				id              => '107',
@@ -3059,16 +3060,16 @@ our %ProtocolListSIGNALduino  = (
 			},
 		"116"	=>	# Fine Offset/ECOWITT/MISOL WH57, froggit DP60
 				# https://forum.fhem.de/index.php/topic,122527
-				# MN;D=5700C655053F00DF95A0026CA23745A3;N=6;R=68;
-				# MN;D=5740C655053F02CBC3A0A7F1C30C3964;N=6;R=57;
-				# MN;D=5780C655050A03A5A9E0A7CC404F8E81;N=6;R=52;
+				# MN;D=5700C655053F00DF95A0026CA23745A3;N=16;R=68;
+				# MN;D=5740C655053F02CBC3A0A7F1C30C3964;N=16;R=57;
+				# MN;D=5780C655050A03A5A9E0A7CC404F8E81;N=16;R=52;
 			{
-				name            => 'WH51 DP60',
+				name            => 'WH57 DP60',
 				comment         => 'Misol WH57, froggit DP60, lightning detector',
 				changed         => '20210825 new',
 				id              => '116',
 				knownFreqs      => '433.92 | 868.35',
-				N               => [6],
+				N               => [6,16],
 				datarate        => '17257.69',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
