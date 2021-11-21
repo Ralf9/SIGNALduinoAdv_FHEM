@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2021-10-13 18:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2021-11-18 21:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -1654,6 +1654,8 @@ sub SD_WS_Parse {
         else {
           $calHum = ($ad - $ad0) * 100 / ($ad100 - $ad0);
           $calHum = round($calHum, 0);
+          #$calHum = ($ad - $ad0) * 200 / ($ad100 - $ad0);    # Runden auf 0.5%
+          #$calHum = sprintf("%.1f", int($calHum + 0.5) / 2);
         }
         Log3 $name, 4, "$name: SD_WS_Parse protocol 107 hum=$hum calhum=$calHum ad=$ad ad0=$ad0 ad100=$ad100";
         $hum = $calHum;
@@ -1796,6 +1798,9 @@ sub SD_WS_Parse {
   if (defined($count)) {
     $state .= " " if (length($state) > 0);
     $state .= "C: $count";
+  }
+  if (defined($transPerBoost) && $transPerBoost > 0) {
+    $state .= " Tb: $transPerBoost";
   }
   ### protocol 33 has different bits per sensor type
   if ($protocol eq "33") {

@@ -1,0 +1,16 @@
+19.11.2021
+ - Transmission period boost zum state zugefügt.
+14.10.2021
+ - ID 107: reading "transPerBoost" zugefügt. Zählt bei einer Hum Änderung runter und es wird dabei alle 10 Sek gesendet.
+ - ID 116: reading "lightning" zugefügt. Wird nur bei einer "count" Änderung aktualisiert.
+ - Neue IDs: 204 (WH24), 205 (WH25), 206 (W136)
+01.10.2021
+ - Bei der ID 107 (Bodenfeuchtesensor) kann nun mit den beiden folgenden Attributen die hum kalibriert werden:
+   dp100-wh51-ad0 und dp100-wh51-ad100
+28.09.2021
+ - Sanity checks verbessert und check für rain zugefügt
+   Bei rain wird nun der Überlauf und der reset beim Batteriewechsel abgefangen
+ - bei der ID 108 (Bresser_rain_gauge) wird nun ein "R" ans model angehängt: SD_WS_108_R
+ - bei Sensoren mit fester ID (ID 107 und 116) wird immer longid verwendet
+ - neue ID 107: Fine Offset WH51, ECOWITT WH51, MISOL/1 Erde Feuchtigkeits Sensoren
+ - neue ID 116: Misol WH57, froggit DP60, Blitzsensor
