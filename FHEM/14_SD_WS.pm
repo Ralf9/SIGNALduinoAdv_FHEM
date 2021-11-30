@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2021-11-18 21:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2021-11-30 21:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -41,6 +41,7 @@
 # 13.10.2021 neues Protokoll 204: WH24 WH65A/B (Ralf9)
 # 13.10.2021 neues Protokoll 205: WH25 WH25A (Ralf9)
 # 13.10.2021 neues Protokoll 206: W136 (Ralf9)
+# 30.11.2021 Protokoll 108: neuer Sensor Fody_E42
 
 package main;
 
@@ -825,28 +826,45 @@ sub SD_WS_Parse {
         # 7C8008000410210085760000
         # IISSGGDGWW WTT THHRRRRBt
 
-        sensortype => 'Bresser_5in1, Bresser_rain_gauge',
+        #sensortype => 'Bresser_5in1, Bresser_rain_gauge, Fody_E42, Fody_E43',
         model      => 'SD_WS_108',
         modelAdd   => sub {my ($rawData,undef) = @_;
                             my $modelAdd = '';
-                            if (substr($rawData,3,1) eq '9') {
-                              $modelAdd = "_R";
+                            my $typ = substr($rawData,3,1);
+                            if ($typ eq '9') {
+                              $modelAdd = '_R';
+                            } elsif ($typ eq '1' || $typ eq '2' || $typ eq '3') {
+                              $modelAdd = '_TH';
                             }
                             return $modelAdd;
                           },
         prematch   => sub {my $rawData = shift; return 1 if ($rawData =~ /^[0-9A-F]{8}[0-9]{2}[0-9A-F]{1}[0-9]{3}[0-9A-F]{1}[0-9]{5}[0-9A-F]{1}[0-9]{1}/); },
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,2); },
+        sensortype2 => sub {my $rawData = shift;
+                            my $ret;
+                            my $typ = substr($rawData,3,1);
+                            if ($typ eq '0') {
+                              $ret = 'Bresser_5in1, Fody_E43';
+                            } elsif ($typ eq '1' || $typ eq '2' || $typ eq '3') {
+                              $ret = 'Fody_E42';
+                            } elsif ($typ eq '9') {
+                              $ret = 'Bresser_rain_gauge';
+                            } else {
+                              $ret = 'Bresser_5in1, Bresser_rain_gauge, Fody_E42, Fody_E43';
+                            }
+                            return $ret;
+                          },
         winddir    => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,3,1) eq '9'); # Bresser Professional Rain Gauge
+                            return if (substr($rawData,3,1) =~ /^[1239]$/ ); # 9 = Bresser Professional Rain Gauge, 1, 2, 3 = Fody E42
                             my $winddirraw = hex(substr($rawData,6,1));
                             return ($winddirraw * 22.5, $winddirtxtar[$winddirraw]);
                           },
         windgust   => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,3,1) eq '9'); # Bresser Professional Rain Gauge
+                            return if (substr($rawData,3,1) =~ /^[1239]$/ ); # 9 = Bresser Professional Rain Gauge, 1, 2, 3 = Fody E42
                             return (hex(substr($rawData,7,1)) * 256 + hex(substr($rawData,4,2))) / 10;
                           },
         windspeed  => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,3,1) eq '9'); # Bresser Professional Rain Gauge
+                            return if (substr($rawData,3,1) =~ /^[1239]$/ ); # 9 = Bresser Professional Rain Gauge, 1, 2, 3 = Fody E42
                             return (substr($rawData,11,1) . substr($rawData,8,2)) / 10;
                           },
         temp       => sub {my ($rawData,undef) = @_;
@@ -859,11 +877,13 @@ sub SD_WS_Parse {
                             return substr($rawData,16,2) + 0;
                           },
         rain       => sub {my ($rawData,undef) = @_;
+                            return if (substr($rawData,3,1) =~ /^[123]$/ ); # 1, 2, 3 = Fody E42
                             my $rain = (substr($rawData,20,2) . substr($rawData,18,2)) / 10;
                             $rain *= 2.5 if (substr($rawData,3,1) eq '9'); # Bresser Professional Rain Gauge
                             return $rain;
                           },
         bat        => sub {my ($rawData,undef) = @_; return substr($rawData,22,1) eq '0' ? 'ok' : 'low';},
+        batChange  => sub {my (undef,$bitData) = @_; return substr($bitData,8, 1) eq '0' ? '1' : '0';},
         crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_Bresser_5in1
     } ,
     110 => {
@@ -1055,9 +1075,9 @@ sub SD_WS_Parse {
                           },
         temp       => sub {my ($rawData,undef) = @_;
                             return if (substr($rawData,20,2) eq 'FF');
-                            my $rawTemp =  substr($rawData,20,3) * 0.1;
-                            if ($rawTemp > 60) {$rawTemp -= 100};
-                            return $rawTemp;
+                            my $rawTemp =  substr($rawData,20,3);
+                            if ($rawTemp > 600) {$rawTemp -= 1000};
+                            return $rawTemp / 10;
                           },
         hum        => sub {my ($rawData,undef) = @_;
                             return if (substr($rawData,20,2) eq 'FF');
@@ -1523,7 +1543,11 @@ sub SD_WS_Parse {
 
   elsif (defined($decodingSubs{$protocol}))   # durch den hash decodieren
   {
-    $SensorTyp=$decodingSubs{$protocol}{sensortype};
+    if (!exists($decodingSubs{$protocol}{sensortype2})) {
+      $SensorTyp=$decodingSubs{$protocol}{sensortype};
+    } else {
+      $SensorTyp=$decodingSubs{$protocol}{sensortype2}->($rawData);
+    }
     if (!$decodingSubs{$protocol}{prematch}->( $rawData )) { 
       Log3 $iohash, 4, "$name: SD_WS_Parse $rawData protocolid $protocol ($SensorTyp) - ERROR prematch" ;
       return "";
@@ -1665,6 +1689,7 @@ sub SD_WS_Parse {
 
   # Sanity checks
   if($def && !defined($noTempCheck)) { # not forBBQ temperature sensor GT-TMBBQ-01s and Wireless Grill Thermometer GFGT 433 B1
+    my $sanityFlag = 1; # ok
     # temperature
     if (defined($temp) && defined(ReadingsVal($name, 'temperature', undef))) {
       my $maxdeviation = AttrVal($name, 'max-deviation-temp', $defaultMaxDeviation);
@@ -1672,12 +1697,12 @@ sub SD_WS_Parse {
         my $valErr = ReadingsVal($name, 'tempErr', undef);
         if (!defined($valErr)) {
           readingsSingleUpdate($hash, 'tempErr', $temp, 0); # fehlerhafte Temperatur merken
-          return "";
+          $sanityFlag = 0; # Abbruch
         }
         else {  # die vorherige Temperatur war fehlerhaft -> Differenz zur vorherigen Temperatur pruefen
           if (SD_WS_Sanity_checks($ioname, $name, 'tempErr', 'tempErr', $temp, 1, $maxdeviation) == -1) {
             readingsSingleUpdate($hash, 'tempErr', $temp, 0);
-            return "";
+            $sanityFlag = 0; # Abbruch
           }
           else {  # temp ok
             readingsDelete($hash, "tempErr");
@@ -1697,12 +1722,12 @@ sub SD_WS_Parse {
         my $valErr = ReadingsVal($name, 'humErr', undef);
         if (!defined($valErr)) {
           readingsSingleUpdate($hash, 'humErr', $hum, 0); # fehlerhafte humidity merken
-          return "";
+          $sanityFlag = 0; # Abbruch
         }
         else {  # die vorherige humidity war fehlerhaft -> Differenz zur vorherigen humidity pruefen
           if (SD_WS_Sanity_checks($ioname, $name, 'humErr', 'humErr', $hum, 0, $maxdeviation) == -1) {
             readingsSingleUpdate($hash, 'humErr', $hum, 0);
-            return "";
+            $sanityFlag = 0; # Abbruch
           }
           else {  # hum ok
             readingsDelete($hash, "humErr");
@@ -1723,12 +1748,12 @@ sub SD_WS_Parse {
         my $valErr = ReadingsVal($name, 'rainErr', undef);
         if (!defined($valErr)) {
           readingsSingleUpdate($hash, 'rainErr', $rain, 0); # fehlerhafte rain merken
-          return "";
+          $sanityFlag = 0; # Abbruch
         }
         else {  # die vorherige rain war fehlerhaft -> Differenz zur vorherigen rain pruefen
           if (SD_WS_Sanity_checks($ioname, $name, 'rainErr', 'rainErr', $rain, 0, $maxdeviation) == -1) {
             readingsSingleUpdate($hash, 'rainErr', $rain, 0);
-            return "";
+            $sanityFlag = 0; # Abbruch
           }
           else {  # rain ok
             readingsDelete($hash, "rainErr");
@@ -1751,6 +1776,7 @@ sub SD_WS_Parse {
       }
       $rain_total = $rain + $rainOffset;
     }
+    return "" if ($sanityFlag == 0);
   }
 
   $hash->{lastReceive} = time();
@@ -1839,7 +1865,8 @@ sub SD_WS_Parse {
   readingsBulkUpdate($hash, "batteryState", $bat) if (defined($bat) && length($bat) > 0) ;
   readingsBulkUpdate($hash, "batteryVoltage", $batVoltage)  if (defined($batVoltage));
   readingsBulkUpdate($hash, "batteryPercent", $batteryPercent)  if (defined($batteryPercent));
-  readingsBulkUpdate($hash, "batteryChanged", $batChange) if (defined($batChange) && length($batChange) > 0 && $batChange eq "1") ;
+  #readingsBulkUpdate($hash, "batteryChanged", $batChange) if (defined($batChange) && length($batChange) > 0 && $batChange eq "1") ;
+  readingsBulkUpdateIfChanged($hash, "batteryChanged", $batChange) if (defined($batChange));
   readingsBulkUpdate($hash, "channel", $channel, 0) if (defined($channel)&& length($channel) > 0);
   readingsBulkUpdate($hash, "trend", $trend) if (defined($trend) && length($trend) > 0);
   readingsBulkUpdate($hash, "temperatureTrend", $trendTemp) if (defined($trendTemp) && length($trendTemp) > 0);
