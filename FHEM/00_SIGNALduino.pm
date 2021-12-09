@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 347 2021-11-18 20:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 347 2021-12-04 11:00:00Z v3.4.7-dev-Ralf9 $
 #
 # v3.4.7
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.7-dev_ralf_18.11.",
+	SDUINO_VERSION            => "v3.4.7-dev_ralf_04.12.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -74,7 +74,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
   "ccreg"    => ["C", '^C.* = .*'],
   "ccpatable" => ["C3E", '^C3E = .*'],
-  "cmdBank"  => ["b", '(b=\d.* ccmode=\d.*)|(switch)|(Bank)|(bank)|(radio)'],
+  "cmdBank"  => ["b", '(b=\d.* ccmode=\d.*)|(switch)|(Bank)|(bank)|(radio)|(not valid)'],
   "zAvailableFirmware" => ["none",'none'],
 );
 
@@ -1491,7 +1491,14 @@ sub SIGNALduino_parseCcBankInfo
 	if (exists($parts{rx})) {
 		$ccRxTxt = " rx=0";
 	}
-	$ccconf = "b=" . $parts{b} . $ccRxTxt . " $ccconf [boffs=" . $parts{boffs} . "]";
+	my $ccconftxt = "";
+	if (exists($parts{write})) {
+		$ccconftxt = 'write ';
+	}
+	elsif (exists($parts{fn})) {
+		$ccconftxt = 'wrReganz=' . $parts{fn} . ' ';
+	}
+	$ccconf = $ccconftxt . 'b=' . $parts{b} . $ccRxTxt . " $ccconf [boffs=" . $parts{boffs} . ']';
 	my $radionr = "";
 	my $radiomsg = "";
 	if (exists($parts{r})) {
