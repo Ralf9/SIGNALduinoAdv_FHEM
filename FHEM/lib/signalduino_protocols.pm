@@ -2875,10 +2875,13 @@ our %ProtocolListSIGNALduino  = (
 		"108"	=>  # BRESSER 5-in-1 Wetter Center
 				# https://forum.fhem.de/index.php/topic,78809.0.html
 				# T: 6.3  H: 70 Ws: 1 Wg: 0.8 Wd: SSW R: 31.2  MN;D=E9837FF76FEFEF9CFF8FEDFCFF167C80089010106300701203000002;N=7;R=215;  W108#7C8008901010630070120300
-				# T: 12.7 H: 46 Ws: 1 Wg: 2 Wd: NW R: 7.6   MN;D=E5837FEB1FEFEFD8FEB989FFFF1A7C8014E010102701467600000002;N=7;R=215;  W108#7C8014E01010270146760000
-			{
+				# T: 12.7 H: 46 Ws: 1 Wg: 2 Wd: NW R: 7.6      MN;D=E5837FEB1FEFEFD8FEB989FFFF1A7C8014E010102701467600000002;N=7;R=215;  W108#7C8014E01010270146760000
+				# T: 16   R: 102 id: CD  SD_WS_108_R           MN;D=EB3246FFFFFFEF9FFE96F7FBFF14CDB9000000106001690804000007;N=7;R=220;  W108#CDB900000010600169080400
+				# https://forum.fhem.de/index.php/topic,124165.0.html
+				# T: 23.2 H: 38  id: 83  SD_WS_108_TH Fody_E42 MN;D=EF7C6CF7FFFFFFCDEDC7FFFFFF108393080000003212380000000009;N=7;R=1;    W108#839308000000321238000000
+				{
 				name            => 'Bresser 5in1',
-				comment         => 'BRESSER 5-in-1 weather center, rain gauge',
+				comment         => 'BRESSER 5-in-1 weather center, rain gauge, Fody_E42',
 				changed         => '20210422 new',
 				id              => '108',
 				knownFreqs      => '868.35',
