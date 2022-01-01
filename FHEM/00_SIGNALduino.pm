@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 347 2021-12-04 11:00:00Z v3.4.7-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 347 2022-01-01 22:00:00Z v3.4.8-dev-Ralf9 $
 #
-# v3.4.7
+# v3.4.8
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.7-dev_ralf_04.12.",
+	SDUINO_VERSION            => "v3.4.8-dev_ralf_01.01.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -1121,7 +1121,7 @@ SIGNALduino_Get
 	if ($arg =~ /\002M.;.*;\003$/)
 	{
 		Log3 $name, 4, "$name/msg get raw: $arg";
-		return SIGNALduino_Parse($hash, $hash->{NAME}, $arg);
+		return SIGNALduino_Parse($hash, $hash->{NAME}, uc($arg));
   	}
   	else {
 		my $arg2 = "";
@@ -5586,6 +5586,31 @@ sub SIGNALduino_Bresser_5in1_neu
 	return (1, substr($dmsg, 4, 30));
 }
 
+sub SIGNALduino_Bresser_7in1
+{
+	my ($name,$rawdmsg,$id) = @_;
+	my $dmsg = '';
+	my $data;
+	
+	for (my $i = 0; $i < 25; $i++) {
+		$data = hex(substr($rawdmsg,$i*2,2)) ^ 0xaa;
+		$dmsg .= sprintf('%02X',$data);
+	}
+	
+	my $digest = lfsr_digest16(substr($dmsg,4), 23, 0x8810, 0xba95);
+	my $digestRef = substr($dmsg,0,4);
+	my $crcXORref = $digest ^ hex($digestRef);
+	
+	if ($crcXORref != 0x6df1) {
+		my $crcXORrefHex = sprintf('%04X',$crcXORref);
+		return (-1, "Bresser 7in1 crc Error: crcXORref=$crcXORrefHex not equal to 0x6DF1");
+	}
+	
+	Log3 $name, 5, "$name Bresser_7in1: dmsg=$dmsg crc16 ok";
+	
+	return (1, substr($dmsg, 4));
+}
+
 sub AddWord
 {
 	my $value = shift;
@@ -6999,12 +7024,12 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	(NUR bei Verwendung eines cc110x Funk-Moduls und EEPROM Speicherb&auml;nke)<br>
 	Damit kann eine Info über die EEPROM Speicherb&auml;nke ausgegeben werden oder die Speicherb&auml;nke den cc1101 zugeordnet werden.<br>
 	<code>s   - </code>damit wird eine &Uuml;bersicht von allen B&auml;nken ausgegeben.<br>
-	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert.<br>
+	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert. Mit nachgestelltem W wird es im EEPROM gespeichert.<br>
 	Nur beim Maple oder ESP32:<br>
 	<code>r   - </code>damit wird von allen cc1101 eine Bankinfo ausgegeben.<br>
 	<code>A-D - </code>damit wird ein cc1101 (A-D) selektiert. Die Befehle zum lesen und schreiben vom EEPROM und cc1101 Registern werden auf das selektierte cc1101 angewendet.<br>
 	<code>A-D<0-9> - </code>damit wird ein cc1101 (A-D) mit einer Speicherbank (0-9) initialisiert. z.B. mit A3 wird das das erste cc1101 Modul A mit der Speicherbank 3 initalisiert.<br>
-	<code>           </code>mit nachgestelltem W wird es im EEPROM gespeichert.<br>
+	<code>           </code>Mit nachgestelltem W wird es im EEPROM gespeichert.<br>
 	</li><br>
 	<a name="cmds"></a>
 	<li>cmds<br>
