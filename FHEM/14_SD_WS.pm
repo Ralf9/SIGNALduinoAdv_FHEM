@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2021-11-30 21:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2022-01-01 18:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -42,6 +42,7 @@
 # 13.10.2021 neues Protokoll 205: WH25 WH25A (Ralf9)
 # 13.10.2021 neues Protokoll 206: W136 (Ralf9)
 # 30.11.2021 Protokoll 108: neuer Sensor Fody_E42
+# 01.01.2022 Protokoll 115: neue Sensoren Indoor und Soil Moisture (Ralf9)
 
 package main;
 
@@ -160,6 +161,7 @@ sub SD_WS_Parse {
   my $noTempCheck;
   my $hum;
   my $windspeed;
+  my $windspeedKmh;
   my $winddir;
   my $winddirtxt;
   my @winddirtxtar=('N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW');
@@ -178,6 +180,7 @@ sub SD_WS_Parse {
   my $count;
   my $ad;             # ID 107, Soil Moisture Sensor
   my $transPerBoost;  # ID 107
+  my @moisture_map=(0, 7, 13, 20, 27, 33, 40, 47, 53, 60, 67, 73, 80, 87, 93, 99); # ID 115
   my $lightningRaw;   # ID 116, lightning detector
   my $lightning;
   my $lux;            # ID 204, WH24
@@ -589,7 +592,7 @@ sub SD_WS_Parse {
       } ,
     85 =>
       {
-        # Protokollbeschreibung: Kombisensor TFA 30.3222.02 fuer Wetterstation TFA 35.1140.01
+        # Protokollbeschreibung: Kombisensor TFA 30.3222.02 (TX141TH-Bv2) fuer Wetterstation TFA 35.1140.01
         # -----------------------------------------------------------------------------------
         # 0    4    | 8    12   | 16   20   | 24   28   | 32   36   | 40   44   | 48   52   | 56   60   | 64
         # 0000 1001 | 0001 0110 | 0001 0000 | 0000 0111 | 0100 1001 | 0100 0000 | 0100 1001 | 0100 1001 | 1
@@ -601,9 +604,11 @@ sub SD_WS_Parse {
         # y:  2 bit typ, 01 - thermo/hygro (message 1), 10 - wind (message 2)
         # t: 12 bit unsigned temperature, offset 500, scaled by 10 - if message 1
         # h:  8 bit relative humidity percentage - if message 1
-        # w: 12 bit unsigned windspeed, scaled by 10 - if message 2
+        # w: 12 bit unsigned windspeed, scaled by 10 (kmh) - if message 2
         # ?: unknown
         # The sensor sends at intervals of about 30 seconds
+        #
+        # https://github.com/merbanan/rtl_433/blob/master/src/devices/lacrosse_tx141x.c
 
         sensortype => 'TFA 30.3222.02',
         model      => 'SD_WS_85_THW',
@@ -626,12 +631,11 @@ sub SD_WS_Parse {
                               return;
                             }
                           },
-        windspeed  => sub {my (undef,$bitData) = @_;
+        windspeedKmh => sub {my (undef,$bitData) = @_;
                             if (substr($bitData,30,2) eq "10") {    # message 2 windspeed
                               return (SD_WS_binaryToNumber($bitData,32,43) / 10.0);
-                            } else {
-                              return;
                             }
+                            return;
                           },
       } ,
     89 =>
@@ -1049,26 +1053,45 @@ sub SD_WS_Parse {
         # 20B00C1618FFFFFF1808152294FFF0  Msg 1, 30 Nibble from SIGNALduino, T: 15.2 H: 94 G:0 W: 0 D:180
         # IIIIIIIIFFGGGWWWDDD?TTT?HH????  Msg 1
         # IIIIIIIIFFGGGWWWDDD?ffRRRRVVV?  Msg 2
+        # 197005FD2900000000002126640000  indoor        T: 21.2 H: 64 CH: 1
+        # 187000E346FFFFFF0000317213FFF2  Soil Moisture T: 27.9 H: 99 CH: 6
         
-        sensortype => 'Bresser_6in1, new Bresser_5in1',
+        #sensortype => 'Bresser_6in1, new Bresser_5in1',
         model      => 'SD_WS_115',
         prematch   => sub { return 1; }, # no precheck known
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,8); },
+        sensortype2 => sub {my $rawData = shift;
+                            my $ret;
+                            my $typ = substr($rawData,8,1);
+                            if ($typ eq '1') {
+                              $ret = 'Bresser_6in1, new Bresser_5in1';
+                            } elsif ($typ eq '2') {
+                              $ret = 'Bresser_6in1_u_7in1 indoor';
+                            } elsif ($typ eq '4') {
+                              $ret = 'Bresser_6in1_u_7in1 Soil Moisture';
+                            } else {
+                              $ret = 'Bresser_6in1_u_7in1 other';
+                            }
+                            return $ret;
+                          },
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,36,1) eq '1' ? 'ok' : 'low';},
         channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,37,39));},
         windgust   => sub {my ($rawData,undef) = @_;
+                            return if (substr($rawData,8,1) ne '1');
                             my $windgust = substr($rawData,10,3);
                             $windgust =~ tr/0123456789ABCDEF/FEDCBA9876543210/;
                             return if ($windgust !~ m/^\d+$/xms);
                             return $windgust * 0.1;
                           },
         windspeed  => sub {my ($rawData,undef) = @_;
+                            return if (substr($rawData,8,1) ne '1');
                             my $windspeed = substr($rawData,14,2) . substr($rawData,13,1);
                             $windspeed =~ tr/0123456789ABCDEF/FEDCBA9876543210/;
                             return if ($windspeed !~ m/^\d+$/xms);
                             return $windspeed * 0.1;
                           },
         winddir    => sub {my ($rawData,undef) = @_;
+                            return if (substr($rawData,8,1) ne '1');
                             my $winddir = substr($rawData,16,3);
                             return if ($winddir !~ m/^\d+$/xms);
                             return ($winddir * 1, $winddirtxtar[round(($winddir / 22.5),0)]);
@@ -1081,7 +1104,11 @@ sub SD_WS_Parse {
                           },
         hum        => sub {my ($rawData,undef) = @_;
                             return if (substr($rawData,20,2) eq 'FF');
-                            return substr($rawData,24,2) + 0;
+                            my $hum = substr($rawData,24,2) + 0;
+                            if (substr($rawData,8,1) eq '4' && $hum >= 1 && $hum <= 16) {  # Soil Moisture
+                              return $moisture_map[$hum - 1];
+                            }
+                            return $hum;
                           },
         rain       => sub {my ($rawData,undef) = @_;
                             return if (substr($rawData,20,2) ne 'FF');
@@ -1566,7 +1593,13 @@ sub SD_WS_Parse {
     $temp2 = $decodingSubs{$protocol}{temp2}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp2}));
     $noTempCheck = $decodingSubs{$protocol}{noTempCheck} if (exists($decodingSubs{$protocol}{noTempCheck}));
     $hum = $decodingSubs{$protocol}{hum}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{hum}));
-    $windspeed = $decodingSubs{$protocol}{windspeed}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{windspeed}));
+    if (exists($decodingSubs{$protocol}{windspeed})) {
+      $windspeed = $decodingSubs{$protocol}{windspeed}->( $rawData,$bitData );
+      $windspeedKmh = round($windspeed*3.6, 1) if (defined($windspeed));
+    } elsif (exists($decodingSubs{$protocol}{windspeedKmh})) {
+      $windspeedKmh = $decodingSubs{$protocol}{windspeedKmh}->( $rawData,$bitData );
+      $windspeed = round($windspeedKmh/3.6, 1);
+    }
     ($winddir,$winddirtxt) = $decodingSubs{$protocol}{winddir}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{winddir}));
     $windgust = $decodingSubs{$protocol}{windgust}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{windgust}));
     $channel = $decodingSubs{$protocol}{channel}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{channel}));
@@ -1857,7 +1890,7 @@ sub SD_WS_Parse {
   readingsBulkUpdate($hash, "temperature2", $temp2)  if (defined($temp2) && (($temp2 > -60 && $temp < 70 ) || defined($noTempCheck)));
   readingsBulkUpdate($hash, "humidity", $hum)  if (defined($hum));
   readingsBulkUpdate($hash, 'windSpeed', $windspeed)  if (defined($windspeed)) ;
-  readingsBulkUpdate($hash, 'windSpeed_kmh', round($windspeed*3.6, 1))  if (defined($windspeed));
+  readingsBulkUpdate($hash, 'windSpeed_kmh', $windspeedKmh)  if (defined($windspeedKmh));
   readingsBulkUpdate($hash, 'windDirectionDegree', $winddir)  if (defined($winddir)) ;
   readingsBulkUpdate($hash, 'windDirectionText', $winddirtxt)  if (defined($winddirtxt)) ;
   readingsBulkUpdate($hash, 'windGust', $windgust)  if (defined($windgust)) ;
