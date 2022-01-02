@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2022-01-01 18:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2022-01-02 09:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -43,6 +43,7 @@
 # 13.10.2021 neues Protokoll 206: W136 (Ralf9)
 # 30.11.2021 Protokoll 108: neuer Sensor Fody_E42
 # 01.01.2022 Protokoll 115: neue Sensoren Indoor und Soil Moisture (Ralf9)
+# 02.01.2022 neues Protokoll 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Sensor
 
 package main;
 
@@ -103,6 +104,7 @@ sub SD_WS_Initialize {
     'SD_WS_204.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_205.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
+    'SD_WS_207.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
   };
   return;
 }
@@ -116,7 +118,7 @@ sub SD_WS_Define {
 
   $hash->{CODE} = $a[2];
   $hash->{lastMSG} =  "";
-  $hash->{bitMSG} =  "";
+  $hash->{bitMSG};
 
   $modules{SD_WS}{defptr}{$a[2]} = $hash;
   $hash->{STATE} = "Defined";
@@ -1266,6 +1268,57 @@ sub SD_WS_Parse {
                           },
         count      => sub {my ($rawData,undef) = @_; return hex(substr($rawData,40,2) . substr($rawData,38,2)); },
         crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_W136
+    },
+    207 => {
+        # https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_7in1.c
+        # The 7-in-1 multifunction outdoor sensor transmits the data on 868.3 MHz.
+        # The device uses FSK-PCM encoding, the device sends a transmission every 12 seconds.
+        #
+        # CCCCIIIIDDDuuuGGGWWWRRRRRR??TTTFHHLLLLLLUUUttttttt
+        #
+        # CCCC    crc16
+        # IIII    ID
+        # DDD     wind_dir_deg
+        # uuu     unknown
+        # GG.G    Wind Gust  m/s
+        # WW.W    Wind Speed m/s
+        # RRRRR.R rain mm
+        # ??      unknown (always 0?)
+        # TT.T    temp
+        # F       Flag Bat low
+        # HH      hum
+        # LLLLLL  Light Lux
+        # UU.U    UV index
+        # ttttttt trailer
+        #
+        # Only nibbles 4 to 49 are transferred to the module. Preprocessing in 00_SIGNALduino.pm sub SIGNALduino_Bresser_7in1
+        #
+        sensortype => 'Bresser_7in1',
+        model      => 'SD_WS_207',
+        fixedId    => '1',
+        prematch   => sub { return 1; }, # no precheck known
+        id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,4); },
+        winddir    => sub {my ($rawData,undef) = @_;
+                            my $winddir = substr($rawData,4,3);
+                            return if ($winddir !~ m/^\d+$/xms);
+                            return ($winddir * 1, $winddirtxtar[round(($winddir / 22.5),0)]);
+                          },
+        windgust   => sub {my ($rawData,undef) = @_; return substr($rawData,10,3) / 10;
+                          },
+        windspeed  => sub {my ($rawData,undef) = @_; return substr($rawData,13,3) / 10;
+                          },
+        rain       => sub {my ($rawData,undef) = @_; return substr($rawData,16,6) / 10;
+                          },
+        temp       => sub {my ($rawData,undef) = @_;
+                            my $rawTemp =  substr($rawData,24,3);
+                            if ($rawTemp > 600) {$rawTemp -= 1000};
+                            return $rawTemp / 10;
+                          },
+        hum        => sub {my ($rawData,undef) = @_; return substr($rawData,28,2) + 0;
+                          },
+        lux        => sub {my ($rawData,undef) = @_; return substr($rawData,30,6) + 0; },
+        uv         => sub {my ($rawData,undef) = @_; return substr($rawData,36,3) / 10; },
+        crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_Bresser_7in1
     }
   );
 
@@ -1816,7 +1869,7 @@ sub SD_WS_Parse {
   $hash->{lastMSG} = $rawData;
   if (defined($bitData2)) {
     $hash->{bitMSG} = $bitData2;
-  } else {
+  } elsif (length($bitData) < 100) {
     $hash->{bitMSG} = $bitData;
   }
 
