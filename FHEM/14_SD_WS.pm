@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2022-01-02 09:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2022-01-08 23:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -1298,6 +1298,8 @@ sub SD_WS_Parse {
         fixedId    => '1',
         prematch   => sub { return 1; }, # no precheck known
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,4); },
+        bat        => sub {my (undef,$bitData) = @_; return substr($bitData,109,2) eq '11' ? 'low' : 'ok';},
+        batChange  => sub {my (undef,$bitData) = @_; return substr($bitData,36, 1);},
         winddir    => sub {my ($rawData,undef) = @_;
                             my $winddir = substr($rawData,4,3);
                             return if ($winddir !~ m/^\d+$/xms);
@@ -1651,7 +1653,7 @@ sub SD_WS_Parse {
       $windspeedKmh = round($windspeed*3.6, 1) if (defined($windspeed));
     } elsif (exists($decodingSubs{$protocol}{windspeedKmh})) {
       $windspeedKmh = $decodingSubs{$protocol}{windspeedKmh}->( $rawData,$bitData );
-      $windspeed = round($windspeedKmh/3.6, 1);
+      $windspeed = round($windspeedKmh/3.6, 1) if (defined($windspeedKmh));
     }
     ($winddir,$winddirtxt) = $decodingSubs{$protocol}{winddir}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{winddir}));
     $windgust = $decodingSubs{$protocol}{windgust}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{windgust}));
