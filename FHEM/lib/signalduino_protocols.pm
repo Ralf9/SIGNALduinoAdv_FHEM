@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 347 2022-01-01 22:00:00Z v3.4.8-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 349 2022-01-15 10:00:00Z v3.4.9-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.8-dev_ralf_01.01.'
+		"version" => 'v3.4.9-dev_ralf_15.01.'
 		);
 
 our %rfmode = (
@@ -337,7 +337,7 @@ our %ProtocolListSIGNALduino  = (
 			developId		=> 'y',
 			format 			=> 'twostate',
 			preamble		=> 'u5#',
-			#clientmodule	=> '',
+			clientmodule	=> 'SIGNALduino_un',
 			#modulematch	=> '',
 			length_min      => '24',   # ?
 			length_max      => '24',   # ?
@@ -455,7 +455,7 @@ our %ProtocolListSIGNALduino  = (
 			clockrange     	=> [420,510],                   # min, max better for Bresser Sensors, OK for hideki/Hideki/TFA too     
 			format 			=> 'manchester',	
 			preamble		=> 'P12#',						# prepend to converted message	
-			clientmodule    => 'hideki',   				# not used now
+			clientmodule    => 'Hideki',   				# not used now
 			modulematch     => '^P12#75.+',  						# not used now
 			length_min      => '71',
 			length_max      => '128',
@@ -470,7 +470,7 @@ our %ProtocolListSIGNALduino  = (
 			clockrange     	=> [420,510],                   # min, max better for Bresser Sensors, OK for hideki/Hideki/TFA too     
 			format 			=> 'manchester',	
 			preamble		=> 'P12#',						# prepend to converted message	
-			clientmodule    => 'hideki',   				# not used now
+			clientmodule    => 'Hideki',   				# not used now
 			modulematch     => '^P12#75.+',  						# not used now
 			length_min      => '71',
 			length_max      => '128',
@@ -672,7 +672,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs		=> 300,
 			format 			=> 'twostate',	  		
 			preamble		=> 'u19#',				# prepend to converted message
-			#clientmodule    => '',   				# not used now
+			clientmodule    => 'SIGNALduino_un',   				# not used now
 			#modulematch     => '',  				# not used now
 			length_min		=> '19',
 			length_max		=> '23',					# not confirmed, length one more as MU Message
@@ -716,7 +716,7 @@ our %ProtocolListSIGNALduino  = (
 			clockpos	=> ['one',1],
 			format 			=> 'twostate',	  		
 			preamble		=> 'u21#',				# prepend to converted message	
-			#clientmodule   => '',   				# not used now
+			clientmodule    => 'SIGNALduino_un',   				# not used now
 			#modulematch    => '',  				# not used now
 			length_min      => '32',
 			length_max      => '32',				
@@ -737,7 +737,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs				=> 200,						# ca 200us
 			format					=> 'twostate',
 			preamble				=> 'u22#',				# prepend to converted message
-			#clientmodule    => '',
+			clientmodule    => 'SIGNALduino_un',
 			#modulematch     => '',
 			length_min				=> '32',
 			length_max				=> '32',
@@ -753,7 +753,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs		=> 200,                  #ca 200us
 			format 			=> 'twostate',	  		
 			preamble		=> 'u23#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
+			clientmodule    => 'SIGNALduino_un',   				# not used now
 			#modulematch     => '',  				# not used now
 			length_min      => '36',
 			length_max      => '44',				
@@ -796,7 +796,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs		=> 350,                 #ca 350us
 			format 			=> 'twostate',	  		
 			preamble		=> 'u25#',				# prepend to converted message	
-			#clientmodule    => '',   				# not used now
+			clientmodule    => 'SIGNALduino_un',   				# not used now
 			#modulematch     => '',  				# not used now
 			length_min      => '24',
 			length_max      => '50',				# message has only 24 bit, but we get more than one message, calculation has to be corrected
@@ -863,7 +863,7 @@ our %ProtocolListSIGNALduino  = (
 			clockpos	=> ['cp'],
 			format 			=> 'twostate',	  		
 			preamble		=> 'u28#',				# prepend to converted message
-			#clientmodule    => '',   				# not used now
+			clientmodule    => 'SIGNALduino_un',   				# not used now
 			#modulematch     => '',  				# not used now
 			length_min      => '8',
 			length_max      => '8',				
@@ -926,6 +926,7 @@ our %ProtocolListSIGNALduino  = (
 				clockpos		=> ['zero',0],
 				format          => 'twostate',
 				preamble        => 'u31#',
+				clientmodule	=> 'SIGNALduino_un',
 				length_min      => '104',
 			},
 	"32"	=>	## FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
@@ -1106,7 +1107,7 @@ our %ProtocolListSIGNALduino  = (
 			format     		=> 'twostate',  		# not used now
 			preamble		=> 'u36#',				# prepend to converted message	
 			postamble		=> '',					# Append to converted message	 	
-			#clientmodule    => '',      			# not used now
+			clientmodule    => 'SIGNALduino_un',      			# not used now
 			#modulematch     => '',     			# not used now
 			length_min      => '24',
 			length_max      => '24',
@@ -1189,7 +1190,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs => 270, 
 			clockpos => ['zero',0],
 			preamble => 'u40#', # prepend to converted message
-			#clientmodule => '', # not used now
+			clientmodule => 'SIGNALduino_un', # not used now
 			#modulematch => '', # not used now
 			length_min => '12',
 		},    
@@ -1532,7 +1533,7 @@ our %ProtocolListSIGNALduino  = (
 			id				=> '52',
 			clockrange     	=> [470,640],			# min , max
 			format 			=> 'manchester',	    # tristate can't be migrated from bin into hex!
-			#clientmodule    => 'OREGON',
+			clientmodule    => 'SIGNALduino_un',
 			modulematch     => '^u52#F{3}|0{3}.*',
 			preamble		=> 'u52#',
 			length_min      => '30',
@@ -1701,7 +1702,7 @@ our %ProtocolListSIGNALduino  = (
 			format 			=> 'twostate',	# tristate can't be migrated from bin into hex!
 			preamble		=> 'u59#',			# Append to converted message	
 			#postamble		=> '',		# Append to converted message	 	
-			#clientmodule    => '',   		# not used now
+			clientmodule    => 'SIGNALduino_un',   		# not used now
 			#modulematch     => '',  # not used now
 			length_min      => '24',
 			length_max      => '24',
@@ -1789,7 +1790,7 @@ our %ProtocolListSIGNALduino  = (
 			clockabs     => 800, 
 			syncabs      => '6700',  # Special field for filterMC function
 			preamble     => 'u63#', # prepend to converted message
-			#clientmodule => '', 
+			clientmodule => 'SIGNALduino_un', 
 			#modulematch => '', 
 			length_min   => '24',
 			filterfunc   => \&main::SIGNALduino_filterMC,
@@ -2758,7 +2759,7 @@ our %ProtocolListSIGNALduino  = (
 				modulation      => 'GFSK',
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^0.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
-				clientmodule    => 'Kopp',
+				clientmodule    => 'KOPP_FC',
 				method        => \&main::SIGNALduino_KoppFreeControl,
 			},
 		"103"	=>	# Lacrosse mode 2 - IT+
@@ -3101,7 +3102,7 @@ our %ProtocolListSIGNALduino  = (
 				format          => 'twostate',
 				modulation      => '2-FSK',
 				preamble        => 'u200#',
-				#clientmodule    => '',
+				clientmodule    => 'SIGNALduino_un',
 				#modulematch     => '',
 				length_min      => '48',
 				length_max      => '48',
@@ -3211,8 +3212,8 @@ our %ProtocolListSIGNALduino  = (
 				method        => \&main::SIGNALduino_W136,
 			},
 		"207" =>  ## BRESSER 7-in-1 Weather Center
-			# T: 12.7 H: 87 MN;D=C26DA6F5B8AA18AADAADAAAA2EAAB8DA2DAAC2AAAAAAAAAAAA000000;N=7;  W207#0C5F1200B2007007000084001270870068000000000000
-			#
+			# T: 12.7 H: 87 Ws: 0.7 Wg: 0.7 Wd: ESE, rain: 8.4           W207#0C5F1200B2007007000084001270870068000000000000;  MN;D=C26DA6F5B8AA18AADAADAAAA2EAAB8DA2DAAC2AAAAAAAAAAAA000000;N=7;
+			# T: 21.7 H: 61 Ws: 0 Wg: 0 Wd: E R: 0, lux: 109280 uv: 6.7  W207#1E0F0970BA000000000000002170611092800670000000;
 			#
 			{
 				name            => 'Bresser Profi 7in1',
