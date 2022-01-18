@@ -1,4 +1,4 @@
-SIGNALduino - 00_SIGNALduino.pm FHEM Module Version 3.4.7
+SIGNALduino - 00_SIGNALduino.pm FHEM Module dev Version 3.4.9
 
 ======
 

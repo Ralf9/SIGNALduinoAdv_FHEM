@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 347 2022-01-01 22:00:00Z v3.4.8-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 349 2022-01-15 18:00:00Z v3.4.9-dev-Ralf9 $
 #
 # v3.4.8
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.8-dev_ralf_01.01.",
+	SDUINO_VERSION            => "v3.4.9-dev_ralf_15.01.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -178,80 +178,80 @@ my %cc1101_register = (		# for get ccreg 99
 );
 
 ## Supported Clients per default
-my $clientsSIGNALduino = ":IT:"
-						."CUL_TCM97001:"
-						."SD_RSL:"
-						."OREGON:"
-						."CUL_TX:"
-						."SD_AS:"
-						."Hideki:"
-						."SD_WS07:"
-						."SD_WS09:"
-						." :"		# Zeilenumbruch
-						."SD_WS:"
-						."RFXX10REC:"
-						."Dooya:"
-						."SOMFY:"
-						."SD_BELL:"	## bells
-						."SD_UT:"			## universal - more devices with different protocols
-			        	."SD_WS_Maverick:"
-			        	."FLAMINGO:"
-			        	."CUL_WS:"
-			        	."Revolt:"
-			        	."FS10:"
-						." :"		# Zeilenumbruch
-			        	."CUL_FHTTK:"
-			        	."Siro:"
-						."FHT:"
-						."FS20:"
-						."CUL_EM:"
-						."Fernotron:"
-						."SD_Keeloq:"
-						."SD_GT:"
-						."LaCrosse:"
-						."KOPP_FC:"
-						."PCA301:"
-						."SD_Rojaflex:"
-						."SD_Tool:"
-			      		."SIGNALduino_un:"
-					; 
+my $clientsSIGNALduino = ":CUL_TCM97001:"
+                        ."SD_WS:"
+                        ."SD_WS07:"
+                        ."SD_WS09:"
+                        ."Hideki:"
+                        ."LaCrosse:"
+                        ."OREGON:"
+                        ."CUL_EM:"
+                        ."CUL_WS:"
+                        ."CUL_TX:"
+                        ."SD_AS:"
+                        ." :"		# Zeilenumbruch
+                        ."IT:"
+                        ."FS10:"
+                        ."FS20:"
+                        ."SOMFY:"
+                        ."FLAMINGO:"
+                        ."SD_WS_Maverick:"
+                        ."KOPP_FC:"
+                        ."PCA301:"
+                        ."SD_BELL:"	    ## bells
+                        ."SD_GT:"
+                        ."SD_RSL:"
+                        ."SD_UT:"		## universal - more devices with different protocol
+                        ." :"		# Zeilenumbruch
+                        ."CUL_FHTTK:"
+                        ."FHT:"
+                        ."RFXX10REC:"
+                        ."Revolt:"
+                        ."Dooya:"
+                        ."Fernotron:"
+                        ."SD_Keeloq:"
+                        ."SD_Rojaflex:"
+                        ."Siro:"
+                        ."SD_Tool:"
+                        ."SIGNALduino_un:"
+                    ;
 
 ## default regex match List for dispatching message to logical modules, can be updated during runtime because it is referenced
 my %matchListSIGNALduino = (
-     "1:IT"            			=> "^i......",	  				  # Intertechno Format
-     "2:CUL_TCM97001"      		=> "^s[A-Fa-f0-9]+",			  # Any hex string		beginning with s
-     "3:SD_RSL"					=> "^P1#[A-Fa-f0-9]{8}",
-     "5:CUL_TX"               	=> "^TX..........",         	  # Need TX to avoid FHTTK
-     "6:SD_AS"       			=> "^P2#[A-Fa-f0-9]{7,8}", 		  # Arduino based Sensors, should not be default
-     "4:OREGON"            		=> "^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*",		
-     "7:Hideki"					=> "^P12#75[A-F0-9]+",
-     "9:CUL_FHTTK"				=> "^T[A-F0-9]{8}",
-     "10:SD_WS07"				=> "^P7#[A-Fa-f0-9]{6}[AFaf][A-Fa-f0-9]{2}",
-     "11:SD_WS09"				=> "^P9#F[A-Fa-f0-9]+",
-     "12:SD_WS"					=> '^W\d+x{0,1}#.*',
-     "13:RFXX10REC" 			=> '^(20|29)[A-Fa-f0-9]+',
-     "14:Dooya"					=> '^P16#[A-Fa-f0-9]+',
-     "15:SOMFY"					=> '^Ys[0-9A-F]+',
-     "16:SD_WS_Maverick"		=> '^P47#[A-Fa-f0-9]+',
-     "17:SD_UT"					=> '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114)#.*',	# universal - more devices with different protocols
-     "18:FLAMINGO"					=> '^P13\.?1?#[A-Fa-f0-9]+',			# Flamingo Smoke
-     "19:CUL_WS"				=> '^K[A-Fa-f0-9]{5,}',
-     "20:Revolt"				=> '^r[A-Fa-f0-9]{22}',
-     "21:FS10"					=> '^P61#[A-F0-9]+',
-     "22:Siro"					=> '^P72#[A-Fa-f0-9]+',
-     "23:FHT"      				=> "^81..(04|09|0d)..(0909a001|83098301|c409c401)..",
-     "24:FS20"    				=> "^81..(04|0c)..0101a001", 
-     "25:CUL_EM"    				=> "^E0.................", 
-     "26:Fernotron"  			=> '^P82#.*',
-     "27:SD_BELL"				=> '^P(?:15|32|41|42|57|79|96|98|112)#.*',
-     "28:SD_Keeloq"				=> '^P(?:87|88)#.*',
-     "29:SD_GT"					=> '^P49#[A-Fa-f0-9]+',
-     "30:LaCrosse"				=> '^(\\S+\\s+9 |OK\\sWS\\s)',
-     "31:KOPP_FC"				=> '^kr..................',
-     "32:PCA301"				=> '^\\S+\\s+24',
-     "33:SD_Rojaflex"			=> '^P109#[A-Fa-f0-9]+',
-     "90:SD_Tool"				=> '^pt([0-9]+(\.[0-9])?)(#.*)?',
-	 "X:SIGNALduino_un"			=> '^[u]\d+#.*',
+      '01:IT'               => '^i......',                    # Intertechno Format
+      '02:CUL_TCM97001'     => '^s[A-Fa-f0-9]+',              # Any hex string beginning with s
+      '03:SD_RSL'           => '^P1#[A-Fa-f0-9]{8}',
+      '04:OREGON'           => '^(3[8-9A-F]|[4-6][0-9A-F]|7[0-8]).*',
+      '05:CUL_TX'           => '^TX..........',                       # Need TX to avoid FHTTK
+      '06:SD_AS'            => '^P2#[A-Fa-f0-9]{7,8}',                # Arduino based Sensors, should not be default
+      '07:Hideki'           => '^P12#75[A-F0-9]+',
+      '09:CUL_FHTTK'        => '^T[A-F0-9]{8}',
+      '10:SD_WS07'          => '^P7#[A-Fa-f0-9]{6}[AFaf][A-Fa-f0-9]{2,3}',
+      '11:SD_WS09'          => '^P9#F[A-Fa-f0-9]+',
+      '12:SD_WS'            => '^W\d+x{0,1}#.*',
+      '13:RFXX10REC'        => '^(20|29)[A-Fa-f0-9]+',
+      '14:Dooya'            => '^P16#[A-Fa-f0-9]+',
+      '15:SOMFY'            => '^Ys[0-9A-F]+',
+      '16:SD_WS_Maverick'   => '^P47#[A-Fa-f0-9]+',
+      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114)#.*', # universal - more devices with different protocols
+      '18:FLAMINGO'         => '^P13\.?1?#[A-Fa-f0-9]+',              # Flamingo Smoke
+      '19:CUL_WS'           => '^K[A-Fa-f0-9]{5,}',
+      '20:Revolt'           => '^r[A-Fa-f0-9]{22}',
+      '21:FS10'             => '^P61#[A-F0-9]+',
+      '22:Siro'             => '^P72#[A-Fa-f0-9]+',
+      '23:FHT'              => '^81..(04|09|0d)..(0909a001|83098301|c409c401)..',
+      '24:FS20'             => '^81..(04|0c)..0101a001',
+      '25:CUL_EM'           => '^E0.................',
+      '26:Fernotron'        => '^P82#.*',
+      '27:SD_BELL'          => '^P(?:15|32|41|42|57|79|96|98|112)#.*',
+      '28:SD_Keeloq'        => '^P(?:87|88)#.*',
+      '29:SD_GT'            => '^P49#[A-Fa-f0-9]+',
+      '30:LaCrosse'         => '^(\\S+\\s+9 |OK\\sWS\\s)',
+      '31:KOPP_FC'          => '^kr..................',
+      '32:PCA301'           => '^\\S+\\s+24',
+      '33:SD_Rojaflex'      => '^P109#[A-Fa-f0-9]+',
+      '90:SD_Tool'          => '^pt([0-9]+(\.[0-9])?)(#.*)?',
+      'X:SIGNALduino_un'    => '^[u]\d+#.*',
 );
 
 
@@ -382,6 +382,7 @@ SIGNALduino_Define
   }	
   
   #$hash->{CMDS} = "";
+  $hash->{ClientsKeepOrder} = 1;
   $hash->{Clients} = $clientsSIGNALduino;
   $hash->{MatchList} = \%matchListSIGNALduino;
   $hash->{DeviceName} = $dev;
@@ -3961,9 +3962,9 @@ sub SIGNALduino_FW_saveWhitelist
 		$wl_attr =~ s/,$//;			# Komma am Ende entfernen
 	}
 	#$attr{$name}{whitelist_IDs} = $wl_attr;
-	CommandAttr(undef,"$name whitelist_IDs $wl_attr");
 	Log3 $name, 3, "$name Whitelist save: $wl_attr";
-	SIGNALduino_IdList("x:$name", $wl_attr);
+	CommandAttr(undef,"$name whitelist_IDs $wl_attr");
+	#SIGNALduino_IdList("x:$name", $wl_attr);
 }
 
 sub SIGNALduino_IdList
@@ -3982,6 +3983,8 @@ sub SIGNALduino_IdList
 	my @devModulId = ();
 	#my %WhitelistIDs;
 	my %BlacklistIDs;
+	my $clientmodule;
+	my %clients;
 	my $wflag = 0;		# whitelist flag, 0=disabled
 	
 	delete ($hash->{IDsNoDispatch}) if (defined($hash->{IDsNoDispatch}));
@@ -4068,6 +4071,10 @@ sub SIGNALduino_IdList
 				}
 			}
 		}
+		else { # whitelist aktive
+		    $clientmodule = SIGNALduino_getProtoProp($id,'clientmodule','');
+			$clients{$clientmodule} = defined if ($clientmodule ne '');
+		}
 		
 		if (exists ($ProtocolListSIGNALduino{$id}{format}) && $ProtocolListSIGNALduino{$id}{format} eq "manchester")
 		{
@@ -4100,6 +4107,42 @@ sub SIGNALduino_IdList
 	Log3 $name, 3, "$name: IDlist MN @mnIdList";
 	Log3 $name, 3, "$name: IDlist blacklistId skipped = @skippedBlackId" if (scalar @skippedBlackId > 0);
 	Log3 $name, 3, "$name: IDlist development skipped = @skippedDevId" if (scalar @skippedDevId > 0);
+	
+	if ($wflag == 1) {            # bei aktiver whitelist werden nur die Clientmodule der IDs in der whitelist in die $hash->{Clients} kopiert
+		my $num_clients = keys %clients;
+		Log3 $name, 4, "$name: IDlist num = $num_clients clients = " . join ',' => map "$_" => keys %clients;
+		if ($num_clients > 0 && $num_clients < 30) {
+			my @clientList = split(":", $clientsSIGNALduino);
+			Log3 $name, 5, "$name: IDlist num = " . scalar(@clientList) . " clientlist=@clientList";
+			my $clientsNew = ':';
+			if (IsDummy($name)) {
+				$clientsNew = ':SD_Tool:';
+			}
+			my $i = 0;
+			foreach my $m (@clientList) {
+				if (exists($clients{$m})) {
+					$clientsNew .= $m . ':';
+					$i++;
+					if ($i == 11) {
+						$clientsNew .= ' :'; # Zeilenumbruch
+						$i = 0;
+					}
+				}
+			}
+			$hash->{Clients} = $clientsNew;
+			delete $hash->{'.clientArray'};
+			Log3 $name, 3, "$name: IDlist clientListNew = $clientsNew";
+		}
+		else {
+			$hash->{Clients} = $clientsSIGNALduino;
+			delete $hash->{'.clientArray'};
+		}
+	}
+	else {  # whitelist nicht aktiv
+		$hash->{Clients} = $clientsSIGNALduino;
+		delete $hash->{'.clientArray'};
+	}
+	
 	if (scalar @devModulId > 0)
 	{
 		Log3 $name, 3, "$name: IDlist development protocol is active (to activate dispatch to not finshed logical module, enable desired protocol via whitelistIDs) = @devModulId";

@@ -1,3 +1,14 @@
+15.01.2022
+ 00_SIGNALduino.pm:
+  - Internal ClientsKeepOrder zugefügt, damit wird in der fhem.pl die Erzeugung des .clientArray stark beschleunigt.
+  - Die Sortierung des Internal Client optimiert, die Module für Temperatursensoren und Wetterstationen stehen nun am Anfang
+  - Bei aktiver Whitelist, werden nun nur die Clientmodule der IDs die in der Whitelist stehen in das Internal Clients kopiert
+  signalduino_protocols.pm:
+  - Bei IDs mit der preamble "u.." bei clientmodule "SIGNALduino_un" eingetragen
+01.01.2022
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+  - neue ID 207 für Bresser 7-in-1 Weather Center
+
 04.12.2021
  00_SIGNALduino.pm:
  - Rückmeldungen bei "get cmdBank" ergänzt
