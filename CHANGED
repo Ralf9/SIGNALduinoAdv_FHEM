@@ -1,3 +1,13 @@
+23.01.2022
+ - Bei ID 116 das reading "identified" zugefügt
+ - beim state Lux und UV zugefügt
+ - deutsche Device specific help ergänzt
+02.01.2022
+ - neue ID 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Senso
+01.01.2022
+ - ID 115: neue Sensoren Indoor und Soil Moisture
+ - ID 85: Windspeed in m/s umgerechnet, war vorher km/h
+
 30.11.2021
  - ID 108: neuer Sensor Fody_E42
 19.11.2021
