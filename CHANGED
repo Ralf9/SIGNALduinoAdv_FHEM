@@ -1,3 +1,17 @@
+12.02.2022
+ 00_SIGNALduino.pm:
+  - bei set raw können nun auch WMBus Nachrichten (bss.. und bst..) gesendet werden
+  - get availableFirmware ist nun auch bei nicht aktivem sduino möglich
+  - deutsche "Device specific help (commandref)" überarbeitet und ergänzt
+    "<a name=.." durch "<a id=.." ersetzt
+ signalduino_protocols.pm:
+  - neue set rfmode für WMBus
+  - neue Protokoll IDs
+    118 Meikee RGB LED Solar Wall Light
+    208 WMBus S
+    209 WMBus T
+    210 WMBus C
+
 15.01.2022
  00_SIGNALduino.pm:
   - Internal ClientsKeepOrder zugefügt, damit wird in der fhem.pl die Erzeugung des .clientArray stark beschleunigt.
@@ -8,7 +22,6 @@
 01.01.2022
  00_SIGNALduino.pm und signalduino_protocols.pm:
   - neue ID 207 für Bresser 7-in-1 Weather Center
-
 04.12.2021
  00_SIGNALduino.pm:
  - Rückmeldungen bei "get cmdBank" ergänzt
