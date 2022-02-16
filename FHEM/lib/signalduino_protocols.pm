@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 349 2022-01-15 10:00:00Z v3.4.9-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3410 2022-02-16 22:00:00Z v3.4.10-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.9-dev_ralf_15.01.'
+		"version" => 'v3.4.10-dev_ralf_16.02.'
 		);
 
 our %rfmode = (
@@ -86,8 +86,10 @@ our %rfmode = (
     "Rojaflex_433__B12_N8_GFSK"      => 'CW0001,0246,0302,04D3,0591,06FF,0700,0805,0D10,0EB0,0F71,10C8,1193,1213,1322,14F8,1535,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D08,3E04,4052,416f,426a,4361,4466,456c,4665,4778',
     "Avantek_433__B8_N9_FSK"         => 'CW0001,0246,0301,0408,0569,06FF,0780,0802,0D10,0EAA,0F56,108A,11F8,1202,1322,14F8,1551,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D09,3E04,4041,4176,4261,436e,4474,4565,466b,4700',
     "WH24_WH25__B20_N1_17241"        => 'CW0001,0246,0304,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,4057,4148,4232,4334,4457,4548,4632,4735',
-    "W136__B24_N10_4798"             => 'CW0001,0246,0305,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D0A,3E04,4057,4131,4233,4336,4400'
-	);
+    "W136__B24_N10_4798"             => 'CW0001,0246,0305,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D0A,3E04,4057,4131,4233,4336,4400',
+    "WMBus_S__N11_ab_firmware_V422"  => 'CW0006,0200,0307,0476,0596,06FF,0704,0800,0B08,0D21,0E65,0F6A,106A,114A,1206,1322,14F8,1547,1700,1818,192E,1A6D,1B04,1C09,1DB2,21B6,2211,23EA,242A,2500,261F,3D0B,3E08,4057,414D,4242,4375,4473,4553,4600',
+    "WMBus_T_u_C__N12_ab_firmw_V422" => 'CW0006,0200,0307,0454,053D,06FF,0704,0800,0B08,0D21,0E6B,0FD0,105C,1104,1206,1322,14F8,1544,1700,1818,192E,1ABF,1B43,1C09,1DB5,21B6,2211,23EA,242A,2500,261F,3D0C,3E08,4057,414D,4242,4375,4473,4554,465F,4743'
+    );
 
 our %ProtocolListSIGNALduino  = (
 	"0"	=>	## various weather sensors (500 | 9100)
@@ -3084,6 +3086,48 @@ our %ProtocolListSIGNALduino  = (
 				length_min      => '18',     # 9 Byte
 				method          => \&main::SIGNALduino_FSK_default,
 			},
+		"118" =>  # Meikee RGB LED Solar Wall Light
+				# https://forum.fhem.de/index.php/topic,126110.0.html
+				# learn P118#20D300  MU;P0=-509;P1=513;P2=-999;P3=1027;P4=-12704;D=01230121230301212121212121212141212301212121212303012301212303012121212121212121;CP=1;R=77;
+				# off   P118#20D301  MU;P0=-516;P1=518;P2=-1015;P3=1000;P4=-12712;D=01230121230301212121212121230141212301212121212303012301212303012121212121212301;CP=1;R=35;
+				# on    P118#20D302  MU;P0=-511;P1=520;P2=-998;P3=1015;P4=-12704;D=0121212121230301230121230301212121212123012141212301212121212303012301212303012121212121230121;CP=1;R=83;
+			{
+				name            => 'Meikee RGB LED Light',
+				comment         => 'Solar Wall Light',
+				changed         => '20220211 new',
+				id              => '118',
+				one             => [2,-1],
+				zero            => [1,-2],
+				start           => [-25],    # -12700
+				end             => [1],    # 510
+				clockabs        => 510,
+				clockpos        => ['zero',0],
+				format          => 'twostate',
+				clientmodule    => 'SD_UT',
+				#modulematch    => '^P118#',
+				preamble        => 'P118#',
+				length_min      => '24',
+				length_max      => '25',
+			},
+		"118.1" =>  # Meikee RGB LED Solar Wall Light (MS-Nachricht)
+				# https://forum.fhem.de/index.php/topic,126110.0.html
+				# on P118#20D302  MS;P1=-12746;P2=528;P3=-1001;P4=1003;P5=-520;D=212323452323232323454523452323454523232323232345232;CP=2;SP=1;
+			{
+				name            => 'Meikee RGB LED Light',
+				comment         => 'Solar Wall Light',
+				changed         => '20220216 new',
+				id              => '118.1',
+				one             => [2,-1],
+				zero            => [1,-2],
+				sync            => [1,-25],    # -12700
+				clockabs        => 510,
+				format          => 'twostate',
+				clientmodule    => 'SD_UT',
+				#modulematch    => '^P118#',
+				preamble        => 'P118#',
+				length_min      => '24',
+				length_max      => '25',
+			},
 			"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
 			# https://github.com/klohner/honeywell-wireless-doorbell#the-data-frame
 			# MU;P0=-381;P1=100;P2=260;P3=-220;P4=419;P5=-544;CP=1;R=248;D=010101010101010101010101010101023101023452310102310231010101023101010102310232310101010101010231010101010101010101010101010101010231010234523101023102310101010231010101023102323101010101010102310101010101010101010101010101010102310102345231010231023101010102310;e;
@@ -3232,7 +3276,69 @@ our %ProtocolListSIGNALduino  = (
 				length_min      => '50',      # 25 Byte
 				method          => \&main::SIGNALduino_Bresser_7in1,
 			},
-		
+		"208" => ## WMBUS S
+			#
+			{
+				name            => 'WMBUS S',
+				comment         => 'ab Firmware V 4.2.2',
+				changed         => '20220131 new',
+				id              => '208',
+				knownFreqs      => '868.3',
+				N               => [11],
+				datarate        => '32730',
+				sync            => '7696',
+				lqiPos          => -4,
+				rssiPos         => -2,
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',       # use FIFOs for RX and TX
+				#match           => '^[0-9A-F]+',
+				preamble        => 'b',
+				clientmodule    => 'WMBUS',
+				#length_min      => '',
+				method          => \&main::SIGNALduino_WMBus,
+			},
+		"209" => ## WMBUS T
+			#
+			{
+				name            => 'WMBUS T',
+				comment         => 'ab Firmware V 4.2.2',
+				changed         => '20220131 new',
+				id              => '209',
+				knownFreqs      => '868.9497',
+				N               => [12],
+				datarate        => '103149',
+				sync            => '543D',
+				lqiPos          => -4,
+				rssiPos         => -2,
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',       # use FIFOs for RX and TX
+				match           => '^[0-9A-F]+',
+				preamble        => 'b',
+				clientmodule    => 'WMBUS',
+				#length_min      => '',
+				method          => \&main::SIGNALduino_WMBus,
+			},
+		"210" => ## WMBUS C
+			#
+			{
+				name            => 'WMBUS C',
+				changed         => '20220130 new',
+				comment         => 'ab Firmware V 4.2.2',
+				id              => '210',
+				knownFreqs      => '868.9497',
+				N               => [12],
+				datarate        => '103149',
+				sync            => '543D',
+				lqiPos          => -4,
+				rssiPos         => -2,
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',       # use FIFOs for RX and TX
+				match           => '^(X|Y).*',
+				preamble        => 'b',
+				clientmodule    => 'WMBUS',
+				#length_min      => '',
+				method          => \&main::SIGNALduino_WMBus,
+			}
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
 
