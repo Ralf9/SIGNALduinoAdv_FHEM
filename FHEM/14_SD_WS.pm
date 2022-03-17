@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2022-01-23 23:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2022-03-17 23:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -44,6 +44,7 @@
 # 30.11.2021 Protokoll 108: neuer Sensor Fody_E42
 # 01.01.2022 Protokoll 115: neue Sensoren Indoor und Soil Moisture (Ralf9)
 # 02.01.2022 neues Protokoll 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Sensor
+# 17.03.2022 neues Protokoll 211: WH31 DP50 (Ralf9)
 
 package main;
 
@@ -105,6 +106,7 @@ sub SD_WS_Initialize {
     'SD_WS_205.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_207.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
+    'SD_WS_211.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
   };
   return;
 }
@@ -1335,6 +1337,36 @@ sub SD_WS_Parse {
         lux        => sub {my ($rawData,undef) = @_; return substr($rawData,30,6) + 0; },
         uv         => sub {my ($rawData,undef) = @_; return substr($rawData,36,3) / 10; },
         crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_Bresser_7in1
+    },
+    211 => {
+        # ecowitt WH31, Ambient Weather WH31E, froggit DP50
+        # https://forum.fhem.de/index.php/topic,111653.msg1212517.html#msg1212517
+        # https://github.com/merbanan/rtl_433/blob/master/src/devices/ambientweather_wh31e.c
+        #
+        # 01234567890123
+        # YYIICTTTHHXXAA
+        #
+        # Y = a fixed Type Code of 0x30
+        # I = device ID
+        # C = the Channel number (only the lower 3 bits) and bat (the highest bit)
+        # T = 12bits Temperature in C, scaled by 10, offset 400
+        # H = Humidity
+        # X = CRC-8, poly 0x31, init 0x00
+        # A = SUM-8
+        #
+        sensortype => 'WH31',
+        model      => 'SD_WS_211_TH',
+        #fixedId    => '1',
+        prematch   => sub {return 1; },
+        id         => sub {my ($rawData,undef) = @_; return substr($rawData,2,2); },
+        channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,17,19) + 1);},
+        bat        => sub {my (undef,$bitData) = @_; return substr($bitData,20,1) eq '0' ? 'ok' : 'low';},
+        temp       => sub {my (undef,$bitData) = @_;
+                            my $rawTemp = SD_WS_binaryToNumber($bitData,21,31);
+                            return round(($rawTemp - 400) / 10, 1);
+                          },
+        hum        => sub {my ($rawData,undef) = @_; return hex(substr($rawData,8,2)); },
+        crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_WH31
     }
   );
 
@@ -1763,7 +1795,7 @@ sub SD_WS_Parse {
   if (defined $hum) {
     if ($protocol ne '107') {
       if ($hum > 99) {
-        Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode - ERROR humidity $hum";
+        Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode raw $rawData - ERROR humidity $hum";
         return "";  
       }
       elsif ($hum == 0) {
