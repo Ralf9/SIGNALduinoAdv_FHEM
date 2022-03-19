@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3410 2022-02-16 22:00:00Z v3.4.10-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3411 2022-03-19 12:00:00Z v3.4.11-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,7 +68,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.10-dev_ralf_16.02.'
+		"version" => 'v3.4.11-dev_ralf_19.03.'
 		);
 
 our %rfmode = (
@@ -3220,11 +3220,32 @@ our %ProtocolListSIGNALduino  = (
 				length_min      => '32',     # 16 Byte
 				method        => \&main::SIGNALduino_WH24,
 			},
-		"205"	=>	# WH25
+		"205"	=>	# WH25 WH25A WH32B
 			{
-				name            => 'WH25 WH25A',
+				name            => 'WH25 WH25A WH32B',
+				comment         => 'without bitsum (XOR), WH25A Firmware .../13',
 				changed         => '20210904 new',
 				id              => '205',
+				knownFreqs      => '868.3',
+				N               => [1,6],
+				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^E.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				preamble        => 'W205#',
+				clientmodule    => 'SD_WS',
+				length_min      => '14',     # 7 Byte
+				method        => \&main::SIGNALduino_WH25,
+			},
+		"205.1"	=>	# WH25 WH25A
+			{
+				name            => 'WH25 WH25A',
+				comment         => 'with bitsum (XOR), Firmware .../14',
+				changed         => '20220319 new',
+				id              => '205.1',
+				developId       => 'y',
 				knownFreqs      => '868.3',
 				N               => [1,6],
 				defaultNoN      => '1',		# wenn 1, dann matchen auch Nachrichten ohne die N Nr
@@ -3338,6 +3359,29 @@ our %ProtocolListSIGNALduino  = (
 				clientmodule    => 'WMBUS',
 				#length_min      => '',
 				method          => \&main::SIGNALduino_WMBus,
+			},
+		"211" => # ecowitt WH31, Ambient Weather WH31E, froggit DP50
+			# https://forum.fhem.de/index.php/topic,111653.msg1212517.html#msg1212517
+			# T: -1.7 H: 28 channel:1 Bat ok  W211#3024817F1C  MN;D=3024817F1CF56500000000000000000000000000;R=18;
+			# T: 16.9 H: 69 channel:1 Bat ok  W211#3024F23945  MN;D=3024F2394535F900000000000000000000000000;R=32;
+			# T: 15.1 H: 44 channel:1 Bat low W211#30248A272C  MN;D=30248A272C78A900000000000000000000000000;R=24;
+			{
+				name            => 'WH31 DP50',
+				comment         => 'ecowitt WH31, froggit DP50',
+				changed         => '20220304 new',
+				id              => '211',
+				knownFreqs      => '868.3',
+				N               => [1,6],
+				defaultNoN      => '1',         # wenn 1, dann matchen auch Nachrichten ohne die N Nr
+				datarate        => '17257.69',
+				sync            => '2DD4',
+				modulation      => '2-FSK',
+				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+				match           => '^30.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				preamble        => 'W211#',
+				clientmodule    => 'SD_WS',
+				length_min      => '12',     # 6 Byte
+				method        => \&main::SIGNALduino_WH31,
 			}
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####

@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3410 2022-02-12 22:00:00Z v3.4.10-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3411 2022-03-19 12:00:00Z v3.4.11-dev-Ralf9 $
 #
-# v3.4.10
+# v3.4.11
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.10-dev_ralf_12.02.",
+	SDUINO_VERSION            => "v3.4.11-dev_ralf_19.03.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -5902,21 +5902,52 @@ sub SIGNALduino_WH25
 		$bitsum ^= $byte;
 	}
 	$checksum &= 0xFF;
-	#$bitsum = ($bitsum << 4) | ($bitsum << 4);  # Swap nibbles
 	my $checksumRef = hex(substr($dmsg,12,2));
-	my $bitsumRef = hex(substr($dmsg,12,2));
 	if ($checksum != $checksumRef) {
 		return (-1, "WH25: checksum Error checksum=$checksum checksumRef=$checksumRef");
 	}
-	#if ($bitsum != $bitsumRef) {
-	#	return (-1, "WH25: bitsum Error bitsum=$bitsum bitsumRef=$bitsumRef");
-	#}
 	$bitsum = sprintf('%02X',$bitsum);
-	Log3 $name, 4, "$name WH25: dmsg=$dmsg checksum=$checksum ok, bitsum=0x$bitsum";
+	if ($id eq '205.1') { # with bitsum check
+		my $bitsumRef = substr($dmsg,15,1) . substr($dmsg,14,1);
+		if ($bitsum ne $bitsumRef) {
+			return (-1, "WH25: bitsum Error bitsum=$bitsum bitsumRef=$bitsumRef");
+		}
+		Log3 $name, 4, "$name WH25: dmsg=$dmsg checksum=$checksum ok, bitsum=0x$bitsum ok";
+	}
+	else { # without bitsum check
+		Log3 $name, 4, "$name WH25/WH32B: dmsg=$dmsg checksum=$checksum ok, bitsum=0x$bitsum (no check)";
+	}
 	
 	return (1, $dmsg);
 }
 
+sub SIGNALduino_WH31
+{
+	my ($name,$dmsg,$id) = @_;
+
+	my $checksum = 0;
+	my $byte;
+	my @data = ();
+
+	for (my $i=0; $i<=5; $i++ ) {
+		$byte = hex(substr($dmsg,$i*2,2));
+		push(@data, $byte);
+		$checksum += $byte;
+	}
+	$checksum &= 0xFF;
+	my $crc = SIGNALduino_CalculateCRC(6, @data);
+	if ($crc != 0) {
+		return (-1, "WH31: crc Error crc=$crc");
+	}
+	
+	my $checksumRef = hex(substr($dmsg,12,2));
+	if ($checksum != $checksumRef) {
+		return (-1, "WH31: checksum Error checksum=$checksum checksumRef=$checksumRef");
+	}
+	Log3 $name, 4, "$name WH31: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
+
+	return (1, substr($dmsg, 0, 10));
+}
 
 sub SIGNALduino_CalculateCRC_W136
 {
