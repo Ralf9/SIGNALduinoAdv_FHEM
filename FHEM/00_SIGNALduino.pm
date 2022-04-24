@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3411 2022-03-19 12:00:00Z v3.4.11-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3412 2022-04-22 18:00:00Z v3.4.12-dev-Ralf9 $
 #
-# v3.4.11
+# v3.4.12
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.11-dev_ralf_19.03.",
+	SDUINO_VERSION            => "v3.4.12-dev_ralf_22.04.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -203,7 +203,9 @@ my $clientsSIGNALduino = ":CUL_TCM97001:"
                         ."SD_RSL:"
                         ."SD_UT:"		## universal - more devices with different protocol
                         ."WMBUS:"
+                        ."HMS:"
                         ." :"		# Zeilenumbruch
+                        ."IFB:"
                         ."CUL_FHTTK:"
                         ."FHT:"
                         ."RFXX10REC:"
@@ -252,6 +254,8 @@ my %matchListSIGNALduino = (
       '32:PCA301'           => '^\\S+\\s+24',
       '33:SD_Rojaflex'      => '^P109#[A-Fa-f0-9]+',
       '34:WMBUS'            => '^b.*',
+      '35:HMS'              => '^810e04......a001',
+      '36:IFB'              => '^J............',
       '90:SD_Tool'          => '^pt([0-9]+(\.[0-9])?)(#.*)?',
       'X:SIGNALduino_un'    => '^[u]\d+#.*',
 );
@@ -2552,7 +2556,12 @@ sub SIGNALduino_Split_Message
 			$rssi = $_ ;
 			Debug "$name: extracted RSSI $rssi \n" if ($debug);
 			$ret{rssi} = $rssi;
-		}  else {
+		}
+		elsif($_ =~ m/^r/)		### append RSSI ###
+		{
+			$ret{appendrssi} = 1;
+		}
+		else {
 			Debug "$name: unknown Message part $_" if ($debug);;
 		}
 		#print "$_\n";
@@ -3381,7 +3390,7 @@ SIGNALduino_Parse_MC
 	#my $protocol=undef;
 	#my %patternListRaw = %msg_parts{patternList};
 	
-	Debug "$name: processing manchester messag len:".length($rawData) if ($debug);
+	Debug "$name: processing manchester message len:".length($rawData) if ($debug);
 	
 	my $hlen = length($rawData);
 	my $blen;
@@ -3483,6 +3492,9 @@ sub SIGNALduino_Parse_MN
 	my $debug = AttrVal($name,"debug",0);
 	my $rssiStr= '';
 	
+	if (defined($msg_parts{appendrssi})) {
+		$rssi = hex(substr($rawData,-4,2));
+	}
 	if (defined($rssi)) {
 		($rssi,$rssiStr) = SIGNALduino_calcRSSI($rssi);
 	}
@@ -4657,7 +4669,12 @@ sub SIGNALduino_postDemo_WS2000 {
 	} else {
 		do {
 			$error += !$bit_msg[$index + $datastart];			# jedes 5. Bit muss 1 sein
-			$dataindex = $index + $datastart + 1;				 
+			$dataindex = $index + $datastart + 1;
+			my $rest = $protolength - $dataindex;   # prevents perl warning WS2000
+			if ($rest < 4) {
+				Log3 $name, 4, "$name: WS2000 Sensortyp $typ - ERROR rest of message < 4 ($rest)";
+				return (0, undef);
+			}
 			$data = oct( "0b".(join "", reverse @bit_msg[$dataindex .. $dataindex + 3]));
 			if ($index == 5) {$adr = ($data & 0x07)}			# Sensoradresse
 			if ($datalength == 45 || $datalength == 46) { 	# Typ 1 ohne Summe
@@ -4790,7 +4807,7 @@ sub SIGNALduino_MCTFA
 	{ 
 		$preamble_pos=$+[1];
 		Log3 $name, 4, "$name: TFA 30.3208.0 preamble_pos = $preamble_pos";
-		return return (-1," sync not found") if ($preamble_pos <=0);
+		return (-1," sync not found") if ($preamble_pos <=0);
 		my @messages;
 		
 		my $i=1;
@@ -4857,7 +4874,7 @@ sub SIGNALduino_OSV2
 		$preamble_pos=$+[1];
 		
 		Log3 $name, 4, "$name: OSV2 protocol detected: preamble_pos = $preamble_pos";
-		return return (-1," sync not found") if ($preamble_pos <=18);
+		return (-1,"sync not found") if ($preamble_pos <=18);
 		
 		$message_end=$-[1] if ($bitData =~ m/^.{44,}(01){16,17}.?10011001/); #Todo regex .{44,} 44 should be calculated from $preamble_pos+ min message lengh (44)
 		if (!defined($message_end) || $message_end < $preamble_pos) {
@@ -5125,7 +5142,7 @@ sub SIGNALduino_Maverick
 	
 		return  (1,$hex); ## Return the bits unchanged in hex
 	} else {
-		return return (-1," header not found");
+		return (-1,"header not found");
 	}	
 }
 
@@ -5134,7 +5151,7 @@ sub SIGNALduino_OSPIR
 	my ($name,$bitData,$id,$mcbitnum) = @_;
 	my $debug = AttrVal($name,"debug",0);
 
-
+	return (-1," message is to long") if (defined($ProtocolListSIGNALduino{$id}{length_max}) && $mcbitnum > $ProtocolListSIGNALduino{$id}{length_max} );
 	if ($bitData =~ m/^.*(1{14}|0{14}).*/) 
 	{  # Valid Oregon PIR detected	
 		my $header_pos=$+[1];
@@ -5145,7 +5162,7 @@ sub SIGNALduino_OSPIR
 	
 		return  (1,$hex); ## Return the bits unchanged in hex
 	} else {
-		return return (-1," header not found");
+		return (-1,"header not found");
 	}	
 }
 
@@ -5176,6 +5193,176 @@ sub SIGNALduino_GROTHE
 	Log3 $name, 4, "$name: GROTHE protocol Id=$id detected. $bitData ($bitLength)";	
 	return  (1,$hex); ## Return the bits unchanged in hex
 }
+
+sub SIGNALduino_HMS
+{
+	my ($name,$bitData,$id,$mcbitnum) = @_;
+
+	my $binData;
+	my $data;
+	my $pdata;
+	my $hex;
+	my $xorsum = 0;
+	my $parity;
+	my $p;
+	my $errtxt = '';
+	my $i = 0;
+
+	if ($mcbitnum == 70) {
+		$bitData = substr($bitData, 1);
+		Log3 $name, 4, "$name: HMS $bitData, remove one bit at begin";
+	}
+	for (my $n=0; $n<=6; $n++) {
+		if (substr($bitData, $i+9, 1) eq '1' && $n < 6) {
+			$errtxt = 'a fixed 0-bit is 1';
+			last;
+		}
+		$binData = reverse substr($bitData, $i, 8);
+		$data = oct("0b$binData");
+		$hex .= sprintf('%02x', $data);
+		$pdata = $data;
+		$p = 0;
+		while ($pdata) {       # parity
+			$p^=($pdata & 1);
+			$pdata>>=1;
+		}
+		$parity = substr($bitData, $i+8, 1);
+		if ($p != $parity) {
+			$errtxt = 'wrong parity pos='.($i+8);
+			last;
+		}
+		$i += 10;
+		if ($n < 6) {
+			$xorsum ^= $data;
+			#Log3 $name, 4, "$name: HMS $binData $p $parity";
+		}
+		else {
+			#Log3 $name, 4, "$name: HMS $binData $p $parity $xorsum $data";
+			if ($xorsum != $data) {
+				$errtxt = 'wrong xorsum';
+				last;
+			}
+		}
+	}
+	if ($errtxt eq '') {
+		Log3 $name, 4, "$name: HMS $hex parity ok, xorsum ok";
+		# Reformat for 12_HMS.pm
+		my $type = hex(substr($hex,5,1));
+		my $stat = $type > 1 ? hex(substr($hex,6,2)) : hex(substr($hex,4,2));
+		my $prf  = $type > 1 ? "02" : "05";
+		my $bat  = $type > 1 ? hex(substr($hex,4,1))+1 : 1;
+		my $HA = substr($hex,0,4);
+		my $values = $type > 1 ?  "000000" : substr($hex,6,6);
+			$hex = sprintf("%s%x%xa001%s0000%02x%s",
+			$prf, $bat, $type,
+			$HA,                 # House-Code
+			$stat,
+			$values);            # Values
+		return  (1,$hex);
+	}
+	else {
+		return  (-1, $errtxt);
+	}
+}
+
+sub SIGNALduino_Funkbus_calcChecksum
+{
+	my $s_bitmsg = shift;
+
+	my $bin;
+	my $data;
+	my $xor = 0;
+	my $chk = 0;
+	my $p = 0;  # parity
+	my $hex = '';
+	for (my $i=0; $i<6;$i++) {  # checksum
+		$bin = substr($s_bitmsg, $i*8,8);
+		$data = oct("b".$bin);
+		$hex .= sprintf('%02X', $data);
+		if ($i<5) {
+			$xor ^= $data;
+		}
+		else {
+			$chk = $data & 0x0f;
+			$xor ^= $data & 0xe0;
+			$data &= 0xf0;
+		}
+		while ($data) {       # parity
+			$p^=($data & 1);
+			$data>>=1;
+		}
+	}
+
+	my $xor_nibble = (($xor&0xf0) >> 4) ^ ($xor&0x0F);
+	my $result = 0;
+	if ($xor_nibble & 0x8) {
+		$result ^= 0xC;
+	}
+	if ($xor_nibble & 0x4) {
+		$result ^= 0x2;
+	}
+	if ($xor_nibble & 0x2) {
+		$result ^= 0x8;
+	}
+	if ($xor_nibble & 0x01) {
+		$result ^= 0x3;
+	}
+	return ($result, $chk, $p, $hex);
+}
+
+sub SIGNALduino_Funkbus
+{
+	my ($name,$bitData,$id,$mcbitnum) = @_;
+	
+	return (-1,'message is to long') if (defined($ProtocolListSIGNALduino{$id}{length_max}) && $mcbitnum > $ProtocolListSIGNALduino{$id}{length_max} );
+	return (-1,'message is to short') if (defined($ProtocolListSIGNALduino{$id}{length_min}) && $mcbitnum < $ProtocolListSIGNALduino{$id}{length_min} );
+	
+	$bitData = substr($bitData,0,$mcbitnum);
+	$bitData =~ s/1/zo/g; # 0 durch zo (01) ersetzen
+	$bitData =~ s/0/oz/g; # 1 durch oz (10) ersetzen
+	Log3 $name, 5, "$name Funkbus: raw=$bitData";
+	
+	my @bitmsg;
+	if ($id ne '213') {
+		push (@bitmsg,0);
+	}
+	my $i = 1;
+	my $len = $mcbitnum * 2;
+	while ($i < $len) {  # nach Differential Manchester wandeln
+		if (substr($bitData,$i,1) eq substr($bitData,$i+1,1)) {
+			push (@bitmsg,0);
+		}
+		else {
+			push (@bitmsg,1);
+		}
+		$i += 2;
+	}
+	my $s_bitmsg = join "", @bitmsg;
+	
+	if ($id eq '213') {
+		my $pos = index($s_bitmsg,'01100');
+		if ($pos >= 0 && $pos < 5) {
+			$s_bitmsg = '001' . substr($s_bitmsg,$pos);
+			return (-1,'wrong bits at begin') if (length($s_bitmsg) < 48);
+		}
+		else {
+			return (-1,'wrong bits at begin');
+		}
+	}
+	
+	my ($result, $chk, $p, $hex) = SIGNALduino_Funkbus_calcChecksum($s_bitmsg);
+
+	Log3 $name, 4, "$name Funkbus: len=" . length($s_bitmsg) . " bit49=" . substr($s_bitmsg,48,1) . " parity=$p res=$result chk=$chk msg=$s_bitmsg hex=$hex";
+	if ($p == 1) {
+		return (-1,'parity error');
+	}
+	if ($result != $chk) {
+		return (-1,'checksum error');
+	}
+	
+	return  (1,$hex);
+}
+
 
 sub SIGNALduino_MCRAW
 {

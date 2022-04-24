@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3411 2022-03-19 12:00:00Z v3.4.11-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3412 2022-04-22 18:00:00Z v3.4.12-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -68,12 +68,12 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.11-dev_ralf_19.03.'
+		"version" => 'v3.4.12-dev_ralf_22.04.'
 		);
 
 our %rfmode = (
     "SlowRF_ccFactoryReset"  => 'e',
-    "Lacrosse_mode1__B12_N1_17241"   => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,404d,4131,425f,4349,4454,452b,4600',
+    "Lacrosse_mode1_WS1080_TX38__B12_N1_17241"   => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,404d,4131,425f,4349,4454,452b,4600',
     "Lacrosse_mode2__B12_N2_9579"    => 'CW0001,0246,0302,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1088,1182,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D02,3E03,404d,4132,425f,4349,4454,452b,4600',
     "PCA301_mode3__B32_N3_6631"      => 'CW0001,0246,0307,042D,05D4,06FF,0700,0802,0D21,0E6B,0FD0,1088,110B,1206,1322,14F8,1553,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D03,3E03,4050,4143,4241,435f,4433,4530,4631,4700',
     "KOPP_FC__B20_N4_4785"           => 'CW0001,0246,0304,04AA,0554,060F,07E0,0800,0D21,0E65,0FCA,10C7,1183,1216,1373,14F8,1540,170C,1829,1936,1B07,1C40,1D91,2211,23E9,242A,2500,261F,3D04,3E02,404b,416f,4270,4370,445f,4546,4643,4700',
@@ -83,7 +83,7 @@ our %rfmode = (
  "Bresser_5in1_u_7in1__B28_N7_8220"  => 'CW0001,0246,0306,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4535,4631,4700',
     "Bresser_6in1__B20_N7_8220"      => 'CW0001,0246,0304,042D,05D4,06FF,07C0,0802,0D21,0E65,0FE8,1088,114C,1202,1322,14F8,1551,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D07,3E04,4042,4172,4265,4373,4473,4536,4631,4700',
     "HoneywActivL__SlowRf_FSK"       => 'CW000D,022D,0307,04D3,0591,063D,0704,0832,0D21,0E65,0FE8,1087,11F8,1200,1323,14B9,1550,1700,1818,1914,1B43,1C00,1D91,2211,23E9,242A,2500,2611,3D00,3E00,4048,4177,4253,436C,446F,4577,4652,4746',
-    "Rojaflex_433__B12_N8_GFSK"      => 'CW0001,0246,0302,04D3,0591,06FF,0700,0805,0D10,0EB0,0F71,10C8,1193,1213,1322,14F8,1535,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D08,3E04,4052,416f,426a,4361,4466,456c,4665,4778',
+    "Rojaflex_433__B12_N8_GFSK"      => 'CW0007,0246,0302,04D3,0591,060C,0788,0805,0D10,0EB0,0F71,10C8,1193,1213,1322,14F8,1535,170F,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D08,3E04,4052,416f,426a,4361,4466,456c,4665,4778',
     "Avantek_433__B8_N9_FSK"         => 'CW0001,0246,0301,0408,0569,06FF,0780,0802,0D10,0EAA,0F56,108A,11F8,1202,1322,14F8,1551,1700,1818,1916,1B43,1C40,1D91,2211,23E9,242A,2500,2611,3D09,3E04,4041,4176,4261,436e,4474,4565,466b,4700',
     "WH24_WH25__B20_N1_17241"        => 'CW0001,0246,0304,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D00,3E04,4057,4148,4232,4334,4457,4548,4632,4735',
     "W136__B24_N10_4798"             => 'CW0001,0246,0305,042D,05D4,06FF,0700,0802,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,2211,23E9,242A,2500,2611,3D0A,3E04,4057,4131,4233,4336,4400',
@@ -421,6 +421,9 @@ our %ProtocolListSIGNALduino  = (
 			length_max      => '120',
 		}, 	
 	"10"	=>	## Oregon Scientific 2
+				# https://forum.fhem.de/index.php/topic,60170.msg875919.html#msg875919 @David1
+				# OSV2 T: 17.8 H: 32 BAT: ok  MC;LL=-997;LH=967;SL=-506;SH=460;D=AAAAAAAA66959A6555655AA55556A9955565A5566AA56A96;C=488;L=192;s1;b1;
+				# OSV3 T: 20.2 H: 37 BAT: ok  MC;LL=-1002;LH=952;SL=-489;SH=475;D=000000A0EBDDC4FBFBF13EF5B6;C=486;L=104;s48;b1;
 		{
 			name		=> 'Oregon Scientific v2|v3',
 			comment		=> 'temperature / humidity or other sensors',
@@ -1539,7 +1542,7 @@ our %ProtocolListSIGNALduino  = (
 			modulematch     => '^u52#F{3}|0{3}.*',
 			preamble		=> 'u52#',
 			length_min      => '30',
-			length_max      => '30',
+			length_max      => '32',
 			method          => \&main::SIGNALduino_OSPIR, # Call to process this message
 			polarity        => 'invert',			
 		},
@@ -1727,6 +1730,7 @@ our %ProtocolListSIGNALduino  = (
 			zero                 => [7,-3],
 			clockabs             => 122,
 			clockpos             => ['one',0],
+			reconstructBit       => '1',
 			pause                => [-70],
 			preamble             => 'K',        # prepend to converted message
 			#postamble            => '',         # Append to converted message
@@ -3128,7 +3132,7 @@ our %ProtocolListSIGNALduino  = (
 				length_min      => '24',
 				length_max      => '25',
 			},
-			"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
+		"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
 			# https://github.com/klohner/honeywell-wireless-doorbell#the-data-frame
 			# MU;P0=-381;P1=100;P2=260;P3=-220;P4=419;P5=-544;CP=1;R=248;D=010101010101010101010101010101023101023452310102310231010101023101010102310232310101010101010231010101010101010101010101010101010231010234523101023102310101010231010101023102323101010101010102310101010101010101010101010101010102310102345231010231023101010102310;e;
 			{
@@ -3363,7 +3367,7 @@ our %ProtocolListSIGNALduino  = (
 		"211" => # ecowitt WH31, Ambient Weather WH31E, froggit DP50
 			# https://forum.fhem.de/index.php/topic,111653.msg1212517.html#msg1212517
 			# T: -1.7 H: 28 channel:1 Bat ok  W211#3024817F1C  MN;D=3024817F1CF56500000000000000000000000000;R=18;
-			# T: 16.9 H: 69 channel:1 Bat ok  W211#3024F23945  MN;D=3024F2394535F900000000000000000000000000;R=32;
+			# T: 16.9 H: 69 channel:8 Bat ok  W211#3024F23945  MN;D=3024F2394535F900000000000000000000000000;R=32;
 			# T: 15.1 H: 44 channel:1 Bat low W211#30248A272C  MN;D=30248A272C78A900000000000000000000000000;R=24;
 			{
 				name            => 'WH31 DP50',
@@ -3382,6 +3386,58 @@ our %ProtocolListSIGNALduino  = (
 				clientmodule    => 'SD_WS',
 				length_min      => '12',     # 6 Byte
 				method        => \&main::SIGNALduino_WH31,
+			},
+		"212"	=>	## HMS
+			# 
+			{
+				name            => 'HMS',
+				#comment         => '',
+				changed         => '20220322 new',
+				id              => '212',
+				clockrange      => [495,515],			# min , max
+				format          => 'manchester',	    # tristate can't be migrated from bin into hex!
+				clientmodule    => 'HMS',
+				#modulematch     => '^W58*',
+				preamble        => '810e04xx',
+				length_min      => '69',
+				#length_max      => '52',
+				method          => \&main::SIGNALduino_HMS, # Call to process this message
+				polarity        => 'invert',
+			},
+		"213"	=>	## Funkbus
+			#
+			{
+				name            => 'Funkbus',
+				comment         => 'only Typ 43',
+				id              => '213',
+				changed         => '20220409 new',
+				clockrange      => [490,520],			# min , max
+				start           => [7.2],  # 3600
+				clockabs        => 500,
+				format          => 'manchester',	    # tristate can't be migrated from bin into hex!
+				clientmodule    => 'IFB',
+				#modulematch     => '',
+				preamble        => 'J',
+				length_min      => '47',
+				length_max      => '52',
+				method          => \&main::SIGNALduino_Funkbus, # Call to process this message
+			},
+		"213.1"	=>	## Funkbus
+			#
+			{
+				name            => 'Funkbus',
+				#comment         => '',
+				id              => '213.1',
+				developId       => 'y',
+				changed         => '20220409 new',
+				clockrange      => [490,520],			# min , max
+				format          => 'manchester',	    # tristate can't be migrated from bin into hex!
+				clientmodule    => 'IFB',
+				#modulematch     => '',
+				preamble        => 'J',
+				length_min      => '49',
+				length_max      => '52',
+				method          => \&main::SIGNALduino_Funkbus, # Call to process this message
 			}
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
