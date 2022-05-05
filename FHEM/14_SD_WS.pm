@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2022-03-17 23:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2022-05-01 20:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -45,6 +45,8 @@
 # 01.01.2022 Protokoll 115: neue Sensoren Indoor und Soil Moisture (Ralf9)
 # 02.01.2022 neues Protokoll 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Sensor
 # 17.03.2022 neues Protokoll 211: WH31 DP50 (Ralf9)
+# 11.04.2022 Protokoll 85: neuer Sensor Windmesser TFA 30.3251.10 mit Windrichtung, Pruefung CRC8 eingearbeitet (elektron-bbs)
+
 
 package main;
 
@@ -68,7 +70,7 @@ sub SD_WS_Initialize {
   $hash->{UndefFn}  = "SD_WS_Undef";
   $hash->{ParseFn}  = "SD_WS_Parse";
   $hash->{AttrList} = "do_not_notify:1,0 ignore:0,1 showtime:1,0 " .
-                      "model:E0001PA,S522,TX-EZ6,other,WH24_65B " .
+                      "model:E0001PA,S522,TFA_30.3251.10,TX-EZ6,other,WH24_65B " .
                       "max-deviation-temp:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
                       "max-deviation-hum:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50,100 ".
                       "max-deviation-rain:1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50 ".
@@ -597,12 +599,13 @@ sub SD_WS_Parse {
       } ,
     85 =>
       {
-        # Protokollbeschreibung: Kombisensor TFA 30.3222.02 (TX141TH-Bv2) fuer Wetterstation TFA 35.1140.01
-        # -----------------------------------------------------------------------------------
+        # Protokollbeschreibung: Kombisensor TFA 30.3222.02 (TX141TH-Bv2) fuer Wetterstation TFA 35.1140.01, Windmesser TFA 30.3251.10
+        # --------------------------------------------------------------------------------------------------
         # 0    4    | 8    12   | 16   20   | 24   28   | 32   36   | 40   44   | 48   52   | 56   60   | 64
         # 0000 1001 | 0001 0110 | 0001 0000 | 0000 0111 | 0100 1001 | 0100 0000 | 0100 1001 | 0100 1001 | 1
-        # ???? iiii | iiii iiii | iiii iiii | b??? ??yy | tttt tttt | tttt ???? | hhhh hhhh | ???? ???? | ?   message 1
-        # ???? iiii | iiii iiii | iiii iiii | b?cc ??yy | wwww wwww | wwww ???? | 0000 0000 | ???? ???? | ?   message 2
+        # 0000 iiii | iiii iiii | iiii iiii | b??? ??yy | tttt tttt | tttt 0000 | hhhh hhhh | CCCC CCCC | ?   message 1 TFA 30.3222.02
+        # 0000 iiii | iiii iiii | iiii iiii | b?cc ??yy | wwww wwww | wwww 0000 | 0000 0000 | CCCC CCCC | ?   message 2 TFA 30.3222.02
+        # 0000 iiii | iiii iiii | iiii iiii | b?cc ??yy | wwww wwww | wwww dddd | dddd dddd | CCCC CCCC | ?   message 2 TFA 30.3251.10
         # i: 20 bit random id (changes on power-loss)
         # b:  1 bit battery indicator (0=>OK, 1=>LOW)
         # c:  2 bit channel valid channels are (always 00 stands for channel 1)
@@ -610,15 +613,16 @@ sub SD_WS_Parse {
         # t: 12 bit unsigned temperature, offset 500, scaled by 10 - if message 1
         # h:  8 bit relative humidity percentage - if message 1
         # w: 12 bit unsigned windspeed, scaled by 10 (kmh) - if message 2
+        # d: 12 bit unsigned winddirection - only TFA 30.3251.10
+        # C:  8 bit CRC of the preceding 7 bytes (Polynomial 0x31, Initial value 0x00, Input not reflected, Result not reflected)
         # ?: unknown
         # The sensor sends at intervals of about 30 seconds
         #
         # https://github.com/merbanan/rtl_433/blob/master/src/devices/lacrosse_tx141x.c
 
-        sensortype => 'TFA 30.3222.02',
+        sensortype => 'TFA 30.3222.02, TFA 30.3251.10, LaCrosse TX141W',
         model      => 'SD_WS_85_THW',
         prematch   => sub {my $msg = shift; return 1 if ($msg =~ /^[0-9A-F]{16}/); },   # min 16 nibbles
-        #crcok      => sub {return 1;},    # crc test method is so far unknown
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,1,5); },    # 0952CF012B1021DF0
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,24,1) eq "0" ? "ok" : "low";},
         channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,26,27) + 1 ); },   # unknown
@@ -642,6 +646,34 @@ sub SD_WS_Parse {
                             }
                             return;
                           },
+        winddir    => sub {my (undef,$bitData) = @_;
+                            if (substr($bitData,30,2) eq "10") {    # message 2 winddirection
+                              $winddir = SD_WS_binaryToNumber($bitData,44,55);
+                              return ($winddir * 1, $winddirtxtar[round(($winddir / 22.5),0)]);
+                            } else {
+                              return;
+                            }
+                          },
+        crcok      => sub {my ($rawData,undef) = @_;
+                            my $rc = eval {
+                              require Digest::CRC;
+                              Digest::CRC->import();
+                              1;
+                            };
+                            if ($rc) {
+                              my $datacheck1 = pack( 'H*', substr($rawData,0,14) );
+                              my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
+                              my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                              if (hex($rr3) != hex(substr($rawData,14,2))) {
+                                Log3 $name, 3, "$name: SD_WS_85 Parse msg $rawData - ERROR CRC8";
+                                return 0;
+                              }
+                            } else {
+                              Log3 $name, 1, "$name: SD_WS_85 Parse msg $rawData - ERROR CRC not load, please install modul Digest::CRC";
+                              return 0;
+                            }
+                            return 1;
+                          }
       } ,
     89 =>
       {
@@ -1033,8 +1065,8 @@ sub SD_WS_Parse {
         # 0123456789012345678901234567890123456789
         # ----------------------------------------
         # 3DA820B00C1618FFFFFF1808152294FFF01E0000  Msg 1, 40 Nibble from SIGNALduino, T: 15.2 H: 94 G:0 W: 0 D:180
-        # CCCCIIIIIIIIFFGGGWWWDDD?TTT?HH????SS      Msg 1, 36 Nibble 
-        # CCCCIIIIIIIIFFGGGWWWDDD?ffRRRRVVV?SS      Msg 2, 36 Nibble 
+        # CCCCIIIIIIIIFFGGGWWWDDD?TTT?HH???XSS      Msg 1, 36 Nibble 
+        # CCCCIIIIIIIIFFGGGWWWDDD?ffRRRRVVVXSS      Msg 2, 36 Nibble 
         # C = CRC16
         # I = station ID
         # F = flags, 4 bit (1: weather station, 2: indoor?, 4: soil probe), 1 bit battery (1=ok, 0=low), 3 bit channel
@@ -1047,7 +1079,7 @@ sub SD_WS_Parse {
         # H = humidity in percent, only if byte 12 ne 0xFF, BCD coded, HH = 23 => 23 %
         # R = rain counter, only if byte 12 eq 0xFF, inverted, BCD coded
         # V = uv, only if byte 12 eq 0xFF and byte 15/16 not 0xFF01, inverted, BCD coded
-        # ? = unknown
+        # X = message type, 0 = temp, hum, wind, uv, 1 = wind, rain
         # S = checksum (sum over byte 2 - 17 must be 255)
         #
         # Only nibbles 4 to 33 are transferred to the module. Preprocessing in 00_SIGNALduino.pm sub SIGNALduino_Bresser_5in1_neu
@@ -1769,7 +1801,13 @@ sub SD_WS_Parse {
   $name = $hash->{NAME};
   return "" if(IsIgnored($name));
   
-  if ($protocol eq '204') {
+  if ($protocol eq '85') {  # Protocol 85 without wind direction
+    if (AttrVal($name,'model','') ne "TFA_30.3251.10") {
+      $winddir = undef;
+      $winddirtxt = undef;
+    }
+  }
+  elsif ($protocol eq '204') {
     if (AttrVal($name, 'model', '') eq 'WH24_65B') {
       $SensorTyp = 'WH65B';
       $windspeed*=0.06375;
