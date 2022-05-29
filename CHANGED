@@ -1,3 +1,17 @@
+29.05.2022
+ 00_SIGNALduino.pm:
+  - neues Attribut "rfmode_testing", damit wird bei set ein neuer Eintrag "rfmodeTesting" aktiviert
+  - neues Attribut "rfmode_user", der hier gespeicherte CW-Befehl kann mit "set sduino rfmode custom" zum sduino gesendet werden.
+  - neues Attribut "parseMUclockCheck", wenn > 0 dann ist bei MU Nachrichten der test ob die clock in der Toleranz ist, aktiv
+  - Funkbus Senderoutinen zugefügt
+  - deutsche "Device specific help" ergänzt
+ signalduino_protocols.pm:
+  - geänderte cc1101 Registerkonfigurationen rfmodeTesting für Firmware V3.3.5 und V4.2.2
+  - neue cc1101 Registerkonfiguration (rfmodeTesting) für Elero
+  - Funkbus Protokoll ID von 213 auf 119 geändert
+  - neue Protokoll IDs
+    120 TFA 35.1077
+    121 universal HT21E, z.B für B.E.G. Alarmanlage
 22.04.2022
  00_SIGNALduino.pm und signalduino_protocols.pm:
  - neue Protokoll IDs
