@@ -1449,12 +1449,17 @@ sub SD_WS_Parse {
         # The 7-in-1 multifunction outdoor sensor transmits the data on 868.3 MHz.
         # The device uses FSK-PCM encoding, the device sends a transmission every 12 seconds.
         #
-        # CCCCIIIIDDDuuuGGGWWWRRRRRR??TTTFHHLLLLLLUUUttttttt
+        # 0CF0A6F5B98A10AAAAAAAAAAAAAABABC3EAABBFCAAAAAAAAAA000000   original message
+        # A65A0C5F1320BA000000000000001016940011560000000000AAAAAA   message after all nibbles xor 0xA
+        # CCCCIIIIDDD??FGGGWWWRRRRRR??TTTFHHLLLLLLUUUttttttt
         #
-        # CCCC    crc16
+        # CCCC    LFSR-16
         # IIII    ID
         # DDD     wind_dir_deg
-        # uuu     unknown
+        # F       flags, 4 bit 
+        #         Bit:    0123
+        #                 r???
+        #                 r:   1 bit device reset, 1 after inserting battery
         # GG.G    Wind Gust  m/s
         # WW.W    Wind Speed m/s
         # RRRRR.R rain mm
@@ -1471,7 +1476,7 @@ sub SD_WS_Parse {
         sensortype => 'Bresser_7in1',
         model      => 'SD_WS_207',
         fixedId    => '1',
-        prematch   => sub {my $rawData = shift; return 1 if ($rawData =~ /^[0-9A-F]{8}[0-9]{3}[0-9A-F]{3}[0-9]{12}[0-9A-F]{2}[0-9]{15}/); },
+        prematch   => sub {my $rawData = shift; return 1 if ($rawData =~ /^[0-9A-F]{4}[0-9]{3}[0-9A-F]{3}[0-9]{12}[0-9A-F]{2}[0-9]{15}/); },
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,4); },
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,109,2) eq '11' ? 'low' : 'ok';},
         batChange  => sub {my (undef,$bitData) = @_; return substr($bitData,36, 1);},
