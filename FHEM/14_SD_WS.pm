@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2022-05-01 20:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2022-07-22 18:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -46,6 +46,8 @@
 # 02.01.2022 neues Protokoll 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Sensor
 # 17.03.2022 neues Protokoll 211: WH31 DP50 (Ralf9)
 # 11.04.2022 Protokoll 85: neuer Sensor Windmesser TFA 30.3251.10 mit Windrichtung, Pruefung CRC8 eingearbeitet (elektron-bbs)
+# 23.05.2022 neues Protokoll 120: Wetterstation TFA 35.1077.54.S2 mit 30.3151 (Thermo/Hygro-Sender), 30.3152 (Regenmesser), 30.3153 (Windmesser)
+# 11.06.2022 neues Protokoll 122: TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
 
 
 package main;
@@ -104,6 +106,8 @@ sub SD_WS_Initialize {
     'SD_WS_113_T.*'   => { ATTR => 'event-min-interval:.*:60 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4:Temp,', autocreateThreshold => '10:180'},
     'SD_WS_115.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '5:120'},
     'SD_WS_116.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', autocreateThreshold => '2:180'},
+    'SD_WS_120.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
+    'SD_WS_122_T.*'   => { ATTR => 'event-min-interval:.*:60 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4:Temp,', autocreateThreshold => '10:180'},
     'SD_WS_204.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_205.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
@@ -164,6 +168,8 @@ sub SD_WS_Parse {
   my $rawTemp;
   my $temp;
   my $temp2;
+  my $temp3;
+  my $temp4;
   my $noTempCheck;
   my $hum;
   my $windspeed;
@@ -192,6 +198,7 @@ sub SD_WS_Parse {
   my $identified;     # ID 116
   my $lux;            # ID 204, WH24
   my $pressure;       # ID 205, WH25
+  my $dcf;            # ID 120
 
   my %decodingSubs  = (
     50 => # Protocol 50
@@ -1238,6 +1245,126 @@ sub SD_WS_Parse {
                             }
                           }
     },
+    120 => {
+        # Weather station TFA 35.1077.54.S2 with 30.3151 (T/H-transmitter), 30.3152 (rain gauge), 30.3153 (anemometer)
+        # ------------------------------------------------------------------------------------------------------------
+        # https://forum.fhem.de/index.php/topic,119335.msg1221926.html#msg1221926
+        # 0    4    | 8    12   | 16   20   | 24   28   | 32   36   | 40   44   | 48   52   | 56   60   | 64   68   | 72   76
+        # 1111 1110 | 1010 1011 | 0000 0100 | 1001 1110 | 1010 1010 | 0000 1000 | 0000 1100 | 0000 1100 | 0101 0011 | 0000 0000 - T: 19.1 H: 85 W: 1.3 R: 473.1
+        # PPPP PPPW | WWWI IIII | IIIF TTTT | TTTT TTTH | HHHH HHHS | SSSS SSSG | GGGG GGGR | RRRR RRRR | RRRR RRR? | CCCC CCCC
+        # 1111 1110 | 1100 1011 | 0001 0101 | 0011 0000 | 0000 0110 | 0000 1100 | 0100 0100 | 1000 1100 | 0100 1111 | 1011 1000 - 2022-06-27 18:03:06
+        # PPPP PPPW | WWWI IIII | IIIF ???? | ?hhh hhh? | mmmm mmm? | ssss sssY | YYYY YYY? | ??MM MMM? | ?DDD DDD? | CCCC CCCC
+        # P -  7 bit preamble
+        # W -  4 bit whid, 0101=weather, 0110=time
+        # I -  8 bit ident
+        # F -  1 bit flag, 0=weather, 1=time
+        # T - 11 bit temperature in 1/10 °C, offset 40
+        # H -  8 bit humidity in percent
+        # S -  8 bit windspeed in 1/10 m/s, resolution 0.33333
+        # G -  8 bit windgust in 1/10 m/s, resolution 0.33333
+        # R - 16 bit rain counter, resolution 0.3 mm
+        # C -  8 bit CRC8 of the all 8 bytes, result must be 33 (Polynomial 0x31)
+        # h -  6 bit hour, BCD coded
+        # m -  7 bit minute, BCD coded
+        # s -  7 bit second, BCD coded
+        # Y -  8 bit year, BCD coded
+        # M -  5 bit month, BCD coded
+        # D -  6 bit day, BCD coded
+        # ? -  x bit unknown
+        sensortype     => 'TFA_35.1077',
+        model          => 'SD_WS_120',
+        prematch       => sub {return 1;}, # no precheck known
+        id             => sub {my (undef,$bitData) = @_; return SD_WS_binaryToNumber($bitData,11,18);},
+        temp           => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '1');
+                                return SD_WS_binaryToNumber($bitData,20,30) * 0.1 - 40;
+                               },
+        hum            => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '1');
+                                return SD_WS_binaryToNumber($bitData,31,38);
+                              },
+        windspeed      => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '1');
+                                return round((SD_WS_binaryToNumber($bitData,39,46) / 3.0),1);
+                              },
+        windgust       => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '1');
+                                return round((SD_WS_binaryToNumber($bitData,47,54) / 3.0),1);
+                              },
+        rawRainCounter => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '1');
+                                return SD_WS_binaryToNumber($bitData,55,70);
+                              },
+        rain           => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '1');
+                                return SD_WS_binaryToNumber($bitData,55,70) * 0.3;
+                              },
+        dcf            => sub {my (undef,$bitData) = @_;
+                                return if (substr($bitData,19,1) eq '0');
+                                return '20' . SD_WS_binaryToNumber($bitData,47,50) . SD_WS_binaryToNumber($bitData,51,54) . '-' # year
+                                       . substr($bitData,58,1) . SD_WS_binaryToNumber($bitData,59,62) . '-' # month
+                                       . SD_WS_binaryToNumber($bitData,65,66) . SD_WS_binaryToNumber($bitData,67,70) . ' ' # day
+                                       . SD_WS_binaryToNumber($bitData,25,26) . SD_WS_binaryToNumber($bitData,27,30) . ':' # hour 
+                                       . SD_WS_binaryToNumber($bitData,32,34) . SD_WS_binaryToNumber($bitData,35,38) . ':' # minute
+                                       . SD_WS_binaryToNumber($bitData,40,42) . SD_WS_binaryToNumber($bitData,43,46) . ' ' # second
+                              },
+        crcok          => sub {my $rawData = shift;
+                                my $rc = eval {
+                                  require Digest::CRC;
+                                  Digest::CRC->import();
+                                  1;
+                                };
+                                if ($rc) {
+                                  my $datacheck1 = pack( 'H*', substr($rawData,2,length($rawData)-2) );
+                                  my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
+                                  my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                                  if (hex($rr3) != 0) {
+                                    Log3 $name, 3, "$name: SD_WS_120 Parse msg $rawData - ERROR CRC8";
+                                    return 0;
+                                  }
+                                } else {
+                                  Log3 $name, 1, "$name: SD_WS_120 Parse msg $rawData - ERROR CRC not load, please install modul Digest::CRC";
+                                  return 0;
+                                }  
+                                return 1;
+                              }
+    },
+    122 => {
+        # TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+        # -----------------------------------------------------------------------------
+        # 0    4    | 8    12   | 16   20   | 24   28   | 32   36   | 40   44   | 48   52   | 56   60   | 64   68   | 72   76   | 80   84   | 88   92   | 96   100  | 104
+				# 1001 0010 | 0110 0011 | 0000 0001 | 0011 0110 | 0000 0001 | 0011 0110 | 0000 0001 | 0100 0000 | 0000 0001 | 0110 1000 | 0000 0000 | 0000 0000 | 1011 1000 | 1000
+        # iiii iiii | iiii iiii | 4444 4444 | 4444 4444 | 3333 3333 | 3333 3333 | 2222 2222 | 2222 2222 | tttt tttt | tttt tttt | ???? ???? | ???? ???? | CCCC CCCC | 1 
+        # i: 16 bit id
+        # 4: 16 bit unsigned temperature 4
+        # 3: 16 bit unsigned temperature 3
+        # 2: 16 bit unsigned temperature 2
+        # t: 16 bit unsigned temperature 1
+        # ?: 16 bit unknown flags
+        # C:  8 bit check???, always changes
+        sensortype => 'TM40',
+        model      => 'SD_WS_122_T',
+        noTempCheck => '1',
+        prematch   => sub { return 1; }, # no precheck known
+        id         => sub { my ($rawData,undef) = @_; return substr($rawData,0,4); },
+        temp4      => sub { my (undef,$bitData) = @_;
+                            return if (substr($bitData,80,4) ne '0000');
+                            return SD_WS_binaryToNumber($bitData,16,31) / 10;
+                          },
+        temp3      => sub { my (undef,$bitData) = @_;
+                            return if (substr($bitData,84,4) ne '0000');
+                            return SD_WS_binaryToNumber($bitData,32,47) / 10;
+                          },
+        temp2      => sub { my (undef,$bitData) = @_;
+                            return if (substr($bitData,88,4) ne '0000');
+                            return SD_WS_binaryToNumber($bitData,48,63) / 10;
+                          },
+        temp       => sub { my (undef,$bitData) = @_;
+                            return if (substr($bitData,92,4) ne '0000');
+                            return SD_WS_binaryToNumber($bitData,64,79) / 10;
+                          },
+        #crcok      => sub {return 1;}, # Check could not be determined yet.
+    },
     204 => {
         # WH24 WH65A/B
         sensortype => 'WH24',
@@ -1344,7 +1471,7 @@ sub SD_WS_Parse {
         sensortype => 'Bresser_7in1',
         model      => 'SD_WS_207',
         fixedId    => '1',
-        prematch   => sub { return 1; }, # no precheck known
+        prematch   => sub {my $rawData = shift; return 1 if ($rawData =~ /^[0-9A-F]{8}[0-9]{3}[0-9A-F]{3}[0-9]{12}[0-9A-F]{2}[0-9]{15}/); },
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,4); },
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,109,2) eq '11' ? 'low' : 'ok';},
         batChange  => sub {my (undef,$bitData) = @_; return substr($bitData,36, 1);},
@@ -1724,6 +1851,8 @@ sub SD_WS_Parse {
     $fixedId = $decodingSubs{$protocol}{fixedId} if (exists($decodingSubs{$protocol}{fixedId}));
     $temp = $decodingSubs{$protocol}{temp}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp}));
     $temp2 = $decodingSubs{$protocol}{temp2}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp2}));
+    $temp3 = $decodingSubs{$protocol}{temp3}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp3}));
+    $temp4 = $decodingSubs{$protocol}{temp4}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{temp4}));
     $noTempCheck = $decodingSubs{$protocol}{noTempCheck} if (exists($decodingSubs{$protocol}{noTempCheck}));
     $hum = $decodingSubs{$protocol}{hum}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{hum}));
     if (exists($decodingSubs{$protocol}{windspeed})) {
@@ -1761,6 +1890,7 @@ sub SD_WS_Parse {
     $transPerBoost = $decodingSubs{$protocol}{transPerBoost}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{transPerBoost}));
     $lux = $decodingSubs{$protocol}{lux}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{lux}));
     $pressure = $decodingSubs{$protocol}{pressure}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{pressure}));
+    $dcf = $decodingSubs{$protocol}{dcf}->( $rawData,$bitData ) if (exists($decodingSubs{$protocol}{dcf}));
     Log3 $iohash, 4, "$name: SD_WS_Parse decoded protocol-id $protocol ($SensorTyp), sensor-id $id";
   }
   else {
@@ -1969,6 +2099,14 @@ sub SD_WS_Parse {
     $state .= ' ' if (length($state) > 0);
     $state .= "T2: $temp2";
   }
+  if (defined($temp3)) {
+    $state .= ' ' if (length($state) > 0);
+    $state .= "T3: $temp3";
+  }
+  if (defined($temp4)) {
+    $state .= ' ' if (length($state) > 0);
+    $state .= "T4: $temp4";
+  }
   if (defined($hum)) {
     $state .= " " if (length($state) > 0); # es gibt auch Sensoren ohne Temp
     $state .= "H: $hum";
@@ -2040,6 +2178,8 @@ sub SD_WS_Parse {
   readingsBulkUpdate($hash, "state", $state);
   readingsBulkUpdate($hash, "temperature", $temp)  if (defined($temp));
   readingsBulkUpdate($hash, "temperature2", $temp2)  if (defined($temp2) && (($temp2 > -60 && $temp < 70 ) || defined($noTempCheck)));
+  readingsBulkUpdate($hash, "temperature3", $temp3)  if (defined($temp3));
+  readingsBulkUpdate($hash, "temperature4", $temp3)  if (defined($temp4));
   readingsBulkUpdate($hash, "humidity", $hum)  if (defined($hum));
   readingsBulkUpdate($hash, 'windSpeed', $windspeed)  if (defined($windspeed)) ;
   readingsBulkUpdate($hash, 'windSpeed_kmh', $windspeedKmh)  if (defined($windspeedKmh));
@@ -2073,6 +2213,7 @@ sub SD_WS_Parse {
   readingsBulkUpdate($hash, "transPerBoost", $transPerBoost)  if (defined($transPerBoost));
   readingsBulkUpdate($hash, "lux", $lux)  if (defined($lux));
   readingsBulkUpdate($hash, "pressure", $pressure)  if (defined($pressure));
+  readingsBulkUpdate($hash, 'dcf', $dcf)  if (defined($dcf));
   readingsBulkUpdate($hash, "id", $id) if (defined($id)); # && !defined($channel));
   readingsEndUpdate($hash, 1); # Notify is done by Dispatch
 
@@ -2323,7 +2464,7 @@ sub SD_WS_WH2SHIFT {
     <li>Conrad S522</li>
     <li>EuroChron EFTH-800, EFS-3110A (Temperatur- und Feuchtigkeitssensor)</li>
     <li>Fine Offset WH51, aka ECOWITT WH51, aka Froggit DP100, aka MISOL/1 (Bodenfeuchtesensor)</li>
-    <li>Fine Offset WH24, WH25, WH65A/B
+    <li>Fine Offset WH24, WH25, WH65A/B</li>
     <li>Fine Offset WH57, aka Froggit DP60, aka Ambient Weather WH31L (Gewittersensor)</li>
     <li>Fody E42 (Temperatur- und Feuchtigkeitssensor)</li>
     <li>Kabelloses Grillthermometer, Modellname: GFGT 433 B1</li>
