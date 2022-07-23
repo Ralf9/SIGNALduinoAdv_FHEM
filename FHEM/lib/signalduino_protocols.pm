@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3413 2022-05-29 10:00:00Z v3.4.13-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3414 2022-07-21 20:00:00Z v3.4.14-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.13-dev_ralf_29.05.'
+		"version" => 'v3.4.14-dev_ralf_21.07.'
 		);
 
 our %rfmode = (
@@ -928,13 +928,15 @@ our %ProtocolListSIGNALduino  = (
 		"31"  =>	## LED Controller LTECH, LED M Serie RF RGBW - M4 & M4-5A
 							# https://forum.fhem.de/index.php/topic,107868.msg1018434.html#msg1018434 | https://forum.fhem.de/index.php/topic,107868.msg1020521.html#msg1020521 @Devirex
 							## note: command length 299, now - not supported by all firmware versions
-							# MU;P0=-16118;P1=315;P2=-281;P4=-1204;P5=-563;P6=618;P7=1204;D=01212121212121212121214151562151515151515151515621515621515626262156262626262626262626215626262626262626262626262626262151515151515151515151515151515151515151515151515626262626262626215151515151515156215156262626262626262626262621570121212121212121212121;CP=1;R=26;O;
-							# MU;P0=-32001;P1=314;P2=-285;P3=-1224;P4=-573;P5=601;P6=1204;P7=-15304;CP=1;R=31;D=012121212121212121212131414521414141414141414145214145214145252521452525252525252525252145252525252525252525252525252521414141414141414141414141414141452141414141414145252525252525252141414141414141414525252141452525252525214145214671212121212121212121213141452;p;i;
-			{
+							# 0490DCFF function: 00 off               MU;P0=-16118;P1=315;P2=-281;P4=-1204;P5=-563;P6=618;P7=1204;D=01212121212121212121214151562151515151515151515621515621515626262156262626262626262626215626262626262626262626262626262151515151515151515151515151515151515151515151515626262626262626215151515151515156215156262626262626262626262621570121212121212121212121;CP=1;R=26;O;
+							# 0490DCFF function: 01 rgbcolor: FF0000  MU;P0=-32001;P1=314;P2=-285;P3=-1224;P4=-573;P5=601;P6=1204;P7=-15304;CP=1;R=31;D=012121212121212121212131414521414141414141414145214145214145252521452525252525252525252145252525252525252525252525252521414141414141414141414141414141452141414141414145252525252525252141414141414141414525252141452525252525214145214671212121212121212121213141452;p;i;
+							# 04444EFF function: 01 rgbcolor: 202000  MU;P0=1194;P1=597;P2=-6269;P3=306;P4=-298;P5=-1216;P6=-559;D=123434343434343434343536361436363636363636143636361436361414143636143614141414141414143614141414141414141414141414141414141414141414143636363636363636143636363636363636363636361436363636363636363636363614361436363614141414143614360;CP=3;R=28;
+							{
 				name            => 'LTECH',
 				comment			=> 'remote control for LED Controller M4-5A',
 				changed			=> '20200211 new. Old moved to ID 34',
 				id              => '31',
+				developId       => 'y',
 				one             => [2,-0.9],
 				zero            => [1,-1.8],
 				start           => [1,-0.9, 1,-3.8],
@@ -943,8 +945,8 @@ our %ProtocolListSIGNALduino  = (
 				clockabs        => 315,
 				clockpos		=> ['zero',0],
 				format          => 'twostate',
-				preamble        => 'u31#',
-				clientmodule	=> 'SIGNALduino_un',
+				preamble        => 'P31#',
+				clientmodule	=> 'LTECH',
 				length_min      => '104',
 			},
 	"32"	=>	## FreeTec PE-6946 -> http://www.free-tec.de/Funkklingel-mit-Voic-PE-6946-919.shtml
@@ -3184,65 +3186,91 @@ our %ProtocolListSIGNALduino  = (
 				length_max      => '52',
 				method          => \&main::SIGNALduino_Funkbus, # Call to process this message
 			},
-		"120" => 
-			{
-				name            => 'TFA 35.1077.54',
-				comment         => 'erstes Bit 1',
-				id              => '120',
-				changed         => '20220518 new',
-				one             => [1,-2],
-				zero            => [3,-2],
-				start           => [-46,2,-2, 1,-2],
-				clockabs        => 480,        # -1 = auto undef=noclock
-				clockpos        => ['one',0],
-				reconstructBit	=> '1',
-				format          => 'twostate',
-				preamble        => 'W120#',		# prepend to converted message
-				clientmodule    => 'SD_WS',
-				#modulematch     => '^u9#.....',  # not used now
-				#length_min      => '60',
-				#length_max      => '120',
-			},
-		"120.1" => 
-			{
-				name            => 'TFA 35.1077.54',
-				comment         => 'erstes Bit 0',
-				id              => '120.1',
-				changed         => '20220521 new',
-				one             => [1,-2],
-				zero            => [3,-2],
-				#start           => [-46,2,-2, 3,-2],
-				start           => [-46,2,-2],
-				clockabs        => 480,        # -1 = auto undef=noclock
-				clockpos        => ['one',0],
-				reconstructBit	=> '1',
-				format          => 'twostate',
-				preamble        => 'W120#',		# prepend to converted message
-				clientmodule    => 'SD_WS',
-				#modulematch     => '^u9#.....',  # not used now
-				#length_min      => '60',
-				#length_max      => '120',
-			},
-		"121" =>  ## universal HT21E, e.g. B.E.G. Alarmanlage
-				# https://forum.fhem.de/index.php/topic,127798.0.html
-				# P121#93E  MU;P0=30880;P1=-1794;P2=821;P3=-920;P4=1704;P5=-30427;P6=404;P7=-4204;CP=2;R=41;D=0123434123434121212121234521234341234341212121212345212343412343412121212123452123434123434121212121234567;e;
-				{
-				name            => 'HT21E (BEG)',
-				comment         => 'universal, e.g. for B.E.G. Alarmanlage',
-				id              => '121',
-				changed         => '20220525 new',
-				one             => [-2,1],
-				zero            => [-1,2],
-				start           => [-35,1],
-				clockabs        => 790,
-				clockpos        => ['one',1],
-				format          => 'twostate',
-				preamble        => 'P121#',
-				clientmodule    => 'SD_UT',
-				#modulematch     => '',
-				length_min      => '12',
-				length_max      => '12',
-			},
+    "120" =>  ## Weather station TFA 35.1077.54.S2 with 30.3151 (T/H-transmitter), 30.3152 (rain gauge), 30.3153 (anemometer)
+              # https://forum.fhem.de/index.php/topic,119335.msg1221926.html#msg1221926 2022-05-17 @ Ronny2510
+              # T: 18.7 H: 60 Ws: 2.0 Wg: 2.7 R: 491.1  MU;P0=-4848;P1=984;P2=-981;P3=1452;P4=-17544;P5=480;P6=-31000;P7=320;D=01234525252525252523252325232523252523232323232523232523232523252523232525252523232323232323252523232323232523232323232323232525232325252323252325252323232523232565272525252525232523252325232525232323232325232325232325232525232325252525232323232323232525;CP=5;R=51;O;
+      {
+        name            => 'TFA 35.1077.54.S2',
+        comment         => 'Weatherstation with sensors 30.3151, 30.3152, 30.3153',
+        id              => '120',
+        changed         => '20220518 new',
+        one             => [1,-2], #  480,-960
+        zero            => [3,-2], # 1440,-960
+        clockabs        => 480,
+        clockpos        => ['one',0],
+        reconstructBit  => '1',
+        format          => 'twostate',
+        preamble        => 'W120#',
+        clientmodule    => 'SD_WS',
+        #modulematch     => '^W120#',
+        length_min      => '78',
+        length_max      => '80',
+      },
+    "121" => ## Remote control Busch-Transcontrol HF - Handsender 6861
+             # 1 OFF   MU;P0=28479;P1=-692;P2=260;P3=574;P4=-371;D=0121212121212134343434213434342121213434343434342;CP=2;R=41;
+             # 1 ON    MU;P0=4372;P1=-689;P2=254;P3=575;P4=-368;D=0121213434212134343434213434342121213434343434342;CP=2;R=59;
+             # 2 OFF   MU;P0=7136;P1=-688;P2=259;P3=585;P4=-363;D=0121212121212134343434213434342121213434343434343;CP=2;R=59;
+      {
+        name            => 'Busch-Transcontrol',
+        comment         => 'Remote control 6861',
+        id              => '121',
+        changed         => '20220617 new',
+        one             => [2.2,-1.4], #   572,-364
+        zero            => [1,-2.6],   #   260,-676
+        start           => [-2.6],     #  -675
+        pause           => [120,-2.6], # 31200,-676
+        clockabs        => 260,
+        clockpos        => ['zero',0],
+        reconstructBit  => '1',
+        format          => 'twostate',
+        clientmodule    => 'SD_UT',
+        modulematch     => '^P121#',
+        preamble        => 'P121#',
+        length_min      => '23',
+        length_max      => '24',
+      },
+    "122" =>  ## TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+              # https://forum.fhem.de/index.php?topic=127938.msg1224516#msg1224516 2022-06-09 @ Prof. Dr. Peter Henning
+              # SD_WS_122_T  T: 36 T2: 32 T3: 31 T4: 31  MU;P0=3412;P1=-1029;P2=1043;P3=4706;P4=-2986;P5=549;P6=-1510;P7=-562;D=01212121212121213456575756575756575756565757575656575757575757575657575656575656575757575757575756575756565756565757575757575757565756575757575757575757575757575657565657565757575757575757575757575757575757575756575656565757575621212121212121213456575756;CP=5;R=2;O;
+              # SD_WS_122_T  T: 83 T2: 22 T3: 22 T4: 22  MU;P0=11276;P1=-1039;P2=1034;P3=4704;P4=-2990;P5=543;P6=-1537;P7=-559;D=01212121212121213456575756575756575756565757575656575757575757575756565756565657575757575757575757565657565656575757575757575757575656575656565757575757575757565657575656565656575757575757575757575757575757575756565756565656575621212121212121213456575756;CP=5;R=12;O;
+      {
+        name            => 'TM40',
+        comment         => 'Roasting Thermometer with 4 Temperature Sensors',
+        changed         => '20220611 new',
+        id              => '122',
+        one             => [1,-3],           # 520,-1560
+        zero            => [1,-1],           # 520,-520
+        start           => [9,-6], # 4680,-3120
+        clockabs        => 520,
+        clockpos        => ['cp'],
+        format          => 'twostate',
+        preamble        => 'W122#',
+        clientmodule    => 'SD_WS',
+        modulematch     => '^W122#',
+        length_min      => '104',
+        length_max      => '108',
+      },
+    "123" =>  ## universal HT21E, e.g. B.E.G. Alarmanlage
+              # https://forum.fhem.de/index.php/topic,127798.0.html
+              # P123#93E  MU;P0=30880;P1=-1794;P2=821;P3=-920;P4=1704;P5=-30427;P6=404;P7=-4204;CP=2;R=41;D=0123434123434121212121234521234341234341212121212345212343412343412121212123452123434123434121212121234567;e;
+      {
+        name            => 'HT21E (BEG)',
+        comment         => 'universal, e.g. for B.E.G. Alarmanlage',
+        id              => '123',
+        developId       => 'y',
+        changed         => '20220525 new',
+        one             => [-2,1],
+        zero            => [-1,2],
+        start           => [-35,1],
+        clockabs        => 790,
+        clockpos        => ['one',1],
+        format          => 'twostate',
+        preamble        => 'P123#',
+        clientmodule    => 'SD_UT',
+        #modulematch     => '',
+        length_min      => '12',
+        length_max      => '12',
+      },
 		"200"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
 			# https://github.com/klohner/honeywell-wireless-doorbell#the-data-frame
 			# MU;P0=-381;P1=100;P2=260;P3=-220;P4=419;P5=-544;CP=1;R=248;D=010101010101010101010101010101023101023452310102310231010101023101010102310232310101010101010231010101010101010101010101010101010231010234523101023102310101010231010101023102323101010101010102310101010101010101010101010101010102310102345231010231023101010102310;e;
