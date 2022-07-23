@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3413 2022-05-29 10:00:00Z v3.4.13-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3414 2022-07-21 20:00:00Z v3.4.14-dev-Ralf9 $
 #
-# v3.4.12
+# v3.4.14
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.13-dev_ralf_29.05.",
+	SDUINO_VERSION            => "v3.4.14-dev_ralf_21.07.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -215,6 +215,7 @@ my $clientsSIGNALduino = ":CUL_TCM97001:"
                         ."SD_Keeloq:"
                         ."SD_Rojaflex:"
                         ."Siro:"
+                        ."LTECH:"
                         ."SD_Tool:"
                         ."SIGNALduino_un:"
                     ;
@@ -236,7 +237,7 @@ my %matchListSIGNALduino = (
       '14:Dooya'            => '^P16#[A-Fa-f0-9]+',
       '15:SOMFY'            => '^Ys[0-9A-F]+',
       '16:SD_WS_Maverick'   => '^P47#[A-Fa-f0-9]+',
-      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121)#.*', # universal - more devices with different protocols
+      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|123)#.*', # universal - more devices with different protocols
       '18:FLAMINGO'         => '^P13\.?1?#[A-Fa-f0-9]+',              # Flamingo Smoke
       '19:CUL_WS'           => '^K[A-Fa-f0-9]{5,}',
       '20:Revolt'           => '^r[A-Fa-f0-9]{22}',
@@ -256,6 +257,7 @@ my %matchListSIGNALduino = (
       '34:WMBUS'            => '^b.*',
       '35:HMS'              => '^810e04......a001',
       '36:IFB'              => '^J............',
+      '37:LTECH'            => '^P31#[A-Fa-f0-9]{26,}',
       '90:SD_Tool'          => '^pt([0-9]+(\.[0-9])?)(#.*)?',
       'X:SIGNALduino_un'    => '^[u]\d+#.*',
 );
@@ -7410,9 +7412,9 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 				<li> <code>set sduino raw SR;R=3;P0=500;P1=-9000;P2=-4000;P3=-2000;D=0302030;</code> , sendet die Daten im Raw-Modus dreimal wiederholt</li>
 				<li> <code>set sduino raw SM;R=3;C=250;D=A4F7FDDE;</code> , sendet die Daten Manchester codiert mit einem clock von 250&micro;S</li>
 				<li> <code>set sduino raw SC;R=3;SR;P0=5000;D=0;SM;C=250;D=A4F7FDDE;</code> , sendet eine kombinierte Nachricht von Raw und Manchester codiert 3 mal wiederholt</li>
-				<li> <code>set sduino raw SN;R=1;N=3;D=010403B7A100FFFFFFFF8D6EAAAAAA;</code> , sendet die xFSK - Daten einmal<br>
-				<li> <code>set sduino raw bss0F44AE0C7856341201074447780B12436587255D</code> , sendet eine WMBus S Nachricht (ab Firmware V 4.2.2)<br>
-				<li> <code>set sduino raw bst0F44AE0C7856341201074447780B12436587255D</code> , sendet eine WMBus T Nachricht (ab Firmware V 4.2.2)<br>
+				<li> <code>set sduino raw SN;R=1;N=3;D=010403B7A100FFFFFFFF8D6EAAAAAA;</code> , sendet die xFSK - Daten einmal</li>
+				<li> <code>set sduino raw bss0F44AE0C7856341201074447780B12436587255D</code> , sendet eine WMBus S Nachricht (ab Firmware V 4.2.2)</li>
+				<li> <code>set sduino raw bst0F44AE0C7856341201074447780B12436587255D</code> , sendet eine WMBus T Nachricht (ab Firmware V 4.2.2)</li>
 				</ul>
 	</li><br>
 	<a id="SIGNALduino-set-reset"></a>
@@ -7499,6 +7501,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<code>s   - </code>damit wird eine &Uuml;bersicht von allen B&auml;nken ausgegeben.<br>
 	<code>1-9 - </code>aktiviert die angegebene Speicherbank, dazu wird der cc1101 mit den in der Speicherbank gespeicherten Registern initialisiert.<br>
     ...Mit nachgestelltem W wird es im EEPROM gespeichert.<br>
+    ...Mit nachgestelltem f optimiertes wechseln der aktiven EEPROM Bank (nur bei FSK, ccmode 1-4, nur ab Firmware V3.3.5 und V4.2.2)<br>
     ...Mit nachgestelltem - wird die Bank deaktiviert (ung&uuml;ltig gemacht)(nur ab Firmware V3.3.5 und V4.2.2)<br>
 	Nur beim Maple oder ESP32:<br>
 	<code>r   - </code>damit wird von allen cc1101 eine Bankinfo ausgegeben.<br>

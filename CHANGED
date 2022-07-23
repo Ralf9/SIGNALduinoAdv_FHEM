@@ -1,3 +1,12 @@
+21.07.2022
+ 00_SIGNALduino.pm:
+  - Modul 14_LTECH in Match- und Clientliste zugefügt
+  - deutsche "Device specific help" ergänzt
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    121 Remote control Busch-Transcontrol HF - Handsender 6861
+    122 TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+  - bei ID 31 clientmodule LTECH zugefügt
 29.05.2022
  00_SIGNALduino.pm:
   - neues Attribut "rfmode_testing", damit wird bei set ein neuer Eintrag "rfmodeTesting" aktiviert
