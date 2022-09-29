@@ -1,3 +1,12 @@
+29.09.2022
+ 00_SIGNALduino.pm:
+  - Attribut "rfmode_testing" wieder entfernt, damit ist "set sduino rfmodeTesting" defaultmässig aktiv
+ signalduino_protocols.pm:
+  - update rfmode DP100_WH51_WH57
+  - neuer rfmodeTesting Inkbird
+  - neue Protokoll IDs
+    20.1 RCnoName20 als MU
+    123 Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R
 21.07.2022
  00_SIGNALduino.pm:
   - Modul 14_LTECH in Match- und Clientliste zugefügt

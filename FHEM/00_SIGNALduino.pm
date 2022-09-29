@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3414 2022-07-21 20:00:00Z v3.4.14-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3414 2022-09-29 16:00:00Z v3.4.14-dev-Ralf9 $
 #
 # v3.4.14
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.14-dev_ralf_21.07.",
+	SDUINO_VERSION            => "v3.4.14-dev_ralf_29.09.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -237,7 +237,7 @@ my %matchListSIGNALduino = (
       '14:Dooya'            => '^P16#[A-Fa-f0-9]+',
       '15:SOMFY'            => '^Ys[0-9A-F]+',
       '16:SD_WS_Maverick'   => '^P47#[A-Fa-f0-9]+',
-      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|123)#.*', # universal - more devices with different protocols
+      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|199)#.*', # universal - more devices with different protocols
       '18:FLAMINGO'         => '^P13\.?1?#[A-Fa-f0-9]+',              # Flamingo Smoke
       '19:CUL_WS'           => '^K[A-Fa-f0-9]{5,}',
       '20:Revolt'           => '^r[A-Fa-f0-9]{22}',
@@ -305,7 +305,6 @@ SIGNALduino_Initialize
 					  ." cc1101_frequency"
 					  ." doubleMsgCheck_IDs"
 					  ." parseMUclockCheck:0,1,2"  # wenn > 0 dann ist bei MU Nachrichten der test ob die clock in der Toleranz ist, aktiv
-					  ." rfmode_testing:0,1"
 					  ." rfmode_user"
 					  ." sendSlowRF_A_IDs"
 					  ." suppressDeviceRawmsg:1,0"
@@ -535,9 +534,7 @@ SIGNALduino_Set
 
   %my_sets = ( %my_sets,  %{$hash->{additionalSets}} ) if ( defined($hash->{additionalSets}) );
   %my_sets = ( %my_sets,  %{$hash->{rfmodesets}} ) if ( defined($hash->{rfmodesets}) );
-  if (AttrVal($name,"rfmode_testing",0) == 1) {
-    %my_sets = ( %my_sets,  %{$hash->{rfmodesetsTesting}} ) if ( defined($hash->{rfmodesetsTesting}) );
-  }
+  %my_sets = ( %my_sets,  %{$hash->{rfmodesetsTesting}} ) if ( defined($hash->{rfmodesetsTesting}) );
   
   #Log3 $hash, 3, "SIGNALduino_Set normal set commands: ".Dumper(%my_sets);
   
@@ -7428,6 +7425,9 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	- Bx: die Anzahl der Bytes die empfangen werden<br>
 	- Nx: Nummerierung der cc1101 konfig<br>
 	- Bei gleicher Nummerierung werden auch rfmode Eintr&auml;ge mit kleinerer Byteanzahl (Bx) verarbeitet</li><br>
+	<a id="SIGNALduino-set-rfmodeTesting"></a>
+	<li>rfmodeTesting<br>
+	optimierte cc1101 Registerkonfigurationen (rfmode) für Firmware V3.3.5 und V4.2.2</li><br>
 	<a id="SIGNALduino-set-sendMsg"></a>
 	<li>sendMsg<br>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
@@ -7663,10 +7663,6 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<li>rawmsgEvent<br>
 	Bei der Einstellung "1", l&ouml;sen empfangene Rohnachrichten Ereignisse aus.
 	</li><br><br>
-	<a id="SIGNALduino-attr-rfmode_testing"></a>
-	<li>rfmode_testing<br>
-	Mit 1 gibts bei set auch einen Eintrag rfmode_testing. Dies sind noch nicht vollst&auml;ndig getestete cc1101 Register konfigurationen.<br>
-	</li><br>
 	<a id="SIGNALduino-attr-rfmode_user"></a>
 	<li>rfmode_user<br>
 	Der hier gespeicherte CW-Befehl kann mit <code>set sduino rfmode custom</code> zum sduino gesendet werden.<br>
