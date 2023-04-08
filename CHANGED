@@ -1,3 +1,13 @@
+08.04.2023
+ 00_SIGNALduino.pm:
+  - Prüfsummenroutinen für die IDs 213 und 214 zugefügt
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    124 Deckenventilator Fernbedienung CasaFan FB-FNK Powerboat mit 5 Tasten
+    198 VONDOM Handsender von einem RGBW LED Blumentopf (noch nicht fertig)
+    213 Regenmesser ecowitt/Ambient Weather WH40
+    214 Ecowitt WS68 Windmesser (noch nicht fertig)
+
 29.09.2022
  00_SIGNALduino.pm:
   - Attribut "rfmode_testing" wieder entfernt, damit ist "set sduino rfmodeTesting" defaultmässig aktiv
@@ -41,7 +51,6 @@
   - neue ID 205.1 für WH25A mit Firmware .../14, damit wird auch die bitsum (XOR) geprüft
     funktioniert nur mit whitelist und die ID 205 darf nicht aktiv sein
   - neue ID 211 für ecowitt WH31, Ambient Weather WH31E, froggit DP50
-
 12.02.2022
  00_SIGNALduino.pm:
   - bei set raw können nun auch WMBus Nachrichten (bss.. und bst..) gesendet werden

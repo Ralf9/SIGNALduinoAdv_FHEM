@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3414 2022-09-27 16:00:00Z v3.4.14-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3415 2023-04-08 16:00:00Z v3.4.15-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.14-dev_ralf_27.09.'
+		"version" => 'v3.4.15-dev_ralf_08.04.'
 		);
 
 our %rfmode = (
@@ -3212,6 +3212,8 @@ our %ProtocolListSIGNALduino  = (
     "120" =>  ## Weather station TFA 35.1077.54.S2 with 30.3151 (T/H-transmitter), 30.3152 (rain gauge), 30.3153 (anemometer)
               # https://forum.fhem.de/index.php/topic,119335.msg1221926.html#msg1221926 2022-05-17 @ Ronny2510
               # T: 18.7 H: 60 Ws: 2.0 Wg: 2.7 R: 491.1  MU;P0=-4848;P1=984;P2=-981;P3=1452;P4=-17544;P5=480;P6=-31000;P7=320;D=01234525252525252523252325232523252523232323232523232523232523252523232525252523232323232323252523232323232523232323232323232525232325252323252325252323232523232565272525252525232523252325232525232323232325232325232325232525232325252525232323232323232525;CP=5;R=51;O;
+              # T: 25.1 H: 48 Ws: 0.0 Wg: 0.0 Bat: low  MU;P0=112;P1=-5520;P2=480;P3=-973;P4=1468;P5=-31000;D=01232323232323234323432323232323232323434323234323434343234323234343232343434343434343434343434343434343434343434343434343434343434343434343434343234343434323252323232323232343234323232323232323234343232343234343432343232343432323434343434343434343434343;CP=2;R=80;O;
+              # T: 22 H: 43 Ws: 0.3 Wg: 0.7 R: 530.4    MU;P0=-15856;P1=480;P2=-981;P3=1460;D=01212121212121232123212321232121232323232321232321212321212323232321232123212123232323232323212323232323232123232323232321212321212123212323232321212121232121;CP=1;R=47;
       {
         name            => 'TFA 35.1077.54.S2',
         comment         => 'Weatherstation with sensors 30.3151, 30.3152, 30.3153',
@@ -3275,10 +3277,11 @@ our %ProtocolListSIGNALduino  = (
         length_max      => '108',
       },
     "123" =>  ## Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R (not tested)
-              # https://forum.fhem.de/index.php/topic,128945.0.html
-              # T: -4.2 Bat%: 90 MN;D=D3910F800301005A0655D6FF14051405264E;N=14;R=22;
-              # T: 22.7 Bat%: 0  MN;D=D3910F80030100000655E30014051405B55C;N=14;R=22;
-              # T: 25   Bat%: 90 MN;D=D3910F800301005A0655FA001405140535F6;N=14;R=22;
+              # https://forum.fhem.de/index.php/topic,128945.0.html @ xeenon
+              # SD_WS_123_T_0655 T: -4.2 Bat%: 90 MN;D=D3910F800301005A0655D6FF14051405264E;N=14;R=22;
+              # SD_WS_123_T_0655 T: 22.7 Bat%: 0  MN;D=D3910F80030100000655E30014051405B55C;N=14;R=22;
+              # SD_WS_123_T_0655 T: 25   Bat%: 90 MN;D=D3910F800301005A0655FA001405140535F6;N=14;R=22;
+              # SD_WS_123_T_7E43 T: 25.4 H: 60 Bat%: 32 MN;D=D3910F00010301207E43FE0014055802772A;N=14;R=232;
       {
         name            => 'Inkbird IBS-P01R ITH-20R',
         comment         => 'IBS-P01R Pool Thermometer',
@@ -3294,6 +3297,69 @@ our %ProtocolListSIGNALduino  = (
         length_min      => '36',     # 18 Byte
         method          => \&main::SIGNALduino_FSK_default,
       },
+    "124" => ## Remote control CasaFan FB-FNK Powerboat with 5 buttons for fan
+             # https://forum.fhem.de/index.php/topic,53282.msg1258346.html#msg1258346 @ datwusel 2023-01-17
+             # FB_FNK_Powerboat_3A9760  light_dimm     MU;P0=-21800;P1=1716;P2=-444;P3=850;P4=416;P5=-2996;P6=648;D=012323242424232423242323242324242423242423232323232324232423242323512323242424232423242323242324242423242423232323232324232423242323512326;CP=4;R=218;
+             # FB_FNK_Powerboat_3A9760  light_on_off   MU;P0=-8672;P1=1730;P2=-426;P3=820;P4=432;P5=-2976;D=012323242424232423242323242324242423242423232323232324242323232323512323242424232423242323242324242423242423232323232324242323232323512323242424232423242323242324242423242423;CP=4;R=227;
+      {
+        name            => 'FB-Powerboat',
+        comment         => 'Remote control CasaFan FB-FNK Powerboat',
+        changed         => '20230408 new',
+        id              => '124',
+        one             => [-1,1], # -430,430
+        zero            => [-1,2], # -430,860
+        start           => [4],    #  1720
+        end             => [-7],   # -3010
+        clockabs        => 430,
+        format          => 'twostate',
+        preamble        => 'P124#',
+        clientmodule    => 'SD_UT',
+        modulematch     => '^P124#.{8}',
+        length_min      => '31',
+        length_max      => '32',
+      },
+    "124.1" => ## Remote control CasaFan FB-FNK Powerboat with 5 buttons for fan
+             # https://forum.fhem.de/index.php/topic,53282.msg1258346.html#msg1258346 @ datwusel 2023-01-17
+             # FB_FNK_Powerboat_3A9760  1_fan_low_speed   MS;P1=1717;P2=-439;P3=861;P4=419;P5=-2992;D=451232324242423242324232324232424242324242323232323242424232324242;CP=4;SP=5;R=229;O;m2;
+             # FB_FNK_Powerboat_3A9760  fan_off           MS;P1=1730;P2=-430;P3=849;P4=436;P5=-2974;D=451232324242423242324232324232424242324242323232323242423242324242;CP=4;SP=5;R=226;O;m2;
+      {
+        name            => 'FB-Powerboat',
+        comment         => 'Remote control CasaFan FB-FNK Powerboat',
+        changed         => '20230408 new',
+        id              => '124.1',
+        one             => [1,-1],      # 430,-430
+        zero            => [2,-1],      # 860,-430
+        sync            => [1,-7,4,-1], # 430,-3010,1720,-430
+        clockabs        => 430,
+        format          => 'twostate',
+        preamble        => 'P124#',
+        clientmodule    => 'SD_UT',
+        modulematch     => '^P124#.{8}',
+        length_min      => '31',
+        length_max      => '32',
+      },
+    "198" =>  ##  VONDOM Handsender von einem RGBW LED Blumentopf
+             # https://forum.fhem.de/index.php?topic=129836.0 @Sebastian J
+             # u198#91 MU;P0=96;P1=-111;P2=-4341;P3=598;P4=-448;P5=289;P6=-745;D=0101010101010101010101010101010101010101010102345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563;CP=5;R=41;
+             # u198#97 MU;P0=105;P1=-103;P2=-4319;P3=585;P4=-456;P5=268;P6=-761;D=010101010101010101010101010101010101010101010101010102345656345634343234565634563434323456563456343432345656345634343234565634563434323456563456343432345656345634343234565634563434323456563456343432345656345634343;CP=3;R=43;
+      {
+        name            => 'VONDOM RGBW LED Blumentopf',
+        #comment         => '',
+        id              => '198',
+        changed         => '20221025 new',
+        one             => [2,-1.5],
+        zero            => [1,-2.5],
+        start           => [-14],
+        clockabs        => 300,
+        clockpos        => ['zero',0],
+        reconstructBit  => '1',
+        format          => 'twostate',
+        preamble        => 'u198#',
+        #clientmodule    => 'SD_UT',
+        #modulematch     => '',
+        length_min      => '7',
+        #length_max      => '',
+      },      
     "199" =>  ## universal HT21E, e.g. B.E.G. Alarmanlage
               # https://forum.fhem.de/index.php/topic,127798.0.html
               # P123#93E  MU;P0=30880;P1=-1794;P2=821;P3=-920;P4=1704;P5=-30427;P6=404;P7=-4204;CP=2;R=41;D=0123434123434121212121234521234341234341212121212345212343412343412121212123452123434123434121212121234567;e;
@@ -3321,8 +3387,31 @@ our %ProtocolListSIGNALduino  = (
 			{
 				name            => 'Honeywell ActivLink',
 				comment         => 'Wireless doorbell and motion sensor (PIR)',
-				changed         => '20210420 new',
+				changed         => '20221112 new',
 				id              => '200',
+				knownFreqs      => '868.35',
+				one             => [2,-1],
+				zero            => [1,-2],
+				start           => [-3],
+				end             => [3],
+				clockabs        => 160,
+				clockpos        => ['zero',0],
+				format          => 'twostate',
+				modulation      => '2-FSK',
+				preamble        => 'u200#',
+				clientmodule    => 'SIGNALduino_un',
+				#modulematch     => '',
+				length_min      => '48',
+				length_max      => '48',
+			},
+		"200.1"	=>	# Honeywell ActivLink, wireless door bell, PIR Motion sensor
+			# https://github.com/klohner/honeywell-wireless-doorbell#the-data-frame
+			# MU;P0=-381;P1=100;P2=260;P3=-220;P4=419;P5=-544;CP=1;R=248;D=010101010101010101010101010101023101023452310102310231010101023101010102310232310101010101010231010101010101010101010101010101010231010234523101023102310101010231010101023102323101010101010102310101010101010101010101010101010102310102345231010231023101010102310;e;
+			{
+				name            => 'Honeywell ActivLink',
+				comment         => 'Wireless doorbell and motion sensor (PIR)',
+				changed         => '20210420 new',
+				id              => '200.1',
 				knownFreqs      => '868.35',
 				one             => [2.6,-2.2],
 				zero            => [1 ,-3.8],
@@ -3512,7 +3601,7 @@ our %ProtocolListSIGNALduino  = (
 				comment         => 'ab Firmware V 4.2.2',
 				changed         => '20220131 new',
 				id              => '209',
-				knownFreqs      => '868.9497',
+				knownFreqs      => '868.9497 | 434.475',
 				N               => [12],
 				datarate        => '103149',
 				sync            => '543D',
@@ -3533,7 +3622,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20220130 new',
 				comment         => 'ab Firmware V 4.2.2',
 				id              => '210',
-				knownFreqs      => '868.9497',
+				knownFreqs      => '868.9497 | 434,475',
 				N               => [12],
 				datarate        => '103149',
 				sync            => '543D',
@@ -3557,17 +3646,17 @@ our %ProtocolListSIGNALduino  = (
 				comment         => 'ecowitt WH31, froggit DP50',
 				changed         => '20220304 new',
 				id              => '211',
-				knownFreqs      => '868.3',
+				knownFreqs      => '868.35',
 				N               => [1,6],
 				defaultNoN      => '1',         # wenn 1, dann matchen auch Nachrichten ohne die N Nr
 				datarate        => '17257.69',
 				sync            => '2DD4',
 				modulation      => '2-FSK',
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
-				match           => '^30.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+				match           => '^(30|37).*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W211#',
 				clientmodule    => 'SD_WS',
-				length_min      => '12',     # 6 Byte
+				length_min      => '14',     # 7 Byte
 				method        => \&main::SIGNALduino_WH31,
 			},
 		"212"	=>	## HMS
@@ -3586,7 +3675,52 @@ our %ProtocolListSIGNALduino  = (
 				#length_max      => '52',
 				method          => \&main::SIGNALduino_HMS, # Call to process this message
 				polarity        => 'invert',
-			}
+			},
+    "213" => # rain gauge ecowitt | Fine Offset | Ambient Weather WH40
+             # SD_WS_126_R_011CDF R: 0 MN;D=40011CDF8F00009762;R=61;
+             # SD_WS_126_R_013E3C R: 0 MN;D=40013E3C900000105B;R=61;
+             #
+      {
+        name            => 'WH40',
+        comment         => 'ecowitt | Fine Offset | Ambient Weather WH40 rain gauge',
+        changed         => '20230403 new',
+        id              => '213',
+        knownFreqs      => '868.35',
+        N               => [1,6],
+        defaultNoN      => '1',         # wenn 1, dann matchen auch Nachrichten ohne die N Nr
+        datarate        => '17257.69',
+        sync            => '2DD4',
+        modulation      => '2-FSK',
+        cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+        match           => '^40.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+        preamble        => 'W213#',
+        clientmodule    => 'SD_WS',
+        length_min      => '18',     # 9 Byte
+        method          => \&main::SIGNALduino_WH40,
+      },
+    "214" => # ecowitt WS68 Anemometer. todo: einbauen ins SD_WS Modul'
+             # MN;D=680000c500004b0fffff005a0000d0af;
+             # MN;D=680000c500004b2fffff000e00008033;
+             # MN;D=680000c501074b0fffff002e0002a663;
+             #
+      {
+        name            => 'WH68',
+        comment         => 'ecowitt WS68 Anemometer. todo: einbauen ins SD_WS Modul',
+        changed         => '20230408 new',
+        id              => '214',
+        knownFreqs      => '868.35',
+        N               => [1,6],
+        defaultNoN      => '1',         # wenn 1, dann matchen auch Nachrichten ohne die N Nr
+        datarate        => '17257.69',
+        sync            => '2DD4',
+        modulation      => '2-FSK',
+        cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+        match           => '^68.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+        preamble        => 'W214#',
+        clientmodule    => 'SD_WS',
+        length_min      => '32',     # 16 Byte
+        method          => \&main::SIGNALduino_WH68,
+      }
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
 

@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3414 2022-09-29 16:00:00Z v3.4.14-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3415 2023-04-08 16:00:00Z v3.4.15-dev-Ralf9 $
 #
-# v3.4.14
+# v3.4.15
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -9,7 +9,7 @@
 # It routes Messages serval Modules which are already integrated in FHEM. But there are also modules which comes with it.
 # N. Butzek, S. Butzek, 2014-2015
 # S.Butzek,Ralf9 2016-2019
-# Ralf9 2020-2022
+# Ralf9 2020-2023
 
 package main;
 my $missingModulSIGNALduino="";
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.14-dev_ralf_29.09.",
+	SDUINO_VERSION            => "v3.4.15-dev_ralf_08.04.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -237,7 +237,7 @@ my %matchListSIGNALduino = (
       '14:Dooya'            => '^P16#[A-Fa-f0-9]+',
       '15:SOMFY'            => '^Ys[0-9A-F]+',
       '16:SD_WS_Maverick'   => '^P47#[A-Fa-f0-9]+',
-      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|199)#.*', # universal - more devices with different protocols
+      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|124|199)#.*', # universal - more devices with different protocols
       '18:FLAMINGO'         => '^P13\.?1?#[A-Fa-f0-9]+',              # Flamingo Smoke
       '19:CUL_WS'           => '^K[A-Fa-f0-9]{5,}',
       '20:Revolt'           => '^r[A-Fa-f0-9]{22}',
@@ -6279,6 +6279,62 @@ sub SIGNALduino_WH31
 	Log3 $name, 4, "$name WH31: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
 
 	return (1, substr($dmsg, 0, 10));
+}
+
+sub SIGNALduino_WH40
+{
+	my ($name,$dmsg,$id) = @_;
+
+	my $checksum = 0;
+	my $byte;
+	my @data = ();
+
+	for (my $i=0; $i<=7; $i++ ) {
+		$byte = hex(substr($dmsg,$i*2,2));
+		push(@data, $byte);
+		$checksum += $byte;
+	}
+	$checksum &= 0xFF;
+	my $crc = SIGNALduino_CalculateCRC(8, @data);
+	if ($crc != 0) {
+		return (-1, "WH40: crc Error crc=$crc");
+	}
+	
+	my $checksumRef = hex(substr($dmsg,16,2));
+	if ($checksum != $checksumRef) {
+		return (-1, "WH40: checksum Error checksum=$checksum checksumRef=$checksumRef");
+	}
+	Log3 $name, 4, "$name WH40: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
+
+	return (1, substr($dmsg, 0, 14));
+}
+
+sub SIGNALduino_WH68
+{
+	my ($name,$dmsg,$id) = @_;
+
+	my $checksum = 0;
+	my $byte;
+	my @data = ();
+
+	for (my $i=0; $i<=14; $i++ ) {
+		$byte = hex(substr($dmsg,$i*2,2));
+		push(@data, $byte);
+		$checksum += $byte;
+	}
+	$checksum &= 0xFF;
+	my $crc = SIGNALduino_CalculateCRC(15, @data);
+	if ($crc != 0) {
+		return (-1, "WH40: crc Error crc=$crc");
+	}
+	
+	my $checksumRef = hex(substr($dmsg,30,2));
+	if ($checksum != $checksumRef) {
+		return (-1, "WH40: checksum Error checksum=$checksum checksumRef=$checksumRef");
+	}
+	Log3 $name, 4, "$name WH40: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
+
+	return (1, $dmsg);
 }
 
 sub SIGNALduino_CalculateCRC_W136
