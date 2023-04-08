@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-03-19 12:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2023-04-08 16:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -49,6 +49,7 @@
 # 23.05.2022 neues Protokoll 120: Wetterstation TFA 35.1077.54.S2 mit 30.3151 (Thermo/Hygro-Sender), 30.3152 (Regenmesser), 30.3153 (Windmesser)
 # 11.06.2022 neues Protokoll 122: TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
 # 02.09.2022 neues Protokoll 123: Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R (elektron-bbs)
+# 03.04.2023 neues Protokoll 213: WH40
 
 package main;
 
@@ -114,6 +115,7 @@ sub SD_WS_Initialize {
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_207.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_211.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
+    'SD_WS_126_R.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'rain4:Rain,', autocreateThreshold => '2:180'}
   };
   return;
 }
@@ -1590,7 +1592,7 @@ sub SD_WS_Parse {
         # X = CRC-8, poly 0x31, init 0x00
         # A = SUM-8
         #
-        sensortype => 'WH31',
+        sensortype => 'WH31e, WH31b, DP50',
         model      => 'SD_WS_211_TH',
         #fixedId    => '1',
         prematch   => sub {return 1; },
@@ -1603,6 +1605,29 @@ sub SD_WS_Parse {
                           },
         hum        => sub {my ($rawData,undef) = @_; return hex(substr($rawData,8,2)); },
         crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_WH31
+    },
+    213 => {
+        # rain gauge ecowitt | Fine Offset | Ambient Weather WH40
+        # https://github.com/merbanan/rtl_433/blob/master/src/devices/ambientweather_wh31e.c
+        # 
+        # 01 234567 89 0123 45 67
+        # YY IIIIII FF RRRR XX AA
+        # 40 013E3C 90 0000 10 5B
+        #
+        # Y = a fixed Type Code of 0x40
+        # I = ID (3 bytes)
+        # F = is perhaps flags?
+        # R = rain bucket tip count, 0.1mm increments
+        # X = CRC-8, poly 0x31, init 0x00, Input not reflected, Result not reflected
+        # A = SUM-8
+        #
+        sensortype => 'WH40',
+        model      => 'SD_WS_126_R',
+        fixedId    => '1',
+        prematch   => sub {return 1; },
+        id         => sub {my ($rawData,undef) = @_; return (substr($rawData,2,6));},
+        rain       => sub {my ($rawData,undef) = @_; return hex(substr($rawData,10,4)) / 10; },
+        crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_WH40
     }
   );
 
