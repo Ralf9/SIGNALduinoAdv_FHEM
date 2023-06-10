@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-04-08 16:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2023-06-10 10:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -6,6 +6,7 @@
 # Sidey79 & Ralf9   2016 - 2017
 # Joerg             2017
 # elektron-bbs      2018 -
+# Ralf9             2021 -
 #
 # 17.04.2017 WH2 (TFA 30.3157 nur Temp, Hum = 255),es wird das Perlmodul Digest:CRC benoetigt fuer CRC-Pruefung benoetigt
 # 29.05.2017 Test ob Digest::CRC installiert
@@ -1089,20 +1090,20 @@ sub SD_WS_Parse {
         # 0123456789012345678901234567890123456789
         # ----------------------------------------
         # 3DA820B00C1618FFFFFF1808152294FFF01E0000  Msg 1, 40 Nibble from SIGNALduino, T: 15.2 H: 94 G:0 W: 0 D:180
-        # CCCCIIIIIIIIFFGGGWWWDDD?TTT?HH???XSS      Msg 1, 36 Nibble 
-        # CCCCIIIIIIIIFFGGGWWWDDD?ffRRRRVVVXSS      Msg 2, 36 Nibble 
+        # CCCCIIIIIIIIFFGGGWWWDDD?TTTfHHVVVXSS      Msg 1, 36 Nibble, wind, temperature, humidity, uv 
+        # CCCCIIIIIIIIFFGGGWWWDDD?RRRRRR???XSS      Msg 2, 36 Nibble, wind, rain
         # C = CRC16
         # I = station ID
-        # F = flags, 4 bit (1: weather station, 2: indoor?, 4: soil probe), 1 bit battery (1=ok, 0=low), 3 bit channel
+        # F = flags, 8 bit (nibble 12 1: weather station, 2: indoor, 4: soil probe, nibble 13 1 bit battery change, 3 bit channel)
         # G = wind gust in 1/10 m/s, inverted, BCD coded, GGG = FE6 =~ 019 => 1.9 m/s.
         # W = wind speed in 1/10 m/s, inverted, BCD coded, LSB first nibble, MSB last two nibble, WWW = EFE =~ 101 => 1.1 m/s.
-        # D = wind direction in grad, BCD coded, DDD = 158 => 158 °
-        # ? = unknown, always 0x8
-        # T = temperature in 1/10 °C, only if byte 12 ne 0xFF, BCD coded, TTT = 312 => 31.2 °C
+        # D = wind direction in grad, BCD coded, DDD = 158 => 158 Grad
         # ? = unknown
-        # H = humidity in percent, only if byte 12 ne 0xFF, BCD coded, HH = 23 => 23 %
-        # R = rain counter, only if byte 12 eq 0xFF, inverted, BCD coded
-        # V = uv, only if byte 12 eq 0xFF and byte 15/16 not 0xFF01, inverted, BCD coded
+        # T = temperature in 1/10 C, BCD coded, TTT = 312 => 31.2 °C
+        # f = flags, 4 bit - bit 3 temperature (0=positive, 1=negative), bit 2 ?, bit 1 battery (1=ok, 0=low), bit 0 ?
+        # H = humidity in percent, BCD coded, HH = 23 => 23 %
+        # R = rain counter, inverted, BCD coded
+        # V = uv, inverted, BCD coded
         # X = message type, 0 = temp, hum, wind, uv, 1 = wind, rain
         # S = checksum (sum over byte 2 - 17 must be 255)
         #
@@ -1112,8 +1113,8 @@ sub SD_WS_Parse {
         # 012345678901234567890123456789
         # ------------------------------
         # 20B00C1618FFFFFF1808152294FFF0  Msg 1, 30 Nibble from SIGNALduino, T: 15.2 H: 94 G:0 W: 0 D:180
-        # IIIIIIIIFFGGGWWWDDD?TTT?HH????  Msg 1
-        # IIIIIIIIFFGGGWWWDDD?ffRRRRVVV?  Msg 2
+        # IIIIIIIIFFGGGWWWDDD?TTTfHHVVVX  Msg 1
+        # IIIIIIIIFFGGGWWWDDD?RRRRRR???X  Msg 2
         # 197005FD2900000000002126640000  indoor        T: 21.2 H: 64 CH: 1
         # 187000E346FFFFFF0000317213FFF2  Soil Moisture T: 27.9 H: 99 CH: 6
         
@@ -1135,51 +1136,66 @@ sub SD_WS_Parse {
                             }
                             return $ret;
                           },
-        bat        => sub {my (undef,$bitData) = @_; return substr($bitData,36,1) eq '1' ? 'ok' : 'low';},
+        bat        => sub {my ($rawData,$bitData) = @_;
+                            return if (substr($rawData,8,1) eq '1' && substr($rawData,29,1) eq '1'); # not by weather station & rain
+                            return substr($bitData,94,1) eq '1' ? 'ok' : 'low';
+                          },
+        batChange  => sub {my (undef,$bitData) = @_; return substr($bitData,36,1);},
         channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,37,39));},
         windgust   => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,8,1) ne '1');
+                            return if (substr($rawData,8,1) ne '1'); # only weather station
                             my $windgust = substr($rawData,10,3);
                             $windgust =~ tr/0123456789ABCDEF/FEDCBA9876543210/;
                             return if ($windgust !~ m/^\d+$/xms);
                             return $windgust * 0.1;
                           },
         windspeed  => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,8,1) ne '1');
+                            return if (substr($rawData,8,1) ne '1'); # only weather station
                             my $windspeed = substr($rawData,14,2) . substr($rawData,13,1);
                             $windspeed =~ tr/0123456789ABCDEF/FEDCBA9876543210/;
                             return if ($windspeed !~ m/^\d+$/xms);
                             return $windspeed * 0.1;
                           },
         winddir    => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,8,1) ne '1');
+                            return if (substr($rawData,8,1) ne '1'); # only weather station
                             my $winddir = substr($rawData,16,3);
                             return if ($winddir !~ m/^\d+$/xms);
                             return ($winddir * 1, $winddirtxtar[round(($winddir / 22.5),0)]);
                           },
-        temp       => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,20,2) eq 'FF');
+        temp       => sub {my ($rawData,$bitData) = @_;
+                            return if (substr($rawData,8,1) eq '1' && substr($rawData,29,1) eq '1'); # not by weather station & rain
                             my $rawTemp =  substr($rawData,20,3);
-                            if ($rawTemp > 600) {$rawTemp -= 1000};
+                            return if ($rawTemp !~ m/^\d+$/xms);
+                            if (substr($bitData,92,1) eq '1') {
+                              if ($rawTemp > 600) {
+                                $rawTemp -= 1000; # Bresser 6in1
+                              } else {
+                                $rawTemp *= -1;  # Bresser 3in1
+                              }
+                            }
                             return $rawTemp / 10;
                           },
         hum        => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,20,2) eq 'FF');
-                            my $hum = substr($rawData,24,2) + 0;
+                            return if (substr($rawData,8,1) eq '1' && substr($rawData,29,1) eq '1'); # not by weather station & rain
+                            my $hum = substr($rawData,24,2);
+                            return if ($hum !~ m/^\d+$/xms);
+                            $hum *= 1;
                             if (substr($rawData,8,1) eq '4' && $hum >= 1 && $hum <= 16) {  # Soil Moisture
                               return $moisture_map[$hum - 1];
                             }
                             return $hum;
                           },
         rain       => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,20,2) ne 'FF');
-                            $rain = substr($rawData,22,4);
+                            return if (substr($rawData,8,1) ne '1' || substr($rawData,29,1) ne '1' ); # message type || weather station
+                            my $rain = substr($rawData,20,6);
                             $rain =~ tr/0123456789ABCDEF/FEDCBA9876543210/;
+                            return if ($rain !~ m/^\d+$/xms);
                             return $rain * 0.1;
                           },
         uv         => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,20,2) ne 'FF' || substr($rawData,26,3) !~ m/^\d+$/xms);
-                            $uv = substr($rawData,26,3);
+                            return if (substr($rawData,8,1) ne '1' || substr($rawData,29,1) ne '0' ); # message type || weather station
+                            my $uv = substr($rawData,26,3);
+                            $uv =~ tr/0123456789ABCDEF/FEDCBA9876543210/;
                             return if ($uv !~ m/^\d+$/xms);
                             return $uv * 0.1;
                           },
@@ -2070,7 +2086,7 @@ sub SD_WS_Parse {
         Log3 $name, 3, "$ioname: SD_WS_Parse $deviceCode raw $rawData - ERROR humidity $hum";
         return "";  
       }
-      elsif ($hum == 0) {
+      elsif ($hum == 0 && $protocol ne '115') {
         $hum = undef;
       }
     }
