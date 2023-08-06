@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-06-10 10:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2023-08-06 17:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -51,6 +51,7 @@
 # 11.06.2022 neues Protokoll 122: TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
 # 02.09.2022 neues Protokoll 123: Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R (elektron-bbs)
 # 03.04.2023 neues Protokoll 213: WH40
+# 06.08.2023 neues Protokoll 129: Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux)
 
 package main;
 
@@ -111,12 +112,13 @@ sub SD_WS_Initialize {
     'SD_WS_120.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_122_T.*'   => { ATTR => 'event-min-interval:.*:60 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4:Temp,', autocreateThreshold => '10:180'},
     'SD_WS_123_T.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4:Temp,', autocreateThreshold => '2:180'},
+    'SD_WS_129.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_204.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_205.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_207.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_211.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
-    'SD_WS_126_R.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'rain4:Rain,', autocreateThreshold => '2:180'}
+    'SD_WS_213_R.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'rain4:Rain,', autocreateThreshold => '2:180'}
   };
   return;
 }
@@ -1455,6 +1457,95 @@ sub SD_WS_Parse {
                                 }
                               },
     },
+    129 => {
+        # Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux), auch von Raddy, Ragova, Nicety Meter, Dema, Cotech
+        # ----
+        #           1         2
+        # 0123456789012345678901234567
+        # ----------------------------
+        # C0E00E141C0000843340FFFBFBBD
+        # AIIFWWGGDDRRRRfTTTHHSSSSUUCC
+        #
+        # A - 4 bit: ?? Type code?, never seems to change
+        # I - 8 bit: Id, changes when reset
+        # F - 4 bit:   b - Battery indicator 0 = Ok, 1 = Battery low
+        #              d - MSB of Wind direction
+        #              g - MSB of Wind Gust value
+        #              w - MSB of Wind Avg value
+        # W - 8 bit: Wind Avg, scaled by 10
+        # G - 8 bit: Wind Gust, scaled by 10
+        # D - 8 bit: Wind direction in degrees
+        # R -16 bit: rain in mm, scaled by 10
+        # f - 4 bit: ?? evtl flags
+        # T -12 bit: Temperature in Fahrenheit, offset 400, scaled by 10
+        # H - 8 bit: Humidity
+        # S -16 bit: Sunlight intensity, 0 to 200.000 lumens
+        # U - 8 bit: UV index
+        # C - 8 bit: CRC, poly 0x31, init 0xc0
+        #
+        model          => 'SD_WS_129',
+        prematch       => sub {return 1; },
+        id             => sub { my ($rawData,undef) = @_; return substr($rawData,1,2); },
+        sensortype2 => sub {my $rawData = shift;
+                            my $ret;
+                            if (substr($rawData,24,1) eq 'F') {
+                              $ret = 'Sainlogic 8in1';
+                            } else  {
+                              $ret = 'Sainlogic Wifi 7in1';
+                            }
+                            return $ret;
+                          },
+        bat            => sub {my (undef,$bitData) = @_; return substr($bitData,12,1) eq '0' ? 'ok' : 'low';},
+
+        windspeed      => sub {my ($rawData,$bitData) = @_;
+                            return ((hex(substr($rawData,4,2)) + substr($bitData,15,1) * 256) / 10);
+                          },
+        windgust       => sub {my ($rawData,$bitData) = @_;
+                            return ((hex(substr($rawData,6,2)) + substr($bitData,14,1) * 256) / 10);
+                          },
+        winddir        => sub {my ($rawData,$bitData) = @_;
+                            my $winddir = hex(substr($rawData,8,2)) + substr($bitData,13,1) * 256;
+                            return if ($winddir > 360);
+                            return ($winddir, $winddirtxtar[round(($winddir / 22.5),0)]);
+                          },
+        rain           => sub {my ($rawData,undef) = @_; return (hex(substr($rawData,10,4)) / 10); },
+        
+        temp           => sub { my ($rawData,undef) = @_;
+                                return round(((hex(substr($rawData,15,3)) - 720) * 5 / 90),1);
+                              },
+        hum            => sub {my ($rawData,undef) = @_; return hex(substr($rawData,18,2)); },
+        
+        lux            => sub {my ($rawData,undef) = @_;
+                                return if (substr($rawData,24,1) eq 'F');
+                                return hex(substr($rawData,20,4));
+                              },
+        uv             => sub {my ($rawData,undef) = @_;
+                                return if (substr($rawData,24,1) eq 'F');
+                                return hex(substr($rawData,24,2));
+                              },
+        crcok          => sub {my $rawData = shift;
+                            my $rc = eval
+                            {
+                              require Digest::CRC;
+                              Digest::CRC->import();
+                              1;
+                            };
+                            if ($rc) {
+                              my $datacheck1 = pack( 'H*', $rawData );
+                              my $crcmein1 = Digest::CRC->new(width => 8, init => 0xc0, poly => 0x31);
+                              my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                              Log3 $name, 4, "$name: SD_WS_129 Parse msg $rawData, CRC $rr3";
+                              if ($rr3 eq '0') {
+                                 return 1;
+                              } else {
+                                 return 0;
+                              }
+                            } else {
+                              Log3 $name, 1, "$name: SD_WS_129 Parse msg $rawData - ERROR CRC not load, please install modul Digest::CRC";
+                              return 0;
+                            }  
+                          }
+    },
     204 => {
         # WH24 WH65A/B
         sensortype => 'WH24',
@@ -1638,7 +1729,7 @@ sub SD_WS_Parse {
         # A = SUM-8
         #
         sensortype => 'WH40',
-        model      => 'SD_WS_126_R',
+        model      => 'SD_WS_213_R',
         fixedId    => '1',
         prematch   => sub {return 1; },
         id         => sub {my ($rawData,undef) = @_; return (substr($rawData,2,6));},
