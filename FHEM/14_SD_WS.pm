@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-08-06 17:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2023-08-06 21:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -1521,7 +1521,7 @@ sub SD_WS_Parse {
                               },
         uv             => sub {my ($rawData,undef) = @_;
                                 return if (substr($rawData,24,1) eq 'F');
-                                return hex(substr($rawData,24,2));
+                                return (round((hex(substr($rawData,24,2)) / 10),1));
                               },
         crcok          => sub {my $rawData = shift;
                             my $rc = eval
@@ -1535,7 +1535,7 @@ sub SD_WS_Parse {
                               my $crcmein1 = Digest::CRC->new(width => 8, init => 0xc0, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
                               Log3 $name, 4, "$name: SD_WS_129 Parse msg $rawData, CRC $rr3";
-                              if ($rr3 eq '0') {
+                              if (hex($rr3) == 0) {
                                  return 1;
                               } else {
                                  return 0;
