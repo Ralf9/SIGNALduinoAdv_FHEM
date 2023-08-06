@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3415 2023-04-08 16:00:00Z v3.4.15-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3416 2023-07-23 23:00:00Z v3.4.16-dev-Ralf9 $
 #
 # v3.4.15
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.15-dev_ralf_08.04.",
+	SDUINO_VERSION            => "v3.4.16-dev_ralf_23.07.",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -237,7 +237,7 @@ my %matchListSIGNALduino = (
       '14:Dooya'            => '^P16#[A-Fa-f0-9]+',
       '15:SOMFY'            => '^Ys[0-9A-F]+',
       '16:SD_WS_Maverick'   => '^P47#[A-Fa-f0-9]+',
-      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|124|199)#.*', # universal - more devices with different protocols
+      '17:SD_UT'            => '^P(?:14|20|24|26|29|30|34|46|56|68|69|76|78|81|83|86|90|91|91.1|92|93|95|97|99|104|105|114|118|121|124|127|128|199)#.*', # universal - more devices with different protocols
       '18:FLAMINGO'         => '^P13\.?1?#[A-Fa-f0-9]+',              # Flamingo Smoke
       '19:CUL_WS'           => '^K[A-Fa-f0-9]{5,}',
       '20:Revolt'           => '^r[A-Fa-f0-9]{22}',
@@ -5233,6 +5233,33 @@ sub SIGNALduino_GROTHE
 	return  (1,$hex); ## Return the bits unchanged in hex
 }
 
+sub SIGNALduino_SainlogicWS
+{
+	my ($name,$bitData,$id,$mcbitnum) = @_;
+	#my $debug = AttrVal($name,"debug",0);
+
+	my $bitLength;
+	$bitData = substr($bitData, 0, $mcbitnum);
+	my $preamble = "1111010100";
+	my $pos = index($bitData, $preamble);
+	if ($pos < 0 || $pos > 7) {
+		return (-1,"Start pattern ($preamble) not found. Pos=$pos");
+	} else {
+		$bitData = substr($bitData,$pos+10);
+		$bitLength = length($bitData);
+		if ($bitLength < 112) {
+			return (-1,"message ist too short. length_min=112, length=$bitLength");
+		}
+		if ($bitLength > 112) {
+			$bitData = substr($bitData,0,112);
+		}
+	}
+	my $hex=SIGNALduino_b2h($bitData);
+
+	Log3 $name, 4, "$name: SainlogicWS protocol Id=$id detected. $bitData ($bitLength)";	
+	return  (1,$hex); ## Return the bits unchanged in hex
+}
+
 sub SIGNALduino_HMS
 {
 	my ($name,$bitData,$id,$mcbitnum) = @_;
@@ -6325,14 +6352,14 @@ sub SIGNALduino_WH68
 	$checksum &= 0xFF;
 	my $crc = SIGNALduino_CalculateCRC(15, @data);
 	if ($crc != 0) {
-		return (-1, "WH40: crc Error crc=$crc");
+		return (-1, "WH68: crc Error crc=$crc");
 	}
 	
 	my $checksumRef = hex(substr($dmsg,30,2));
 	if ($checksum != $checksumRef) {
-		return (-1, "WH40: checksum Error checksum=$checksum checksumRef=$checksumRef");
+		return (-1, "WH68: checksum Error checksum=$checksum checksumRef=$checksumRef");
 	}
-	Log3 $name, 4, "$name WH40: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
+	Log3 $name, 4, "$name WH68: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
 
 	return (1, $dmsg);
 }

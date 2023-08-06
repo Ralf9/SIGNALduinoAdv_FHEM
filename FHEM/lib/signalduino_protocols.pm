@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3415 2023-04-08 16:00:00Z v3.4.15-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3416 2023-07-23 23:00:00Z v3.4.16-dev-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.15-dev_ralf_08.04.'
+		"version" => 'v3.4.16-dev_ralf_23.07.'
 		);
 
 our %rfmode = (
@@ -3338,6 +3338,109 @@ our %ProtocolListSIGNALduino  = (
         length_min      => '31',
         length_max      => '32',
       },
+    "127" =>  ## Remote control with 14 buttons for ceiling fan
+               # https://forum.fhem.de/index.php?topic=134121.0 @ Kai-Alfonso 2023-06-29
+               # RCnoName127_3603A fan_off  MU;P0=5271;P1=-379;P2=1096;P3=368;P4=-1108;P5=-5997;D=01213434213434212121212121213434342134212121343421343434212521213434213434212121212121213434342134212121343421343434212521213434213434212121212121213434342134212121343421343434212521213434213434212121212121213434342134212121343421343434212;CP=3;R=63;
+               # Message is output by SIGNALduino as MU if the last bit is a 0.
+      {
+        name             => 'RCnoName127',
+        comment          => 'Remote control with 14 buttons for ceiling fan',
+        changed          => '20230723 new',
+        id               => '127',
+        one              => [1,-3],  #  370,-1110
+        zero             => [3,-1],  # 1110, -370
+        start            => [-15],   # -5550 (MU)
+        reconstructBit   => '1',
+        clockabs         => '370',
+        format           => 'twostate',
+        preamble         => 'P127#',
+        clientmodule     => 'SD_UT',
+        modulematch      => '^P127#',
+        length_min       => '29',
+        length_max       => '30',
+      },
+    "127.1" =>  ## Remote control with 14 buttons for ceiling fan
+                 # https://forum.fhem.de/index.php?topic=134121.0 @ Kai-Alfonso 2023-06-29
+                 # RCnoName127_3603A fan_1         MS;P1=-385;P2=1098;P3=372;P4=-1108;P5=-6710;D=352121343421343421212121212121343434213421212121213421343434;CP=3;SP=5;R=79;m2;
+                 # RCnoName127_3603A light_on_off  MS;P1=-372;P2=1098;P3=376;P4=-1096;P5=-6712;D=352121343421343421212121212121343434213421342134212134213421;CP=3;SP=5;R=73;m2;
+                 # Message is output by SIGNALduino as MS if the last bit is a 1.
+      {
+        name             => 'RCnoName127',
+        comment          => 'Remote control with 14 buttons for ceiling fan',
+        changed          => '20230723 new',
+        id               => '127',
+        one              => [1,-3],  #  370,-1110
+        zero             => [3,-1],  # 1110, -370
+        sync             => [1,-18], #  370,-6660 (MS)
+        clockabs         => '370',
+        format           => 'twostate',
+        preamble         => 'P127#',
+        clientmodule     => 'SD_UT',
+        modulematch      => '^P127#',
+        length_min       => '29',
+        length_max       => '30',
+      },
+    "128" =>  ## Remote control with 12 buttons for ceiling fan
+               # https://forum.fhem.de/index.php?msg=1281573 @ romakrau 2023-07-14
+               # RCnoName128_8A7F fan_slower   MU;P0=-420;P1=1207;P2=-1199;P3=424;P4=-10154;D=010101230123010123232323232323232323230123010143230101012301230101232323232323232323232301230101432301010123012301012323232323232323232323012301014323010101230123010123232323232323232323230123010143230101012301230101232323232323232323232301230101;CP=3;R=18;
+               # Message is output by SIGNALduino as MU if the last bit is a 0.
+      {
+        name             => 'RCnoName128',
+        comment          => 'Remote control with 12 buttons for ceiling fan',
+        changed          => '20230723 new',
+        id               => '128',
+        one              => [-3,1],  #  -1218,406
+        zero             => [-1,3],  #   -406,1218
+        start            => [-25,1], # -10150,406 (MU)
+        clockabs         => '406',
+        format           => 'twostate',
+        preamble         => 'P128#',
+        clientmodule     => 'SD_UT',
+        modulematch      => '^P128#',
+        length_min       => '23',
+        length_max       => '24',
+      },
+    "128.1" =>  ## Remote control with 12 buttons for ceiling fan
+                 # https://forum.fhem.de/index.php?msg=1281573 @ romakrau 2023-07-14
+                 # RCnoName128_8A7F fan_on_off      MS;P2=-424;P3=432;P4=1201;P5=-1197;P6=-10133;D=36353242424532453242453535353535353535353532453535;CP=3;SP=6;R=36;m1;
+                 # RCnoName128_8A7F fan_direction   MS;P0=-10144;P4=434;P5=-415;P6=1215;P7=-1181;D=40474565656745674565674747474747474747474745656567;CP=4;SP=0;R=37;m2;
+                 # Message is output by SIGNALduino as MS if the last bit is a 1.
+      {
+        name             => 'RCnoName128',
+        comment          => 'Remote control with 12 buttons for ceiling fan',
+        changed          => '20230723 new',
+        id               => '128',
+        one              => [-3,1],  #  -1218,406
+        zero             => [-1,3],  #   -406,1218
+        sync             => [-25,1], # -10150,406 (MS)
+        reconstructBit   => '1',
+        clockabs         => '406',
+        format           => 'twostate',
+        preamble         => 'P128#',
+        clientmodule     => 'SD_UT',
+        modulematch      => '^P128#',
+        length_min       => '23',
+        length_max       => '24',
+      },
+    "129"	=>	## Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux), auch von Raddy, Ragova, Nicety Meter, Dema, Cotech
+                 # https://forum.fhem.de/index.php?topic=134381.0
+                 # T: 19.7 H: 64 Ws: 1.4 Wg: 2 Wd: NNE R: 0  W129#C0E00E141C0000843340FFFBFBBD  MC;LL=-966;LH=989;SL=-485;SH=490;D=002B3F1FF1EBE3FFFF7BCCBF00040442;C=488;L=128;R=83;
+                 #
+      {
+        name            => 'Sainlogic weatherstation',
+        comment         => 'also Raddy, Ragova, Nicety Meter, Dema, Cotech',
+        changed         => '20230723 new',
+        id              => '129',
+        clockrange      => [450,550],     # min , max
+        format          => 'manchester',
+        clientmodule    => 'SD_WS',
+        modulematch     => '^W129#',
+        preamble        => 'W129#',
+        length_min      => '122',
+        #length_max      => '32',
+        method          => \&main::SIGNALduino_SainlogicWS, # Call to process this message
+        polarity        => 'invert',
+      },
     "198" =>  ##  VONDOM Handsender von einem RGBW LED Blumentopf
              # https://forum.fhem.de/index.php?topic=129836.0 @Sebastian J
              # u198#91 MU;P0=96;P1=-111;P2=-4341;P3=598;P4=-448;P5=289;P6=-745;D=0101010101010101010101010101010101010101010102345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563;CP=5;R=41;
@@ -3622,7 +3725,7 @@ our %ProtocolListSIGNALduino  = (
 				changed         => '20220130 new',
 				comment         => 'ab Firmware V 4.2.2',
 				id              => '210',
-				knownFreqs      => '868.9497 | 434,475',
+				knownFreqs      => '868.9497 | 434.475',
 				N               => [12],
 				datarate        => '103149',
 				sync            => '543D',
