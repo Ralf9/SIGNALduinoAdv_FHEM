@@ -1,3 +1,131 @@
+06.08.2023
+ 00_SIGNALduino.pm:
+  - neue Routine für die Preamble der Sainlogic Wetterstation
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    127 Fernbedienung mit 14 buttons für Deckenventilator (übernommen von @elektron-bbs)
+    128 Fernbedienung mit 12 buttons für Deckenventilator (übernommen von @elektron-bbs)
+    129 Sainlogic Wetterstation
+
+08.04.2023
+ 00_SIGNALduino.pm:
+  - Prüfsummenroutinen für die IDs 213 und 214 zugefügt
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    124 Deckenventilator Fernbedienung CasaFan FB-FNK Powerboat mit 5 Tasten
+    198 VONDOM Handsender von einem RGBW LED Blumentopf (noch nicht fertig)
+    213 Regenmesser ecowitt/Ambient Weather WH40
+    214 Ecowitt WS68 Windmesser (noch nicht fertig)
+29.09.2022
+ 00_SIGNALduino.pm:
+  - Attribut "rfmode_testing" wieder entfernt, damit ist "set sduino rfmodeTesting" defaultmässig aktiv
+ signalduino_protocols.pm:
+  - update rfmode DP100_WH51_WH57
+  - neuer rfmodeTesting Inkbird
+  - neue Protokoll IDs
+    20.1 RCnoName20 als MU
+    123 Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R
+21.07.2022
+ 00_SIGNALduino.pm:
+  - Modul 14_LTECH in Match- und Clientliste zugefügt
+  - deutsche "Device specific help" ergänzt
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    121 Remote control Busch-Transcontrol HF - Handsender 6861
+    122 TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+  - bei ID 31 clientmodule LTECH zugefügt
+29.05.2022
+ 00_SIGNALduino.pm:
+  - neues Attribut "rfmode_testing", damit wird bei set ein neuer Eintrag "rfmodeTesting" aktiviert
+  - neues Attribut "rfmode_user", der hier gespeicherte CW-Befehl kann mit "set sduino rfmode custom" zum sduino gesendet werden.
+  - neues Attribut "parseMUclockCheck", wenn > 0 dann ist bei MU Nachrichten der test ob die clock in der Toleranz ist, aktiv
+  - Funkbus Senderoutinen zugefügt
+  - deutsche "Device specific help" ergänzt
+ signalduino_protocols.pm:
+  - geänderte cc1101 Registerkonfigurationen rfmodeTesting für Firmware V3.3.5 und V4.2.2
+  - neue cc1101 Registerkonfiguration (rfmodeTesting) für Elero
+  - Funkbus Protokoll ID von 213 auf 119 geändert
+  - neue Protokoll IDs
+    120 TFA 35.1077
+    121 universal HT21E, z.B für B.E.G. Alarmanlage
+22.04.2022
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+ - neue Protokoll IDs
+   212 HMS
+   213 Funkbus
+ - WS2000, vorbeugen von Perl warnings
+19.03.2022
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+  - neue ID 205.1 für WH25A mit Firmware .../14, damit wird auch die bitsum (XOR) geprüft
+    funktioniert nur mit whitelist und die ID 205 darf nicht aktiv sein
+  - neue ID 211 für ecowitt WH31, Ambient Weather WH31E, froggit DP50
+12.02.2022
+ 00_SIGNALduino.pm:
+  - bei set raw können nun auch WMBus Nachrichten (bss.. und bst..) gesendet werden
+  - get availableFirmware ist nun auch bei nicht aktivem sduino möglich
+  - deutsche "Device specific help (commandref)" überarbeitet und ergänzt
+    "<a name=.." durch "<a id=.." ersetzt
+ signalduino_protocols.pm:
+  - neue set rfmode für WMBus
+  - neue Protokoll IDs
+    118 Meikee RGB LED Solar Wall Light
+    208 WMBus S
+    209 WMBus T
+    210 WMBus C
+15.01.2022
+ 00_SIGNALduino.pm:
+  - Internal ClientsKeepOrder zugefügt, damit wird in der fhem.pl die Erzeugung des .clientArray stark beschleunigt.
+  - Die Sortierung des Internal Client optimiert, die Module für Temperatursensoren und Wetterstationen stehen nun am Anfang
+  - Bei aktiver Whitelist, werden nun nur die Clientmodule der IDs die in der Whitelist stehen in das Internal Clients kopiert
+  signalduino_protocols.pm:
+  - Bei IDs mit der preamble "u.." bei clientmodule "SIGNALduino_un" eingetragen
+01.01.2022
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+  - neue ID 207 für Bresser 7-in-1 Weather Center
+04.12.2021
+ 00_SIGNALduino.pm:
+ - Rückmeldungen bei "get cmdBank" ergänzt
+21.11.2021
+ 00_SIGNALduino.pm:
+ - bei den meisten get und set Befehlen wird das Ergebnis in ein reading geschrieben,
+   nun wird auch noch ein event erzeugt.
+  signalduino_protocols.pm:
+  - Fix: Bei der ProtocolID 116 bei N 16 zugefügt
+14.10.2021
+  00_SIGNALduino.pm:
+  - beim Attribut Hardware culV3 zugefügt
+  - "Device specific help" ergänzt
+  - Es können nun bei FSK bei einer ProtocolID mehrere cc1101 konfig Nummern (N) angegeben werden
+10.10.2021
+  signalduino_protocols.pm:
+  - bei den rfmode Bezeichnungen Bx (die Anzahl der Bytes die empfangen werden) und Nx (Nummerierung der cc1101 konfig) ergänzt
+  - bei FSK Protokollen "length_min" und "N" ergänzt
+04.09.2021
+  00_SIGNALduino.pm:
+  - Zur FileLog notify Reduzierung bei showLastFileLog den Fakelog Eintrag entfernt (Forum Thread #122372)
+  - Für die neuen Protokolle WS1080, TX22, TX38, WH24, WH25, W136 convert und Prüfsummenroutinen zugefügt
+  signalduino_protocols.pm:
+  - neuer set rfmode für WH24_WH25 und W136
+  - neue Protokoll IDs
+    201 WS1080
+    202 TX22
+    203 TX38
+    204 WH24 WH65A/B
+    205 WH25
+    206 W136
+01.08.2021
+  00_SIGNALduino.pm:
+  - SIGNALduino_PatternExists wurde von Sidey überarbeitet um hohe CPU Last und Speicherverbrauch zu umgehen.
+  - sendMsg funktioniert nun auch bei xFSK. 
+  - Fix: bei der Bankübersicht (set cmdBank s) wird nun auch bei Konfigvariable ccN auch Werte größer 9 ausgegeben.
+  - Wenn in der whitelist nur eine FSK-protocol ID eingetragen ist, dann können auch FSK-Nachrichten (MN...) von der Firmware vin Sidey empfangen werden.
+  - CRC16 und Sum Berechnung für Bresser_6in1 und Bresser_5in1_neu
+  signalduino_protocols.pm:
+  - neuer set rfmode für Bresser 6in1 und 5in1 neu
+  - neue Protocol Id 113 für Wireless Grill Thermometer, Model name: GFGT 433 B1, WDJ7036, FCC ID: 2AJ9O-GFGT433B1
+  - neue Protocol Id 115 für Bresser 6in1 und 5in1 neu
+  - Protocol Id 201 in 114 geändert
+
 24.06.2021
   00_SIGNALduino.pm:
   - wenn bei der Protocollist Overview die whitelist gespeichert wird, dann erscheint nun bei Save config ein rotes ?
