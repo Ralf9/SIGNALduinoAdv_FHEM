@@ -1,46 +1,421 @@
 06.08.2023
- - neue ID 129: Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux), auch von Raddy, Ragova, Nicety Meter, Dema, Cotech
-
+ 00_SIGNALduino.pm:
+  - neue Routine für die Preamble der Sainlogic Wetterstation
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    127 Fernbedienung mit 14 buttons für Deckenventilator (übernommen von @elektron-bbs)
+    128 Fernbedienung mit 12 buttons für Deckenventilator (übernommen von @elektron-bbs)
+    129 Sainlogic Wetterstation
+ 14_SD_WS.pm
+  - neue ID 129: Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux), auch von Raddy, Ragova, Nicety Meter, Dema, Cotech
 10.06.2023
- - ID 115 (Bresser 6-in-1): update und bugfix
+ 14_SD_WS.pm
+  - ID 115 (Bresser 6-in-1): update und bugfix
 08.04.2023
- - neue ID 213: Regenmesser ecowitt/Ambient Weather WH40
+ 00_SIGNALduino.pm:
+  - Prüfsummenroutinen für die IDs 213 und 214 zugefügt
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    124 Deckenventilator Fernbedienung CasaFan FB-FNK Powerboat mit 5 Tasten
+    198 VONDOM Handsender von einem RGBW LED Blumentopf (noch nicht fertig)
+    213 Regenmesser ecowitt/Ambient Weather WH40
+    214 Ecowitt WS68 Windmesser (noch nicht fertig)
+ 14_SD_WS.pm
+  - neue ID 213: Regenmesser ecowitt/Ambient Weather WH40
 19.03.2023
- - neue ID 123: Inkbird IBS-P01R, ITH-20R (Pool Thermometer)
- - ID 120: BatteryState zugefügt
- - ID 122: update
- - ID 204: bugfix, Lux und windSpeed_kmh
+ 14_SD_WS.pm
+  - neue ID 123: Inkbird IBS-P01R, ITH-20R (Pool Thermometer)
+  - ID 120: BatteryState zugefügt
+  - ID 122: update
+  - ID 204: bugfix, Lux und windSpeed_kmh
+29.09.2022
+ 00_SIGNALduino.pm:
+  - Attribut "rfmode_testing" wieder entfernt, damit ist "set sduino rfmodeTesting" defaultmässig aktiv
+ signalduino_protocols.pm:
+  - update rfmode DP100_WH51_WH57
+  - neuer rfmodeTesting Inkbird
+  - neue Protokoll IDs
+    20.1 RCnoName20 als MU
+    123 Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R
 22.07.2022
- - neue ID 120: Wetterstation TFA 35.1077.54.S2
- - neue ID 122: TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+ 14_SD_WS.pm
+  - neue ID 120: Wetterstation TFA 35.1077.54.S2
+  - neue ID 122: TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+21.07.2022
+ 00_SIGNALduino.pm:
+  - Modul 14_LTECH in Match- und Clientliste zugefügt
+  - deutsche "Device specific help" ergänzt
+ signalduino_protocols.pm:
+  - neue Protokoll IDs
+    121 Remote control Busch-Transcontrol HF - Handsender 6861
+    122 TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
+  - bei ID 31 clientmodule LTECH zugefügt
+29.05.2022
+ 00_SIGNALduino.pm:
+  - neues Attribut "rfmode_testing", damit wird bei set ein neuer Eintrag "rfmodeTesting" aktiviert
+  - neues Attribut "rfmode_user", der hier gespeicherte CW-Befehl kann mit "set sduino rfmode custom" zum sduino gesendet werden.
+  - neues Attribut "parseMUclockCheck", wenn > 0 dann ist bei MU Nachrichten der test ob die clock in der Toleranz ist, aktiv
+  - Funkbus Senderoutinen zugefügt
+  - deutsche "Device specific help" ergänzt
+ signalduino_protocols.pm:
+  - geänderte cc1101 Registerkonfigurationen rfmodeTesting für Firmware V3.3.5 und V4.2.2
+  - neue cc1101 Registerkonfiguration (rfmodeTesting) für Elero
+  - Funkbus Protokoll ID von 213 auf 119 geändert
+  - neue Protokoll IDs
+    120 TFA 35.1077
+    121 universal HT21E, z.B für B.E.G. Alarmanlage
 01.05.2022
- - ID 85: neuer Sensor TFA 30.3251.10, CRC8 check zugefügt
+ 14_SD_WS.pm
+  - ID 85: neuer Sensor TFA 30.3251.10, CRC8 check zugefügt
+22.04.2022
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+ - neue Protokoll IDs
+   212 HMS
+   213 Funkbus
+ - WS2000, vorbeugen von Perl warnings
+19.03.2022
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+  - neue ID 205.1 für WH25A mit Firmware .../14, damit wird auch die bitsum (XOR) geprüft
+    funktioniert nur mit whitelist und die ID 205 darf nicht aktiv sein
+  - neue ID 211 für ecowitt WH31, Ambient Weather WH31E, froggit DP50
 17.03.2022
- - neue ID 211: ecowitt WH31, DP50
+ 14_SD_WS.pm
+  - neue ID 211: ecowitt WH31, DP50
+12.02.2022
+ 00_SIGNALduino.pm:
+  - bei set raw können nun auch WMBus Nachrichten (bss.. und bst..) gesendet werden
+  - get availableFirmware ist nun auch bei nicht aktivem sduino möglich
+  - deutsche "Device specific help (commandref)" überarbeitet und ergänzt
+    "<a name=.." durch "<a id=.." ersetzt
+ signalduino_protocols.pm:
+  - neue set rfmode für WMBus
+  - neue Protokoll IDs
+    118 Meikee RGB LED Solar Wall Light
+    208 WMBus S
+    209 WMBus T
+    210 WMBus C
 23.01.2022
- - Bei ID 116 das reading "identified" zugefügt
- - beim state Lux und UV zugefügt
- - deutsche Device specific help ergänzt
+ 14_SD_WS.pm
+  - Bei ID 116 das reading "identified" zugefügt
+  - beim state Lux und UV zugefügt
+  - deutsche Device specific help ergänzt
+15.01.2022
+ 00_SIGNALduino.pm:
+  - Internal ClientsKeepOrder zugefügt, damit wird in der fhem.pl die Erzeugung des .clientArray stark beschleunigt.
+  - Die Sortierung des Internal Client optimiert, die Module für Temperatursensoren und Wetterstationen stehen nun am Anfang
+  - Bei aktiver Whitelist, werden nun nur die Clientmodule der IDs die in der Whitelist stehen in das Internal Clients kopiert
+ signalduino_protocols.pm:
+  - Bei IDs mit der preamble "u.." bei clientmodule "SIGNALduino_un" eingetragen
 02.01.2022
- - neue ID 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Senso
+ 14_SD_WS.pm
+  - neue ID 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Sensor
 01.01.2022
- - ID 115: neue Sensoren Indoor und Soil Moisture
- - ID 85: Windspeed in m/s umgerechnet, war vorher km/h
+ 00_SIGNALduino.pm und signalduino_protocols.pm:
+  - neue ID 207 für Bresser 7-in-1 Weather Center
+ 14_SD_WS.pm
+  - ID 115: neue Sensoren Indoor und Soil Moisture
+  - ID 85: Windspeed in m/s umgerechnet, war vorher km/h
+04.12.2021
+ 00_SIGNALduino.pm:
+  - Rückmeldungen bei "get cmdBank" ergänzt
 30.11.2021
- - ID 108: neuer Sensor Fody_E42
+ 14_SD_WS.pm
+  - ID 108: neuer Sensor Fody_E42
+21.11.2021
+ 00_SIGNALduino.pm:
+  - bei den meisten get und set Befehlen wird das Ergebnis in ein reading geschrieben,
+    nun wird auch noch ein event erzeugt.
+ signalduino_protocols.pm:
+  - Fix: Bei der ProtocolID 116 bei N 16 zugefügt
 19.11.2021
- - Transmission period boost zum state zugefügt.
+ 14_SD_WS.pm
+  - Transmission period boost zum state zugefügt.
 14.10.2021
- - ID 107: reading "transPerBoost" zugefügt. Zählt bei einer Hum Änderung runter und es wird dabei alle 10 Sek gesendet.
- - ID 116: reading "lightning" zugefügt. Wird nur bei einer "count" Änderung aktualisiert.
- - Neue IDs: 204 (WH24), 205 (WH25), 206 (W136)
+ 00_SIGNALduino.pm:
+  - beim Attribut Hardware culV3 zugefügt
+  - "Device specific help" ergänzt
+  - Es können nun bei FSK bei einer ProtocolID mehrere cc1101 konfig Nummern (N) angegeben werden
+ 14_SD_WS.pm
+  - ID 107: reading "transPerBoost" zugefügt. Zählt bei einer Hum Änderung runter und es wird dabei alle 10 Sek gesendet.
+  - ID 116: reading "lightning" zugefügt. Wird nur bei einer "count" Änderung aktualisiert.
+  - Neue IDs: 204 (WH24), 205 (WH25), 206 (W136)
+10.10.2021
+ signalduino_protocols.pm:
+  - bei den rfmode Bezeichnungen Bx (die Anzahl der Bytes die empfangen werden) und Nx (Nummerierung der cc1101 konfig) ergänzt
+  - bei FSK Protokollen "length_min" und "N" ergänzt
 01.10.2021
- - Bei der ID 107 (Bodenfeuchtesensor) kann nun mit den beiden folgenden Attributen die hum kalibriert werden:
-   dp100-wh51-ad0 und dp100-wh51-ad100
+ 14_SD_WS.pm
+  - Bei der ID 107 (Bodenfeuchtesensor) kann nun mit den beiden folgenden Attributen die hum kalibriert werden:
+    dp100-wh51-ad0 und dp100-wh51-ad100
 28.09.2021
- - Sanity checks verbessert und check für rain zugefügt
-   Bei rain wird nun der Überlauf und der reset beim Batteriewechsel abgefangen
- - bei der ID 108 (Bresser_rain_gauge) wird nun ein "R" ans model angehängt: SD_WS_108_R
- - bei Sensoren mit fester ID (ID 107 und 116) wird immer longid verwendet
- - neue ID 107: Fine Offset WH51, ECOWITT WH51, MISOL/1 Erde Feuchtigkeits Sensoren
- - neue ID 116: Misol WH57, froggit DP60, Blitzsensor
+ 14_SD_WS.pm
+  - Sanity checks verbessert und check für rain zugefügt
+    Bei rain wird nun der Überlauf und der reset beim Batteriewechsel abgefangen
+  - bei der ID 108 (Bresser_rain_gauge) wird nun ein "R" ans model angehängt: SD_WS_108_R
+  - bei Sensoren mit fester ID (ID 107 und 116) wird immer longid verwendet
+  - neue ID 107: Fine Offset WH51, ECOWITT WH51, MISOL/1 Erde Feuchtigkeits Sensoren
+  - neue ID 116: Misol WH57, froggit DP60, Blitzsensor
+04.09.2021
+  00_SIGNALduino.pm:
+  - Zur FileLog notify Reduzierung bei showLastFileLog den Fakelog Eintrag entfernt (Forum Thread #122372)
+  - Für die neuen Protokolle WS1080, TX22, TX38, WH24, WH25, W136 convert und Prüfsummenroutinen zugefügt
+  signalduino_protocols.pm:
+  - neuer set rfmode für WH24_WH25 und W136
+  - neue Protokoll IDs
+    201 WS1080
+    202 TX22
+    203 TX38
+    204 WH24 WH65A/B
+    205 WH25
+    206 W136
+01.08.2021
+  00_SIGNALduino.pm:
+  - SIGNALduino_PatternExists wurde von Sidey überarbeitet um hohe CPU Last und Speicherverbrauch zu umgehen.
+  - sendMsg funktioniert nun auch bei xFSK. 
+  - Fix: bei der Bankübersicht (set cmdBank s) wird nun auch bei Konfigvariable ccN auch Werte größer 9 ausgegeben.
+  - Wenn in der whitelist nur eine FSK-protocol ID eingetragen ist, dann können auch FSK-Nachrichten (MN...) von der Firmware vin Sidey empfangen werden.
+  - CRC16 und Sum Berechnung für Bresser_6in1 und Bresser_5in1_neu
+  signalduino_protocols.pm:
+  - neuer set rfmode für Bresser 6in1 und 5in1 neu
+  - neue Protocol Id 113 für Wireless Grill Thermometer, Model name: GFGT 433 B1, WDJ7036, FCC ID: 2AJ9O-GFGT433B1
+  - neue Protocol Id 115 für Bresser 6in1 und 5in1 neu
+  - Protocol Id 201 in 114 geändert
+
+24.06.2021
+  00_SIGNALduino.pm:
+  - wenn bei der Protocollist Overview die whitelist gespeichert wird, dann erscheint nun bei Save config ein rotes ?
+  - beim Attribut hardware einige Einträge für den Maple zugefügt
+  - bei der parse_MU Routine gibts nun für lange start Einträge in der signalduino_protocols.pm einen neuen Eintrag starti
+  signalduino_protocols.pm:
+  - update ID 31
+  - ID 42,80,85,89 -> starti für optimierte Verarbeitung von langen start Arrays zugefügt
+  - neue Protokoll IDs
+    109 Rojaflex Rolläden
+    110 ADE WS1907 Wetterstation mit Funk-Regenmesser
+    111 Water Tank Level Monitor TS-FT002
+    112 AVANTEK DB-LE - Wireless doorbell & LED night light
+    201 Well-Light TR401 Funksteckdosen
+
+01.05.2021
+  00_SIGNALduino.pm:
+  - Revolt ID 45: drops Revolt messages with invalid checksums
+  signalduino_protocols.pm:
+  - new protocol ID 108 for BRESSER 5-in-1 Comfort Wetter Center
+  - new protocol ID 200 for Honeywell ActivLink, wireless door bell, PIR Motion sensor
+18.04.2021
+  00_SIGNALduino.pm:
+  - add DEVIATN to get ccconf
+  - add set cc1101_dataRate
+  - add set cc1101_deviatn
+12.04.2021
+  signalduino_protocols.pm:
+  - new protocol ID 78 for BeSmart S4 remote control
+  - improved cc1101 reg setings for Kopp Free Control
+
+16.01.2021
+  00_SIGNALduino.pm - add attribute "sendSlowRF_A_IDs"
+08.01.2021
+ signalduino_protocols.pm - update protocol ID 24 + 56
+ 00_SIGNALduino.pm:
+ - Anpassungen für den Standard Fix für Somfy Nachrichten mit der Protocol ID 43.1
+ - Bei "get cmds" können nun auch mit dem Parameter "S" die ConfigSet Variablen angezeigt werden
+ - Anpassungen für den MapleSduino mit einem einfachen Empfänger, z.B. dem RXB6
+ - "Device specific help" ergänzt
+
+29.11.2020
+ 00_SIGNALduino.pm und signalduino_protocols.pm
+ - add id 43.1, ohne verbessertem msg fix, für Somfy Wandsender deren msg nicht mit A anfangen
+03.11.2020
+ 00_SIGNALduino.pm        - add "set rfmode" 
+ signalduino_protocols.pm - add list of rfmode
+06.10.2020
+ 00_SIGNALduino.pm        - add preamble to Parse_MN
+ signalduino_protocols.pm - new protocol ID 107 for ECOWITT / FineOffset WH51
+05.10.2020
+ 00_SIGNALduino.pm - set flash improved
+04.10.2020
+ signalduino_protocols.pm - new protocol ID 106 for GT-TMBBQ-01
+19.08.2020
+ 00_SIGNALduino.pm - update SomfyRTS message fix
+12.12.2017
+ 14_SD_WS07.pm implementing correction factor temperature and humidity. logs revised
+02.12.2017
+ 14_Hideki.pm implementing Hideki SecondChecksum
+22.11.2017
+ Fix max length (Proto 51) is to small (#79929 #msg719499)
+21.11.2017
+ Fix Bresser (Proto 37) max length to small (#79929)
+18.11.2017
+ support of blacklisting of protocols via new attribute
+ serval new protocols are added
+ many stacktraces and race conditions are fixed
+ firmware can now be also updated via http source 
+ commands (sending) are now placed in a queue, so switching multiple 
+ sockets for example is now possible withoud manual added delay
+ many more fixes
+ support for cc1101 based uC like radino or nanocul added
+05.12.2016
+  Bugfix wrong return in SIGNALduino_un ParseFn  
+09.10.2016
+  improve Send queue: Send not before response of previous
+30.09.2016
+  SIGNALduino is now nonblocking
+  improved init and keepalive
+  some fixes providing more messages instad of fewer.
+  fixed some manchester realted things
+  added protocol 43 Somfy RTS
+  increased number of pattern from 6 to 8 to support dooya shutter protocol better
+  Rised the allowd numbers in protocol check
+  fixed a possible bug, that append a 0 nibble in mc message
+  added a new information field in mc messages, providing exact number of
+  provided bits
+  fixed incomplete mc output (last nibble was not delivered)
+  decoding mc signals > message buffer is now possible
+  max 340 bits are currently suppored
+  small improvement in processMessage  (if MS decoding fails, 
+  mc or mu decoding is called)
+  corrected readings for firmware version.
+  new sendMsg Function
+  14_SD_WS09.pm WH1080 CRC-Berechung angepaßt--> automatische Modelauswahl
+15.01.2016
+ - Added 14_SD_WS09.pm Module for WH1080 (WS-0101, TFA30.3189) & CTW600 868MHz OOK/AS
+08.11.2015
+ - Firmware Update 3.1.8-HF2 fixes a possible crash
+ - Fixes missing event when DMSG is updated
+26.10.2015 - Firmware Update 3.1.8-HF1 due to a bug in the raw send option
+ 23.10.2015
+ - bugfix in 90_SIGNALduino_un (caused to crash fhem)
+20.10.2015
+ - Release 3.1
+ - Firmware 3.1.8
+ - some fixes and removed some warning
+ - For sending IT messages, the clock can be adjusted via set <name> ITClock
+ - SIGNALduino_un will catch all messages, which coul'd not be processed
+ 
+15.10.2015
+ - Addes SD_WS07 Module for Technoline and Eurochron sensordevices
+ - Bugfixes for MU messages
+ 
+13.10.2015
+ - Added support for Sensors which use Hideki Protocol (Cresta, Bresser, TFA, HAMA and more)
+ - Added an option to specify a whitlist for supported protocols
+ - Updated Firmware to 3.1.7-hf3
+ 
+12.10.2015
+ - Hotfix2 for firmware 3.1.7
+ - some minor changes
+
+07.10.2015
+ - Added Demodulation for Meteo TX6 Signal
+ - Corrected serval bugs in demodulation for MU Messages, shoud be more accurate now
+ - Updated Firmware to 3.1.7 -> bugfix and better detection for MU Messages
+ 
+06.10.2015
+ - Added Demodulation for Oregon Scientific V1 Data. No Decoding
+ - Support Attribute longids
+ - Try to add demodulation for livolo, tests needed
+ - Try to add HS 434/6 6-Channel. ISC GmbH demodulation
+ - Changed Identification for unknown Protocols
+ - Modified demodulation, for start and end of demodulation process
+ 
+12.10.2015
+ - Whitelist option
+ - Firmware 3.1.7 hotfix2
+
+28.09.2015
+ - Added a history for unhandled messages when verbose=5
+
+23.09.2015
+ - Defined Dooya shutter protocol, and debug decoding of signal (untested)
+ 
+21.09.2015
+ - Added support for longids in physical module
+ - Use floating point value for better puls factor detection
+ - some code cleanup
+ - dropped firmware support <3.1.4 -- flashing the microcontroller is needed
+ 
+15.09.2015
+ - Added some eas800 code for decoding the sensor
+ - Updated rfreceiver to 3.1.5
+ 
+31.08.2015
+ - Added helper submodule to allow some decoding tests for serval sensors
+
+30.08.2015
+ - Added support for cresta protocol. needs still a valid module to send
+ - reworked manchester signal decoding to allow easier adding of new protocols
+ - checks at initialisation if round exists
+ - Try for detecting RF20, Heidemann HX, TCM Doorbell and TX70DHT
+
+28.08.2015
+ - TX3 Protocol fix
+ - CTW 600 get messages up to 120 bytes
+
+21.08.2015
+ - Added protocol support fot CTW600 weather station
+
+20.08.2015
+ - RC2 - 3.1.4
+ - Can process unfiltered synced messages from arduino
+ - Handles TX3 Type Messages
+ - code improvements
+ - messages without sync, can now be defined and converted via protocol list
+ - some warnings and errors removed
+ - Added detection of protocol in this Module. 
+
+27.07.2015
+ - RC1
+ - Fixed bug in Oregon Scientific decoding, works now
+ - debug output can be adjusted via attribute  "debug" , default is 0
+ - verbose attribute does not adjust debug anymore
+ - updated firmware to 3.1.3
+
+19.07.2015
+ - Fixed a bug, to verify protocol #7
+ - added a option, to run the fhem module without a pysical device. Use directio to run the module from a fifo
+ - updated firmware to 3.1.2a
+
+15.07.2015
+ - added a debug option to verify decoding information from protocol 7
+
+12.07.2015
+ - removed some debug output if debug is disabled
+ - added oregon module (osv2 support still not finished)
+ - fixed TCM_97001 and IT decoding (bug)
+
+07.07.2015
+ - Debug output will be suspressed if device is initialized with verbose <= 4.
+ - Added some code for later OSV2 Protocol decodinbg (not finished)
+ - Added a check, to avoid decoding the wrong protocol
+
+28.06.2015
+ - Added Firmware 3.1.1 for promini, nano and uno
+ - Removed Firmware for mini and mega2560
+ - Enabled filter list update trough fhem at startup at SIGNALduino (extension from 11.05.2015)
+ - Added eurochon protocol detection and protocol unknown1 
+ - some basic stuff to detect osv2 protocol (not finished)
+ - Changed Regex for better message detection and filtering some bad things out
+
+22.06.2015
+ - added option to specify arduino hardware type (nano328,mini328,uno,mega2560) 
+ - changed some code future support of MU and MC messages from signalduino
+
+11.05.2015
+ - fixed bug if clock (C=x)is transmitted instead of clockidx (CP=x)
+ - corrected internal filterlist for protocol detection
+ - write protocol filter list at startup into arduino
+
+06.05.2015
+- corrected automatic update of freeram reading.
+
+15.04.2015
+- Decoding for protocols was broken, corrected this error.
+
+14.04.2015
+- Updated HEX files for Arduino, due to broken sync detection for pt2262 and similar
+
+13.04.2015
+- Unterstützung für Empfang von Conrad RSL Protokoll aufgenommen, senden geht noch nicht!
+
+08.04.2015
+- Initial Version of SIGNALduino. It supports IT V1 devices an Devices defined in logical Module CUL_TCM97001 and produces a lot of debug output
