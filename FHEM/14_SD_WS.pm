@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-08-06 21:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2023-09-18 11:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -45,13 +45,14 @@
 # 30.11.2021 Protokoll 108: neuer Sensor Fody_E42
 # 01.01.2022 Protokoll 115: neue Sensoren Indoor und Soil Moisture (Ralf9)
 # 02.01.2022 neues Protokoll 207: Bresser WLAN Comfort Wettercenter mit 7-in-1 Profi-Sensor
-# 17.03.2022 neues Protokoll 211: WH31 DP50 (Ralf9)
+# 17.03.2022 neues Protokoll 125: WH31 DP50 (Ralf9)
 # 11.04.2022 Protokoll 85: neuer Sensor Windmesser TFA 30.3251.10 mit Windrichtung, Pruefung CRC8 eingearbeitet (elektron-bbs)
 # 23.05.2022 neues Protokoll 120: Wetterstation TFA 35.1077.54.S2 mit 30.3151 (Thermo/Hygro-Sender), 30.3152 (Regenmesser), 30.3153 (Windmesser)
 # 11.06.2022 neues Protokoll 122: TM40, Wireless Grill-, Meat-, Roasting-Thermometer with 4 Temperature Sensors
 # 02.09.2022 neues Protokoll 123: Inkbird IBS-P01R Pool Thermometer, Inkbird ITH-20R (elektron-bbs)
-# 03.04.2023 neues Protokoll 213: WH40
+# 03.04.2023 neues Protokoll 126: WH40
 # 06.08.2023 neues Protokoll 129: Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux)
+# 18.09.2023 neues Protokoll 214: ecowitt WS68 Windmesser. todo: ueberpruefen Wind, add bat, lux und uv
 
 package main;
 
@@ -117,8 +118,9 @@ sub SD_WS_Initialize {
     'SD_WS_205.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_207.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
-    'SD_WS_211.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
-    'SD_WS_213_R.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'rain4:Rain,', autocreateThreshold => '2:180'}
+    'SD_WS_125.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
+    'SD_WS_126_R.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'rain4:Rain,', autocreateThreshold => '2:180'},
+    'SD_WS_214.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', autocreateThreshold => '2:180'}
   };
   return;
 }
@@ -223,7 +225,13 @@ sub SD_WS_Parse {
           sensortype => 'XT300',
           model      => 'SD_WS_50_SM',
           prematch   => sub {my $msg = shift; return 1 if ($msg =~ /^FF5[0-9A-F]{5}FF[0-9A-F]{2}/); },           # prematch
-          crcok      => sub {my $msg = shift; return 1 if ((hex(substr($msg,2,2))+hex(substr($msg,4,2))+hex(substr($msg,6,2))+hex(substr($msg,8,2))&0xFF) == (hex(substr($msg,10,2))) );  },   # crc
+          crcok      => sub {my $msg = shift;
+                             if ((hex(substr($msg,2,2))+hex(substr($msg,4,2))+hex(substr($msg,6,2))+hex(substr($msg,8,2))&0xFF) != hex(substr($msg,10,2))) {
+                               Log3 $name, 4, "$name: SD_WS_50 Parse - ERROR checksum";
+                               return 0;
+                             }
+                             return 1;
+                            },
           id         => sub {my $msg = shift; return (hex(substr($msg,2,2)) &0x03 ); },                          # id
           temp       => sub {my $msg = shift; return  ((hex(substr($msg,6,2)))-40)  },                           # temp
           hum        => sub {my $msg = shift; return hex(substr($msg,4,2));  },                                  # hum
@@ -285,10 +293,10 @@ sub SD_WS_Parse {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,10) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
-                              Log3 $name, 4, "$name: SD_WS_27 Parse msg $rawData, CRC $rr3";
                               if (hex($rr3) == hex(substr($rawData,-2))) {
                                 return 1;
                               } else {
+                                Log3 $name, 4, "$name: SD_WS_27 Parse - ERROR CRC8 $rr3 should be 0";
                                 return 0;
                               }
                             } else {
@@ -800,7 +808,7 @@ sub SD_WS_Parse {
         sensortype => 'WH51',
         model      => 'SD_WS_107_H',
         fixedId    => '1',
-        prematch   => sub {return 1; }, # todo Test if XXXXXX == ff ff ff
+        prematch   => sub {return 1; },
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,2,6); },
         transPerBoost => sub {my (undef,$bitData) = @_; return SD_WS_binaryToNumber($bitData,32,34); },
         batVoltage => sub {my (undef,$bitData) = @_; my $batvol = SD_WS_binaryToNumber($bitData,35,39);
@@ -819,7 +827,7 @@ sub SD_WS_Parse {
                             }
                             $checksum &= 255;
                             if ($checksum != $checksumRef) {
-                              Log3 $name, 4, "$name: SD_WS_Parse protocol 107, sum = $checksum, ref = $checksumRef";
+                              Log3 $name, 4, "$name: SD_WS_107 (WH51) Parse - ERROR sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
                             my $rc = eval
@@ -832,15 +840,14 @@ sub SD_WS_Parse {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,26) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
-                              Log3 $name, 4, "$name: SD_WS_Parse protocol 107, sum = ref = $checksum, CRC = $rr3";
-                              if (hex($rr3) == 0) {
-                                return 1;
-                              } else {
+                              if ($rr3) {
+                                Log3 $name, 4, "$name: SD_WS_107 (WH51) Parse - ERROR CRC8 $rr3 should be 0";
                                 return 0;
                               }
+                              Log3 $name, 4, "$name: SD_WS_107 (WH51) Parse - checksum=$checksum ok, CRC=0 ok";
+                              return 1;
                             } else {
-                              Log3 $name, 4, "$name: SD_WS_Parse protocol 107, sum = $checksum, ref = $checksumRef";
-                              Log3 $name, 1, "$name: SD_WS_Parse protocol 107, ERROR CRC not load, please install modul Digest::CRC";
+                              Log3 $name, 1, "$name: SD_WS_107 (WH51) Parse - ERROR CRC not load, please perl install modul Digest::CRC";
                               return 0;
                             }
                           }
@@ -1131,10 +1138,12 @@ sub SD_WS_Parse {
                               $ret = 'Bresser_6in1, new Bresser_5in1';
                             } elsif ($typ eq '2') {
                               $ret = 'Bresser_6in1_u_7in1 indoor';
+                            } elsif ($typ eq '3') {
+                              $ret = 'Bresser_6in1_u_7in1 Pool Thermometer';
                             } elsif ($typ eq '4') {
                               $ret = 'Bresser_6in1_u_7in1 Soil Moisture';
                             } else {
-                              $ret = 'Bresser_6in1_u_7in1 other';
+                              $ret = 'Bresser_6in1_u_7in1 other (Typ=' . $typ . ')';
                             }
                             return $ret;
                           },
@@ -1178,11 +1187,12 @@ sub SD_WS_Parse {
                             return $rawTemp / 10;
                           },
         hum        => sub {my ($rawData,undef) = @_;
-                            return if (substr($rawData,8,1) eq '1' && substr($rawData,29,1) eq '1'); # not by weather station & rain
+                            my $typ = substr($rawData,8,1);
+                            return if (($typ eq '1' && substr($rawData,29,1) eq '1') || $typ eq '3'); # not by weather station & rain or pool
                             my $hum = substr($rawData,24,2);
                             return if ($hum !~ m/^\d+$/xms);
                             $hum *= 1;
-                            if (substr($rawData,8,1) eq '4' && $hum >= 1 && $hum <= 16) {  # Soil Moisture
+                            if ($typ eq '4' && $hum >= 1 && $hum <= 16) {  # Soil Moisture
                               return $moisture_map[$hum - 1];
                             }
                             return $hum;
@@ -1254,7 +1264,7 @@ sub SD_WS_Parse {
                             }
                             $checksum &= 255;
                             if ($checksum != $checksumRef) {
-                              Log3 $name, 4, "$name: SD_WS_Parse protocol 116, sum = $checksum, ref = $checksumRef";
+                              Log3 $name, 4, "$name: SD_WS_116 (WH57) Parse - ERROR sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
                             my $rc = eval
@@ -1267,15 +1277,14 @@ sub SD_WS_Parse {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,16) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
-                              Log3 $name, 4, "$name: SD_WS_Parse protocol 116, sum = ref = $checksum, CRC = $rr3";
-                              if (hex($rr3) == 0) {
-                                return 1;
-                              } else {
+                              if ($rr3) {
+                                Log3 $name, 4, "$name: SD_WS_116 (WH57) Parse - ERROR CRC8 $rr3 should be 0";
                                 return 0;
                               }
+                              Log3 $name, 4, "$name: SD_WS_116 (WH57) Parse - checksum=$checksum ok, CRC=0 ok";
+                              return 1;
                             } else {
-                              Log3 $name, 4, "$name: SD_WS_Parse protocol 116, sum = $checksum, ref = $checksumRef";
-                              Log3 $name, 1, "$name: SD_WS_Parse protocol 116, ERROR CRC not load, please install modul Digest::CRC";
+                              Log3 $name, 1, "$name: SD_WS_116 (WH57) Parse - ERROR CRC not load, please install perl modul Digest::CRC";
                               return 0;
                             }
                           }
@@ -1356,14 +1365,14 @@ sub SD_WS_Parse {
                                   my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                                   my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
                                   if (hex($rr3) != 0) {
-                                    Log3 $name, 3, "$name: SD_WS_120 Parse msg $rawData - ERROR CRC8";
+                                    Log3 $name, 3, "$name: SD_WS_120 Parse msg $rawData - ERROR CRC8 $rr3 should be 0";
                                     return 0;
                                   }
+                                  return 1;
                                 } else {
-                                  Log3 $name, 1, "$name: SD_WS_120 Parse msg $rawData - ERROR CRC not load, please install modul Digest::CRC";
+                                  Log3 $name, 1, "$name: SD_WS_120 Parse - ERROR CRC not load, please install modul Digest::CRC";
                                   return 0;
                                 }  
-                                return 1;
                               }
     },
     122 => {
@@ -1452,7 +1461,7 @@ sub SD_WS_Parse {
                                 if ($checksum == $calcsum) {
                                   return 1;
                                 } else {
-                                  Log3 $name, 4, "$name: SD_WS_123 Parse msg $msg - ERROR CRC16 $checksum != $calcsum";
+                                  Log3 $name, 4, "$name: SD_WS_123 Parse - ERROR CRC16 $checksum != $calcsum";
                                   return 0;
                                 }
                               },
@@ -1534,12 +1543,12 @@ sub SD_WS_Parse {
                               my $datacheck1 = pack( 'H*', $rawData );
                               my $crcmein1 = Digest::CRC->new(width => 8, init => 0xc0, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
-                              Log3 $name, 4, "$name: SD_WS_129 Parse msg $rawData, CRC $rr3";
-                              if (hex($rr3) == 0) {
-                                 return 1;
-                              } else {
+                              if ($rr3) {
+                                 Log3 $name, 4, "$name: SD_WS_129 Parse - ERROR CRC8 $rr3 should be 0";   
                                  return 0;
                               }
+                              Log3 $name, 4, "$name: SD_WS_129 Parse - CRC8 $rr3 ok";
+                              return 1;
                             } else {
                               Log3 $name, 1, "$name: SD_WS_129 Parse msg $rawData - ERROR CRC not load, please install modul Digest::CRC";
                               return 0;
@@ -1683,11 +1692,12 @@ sub SD_WS_Parse {
         uv         => sub {my ($rawData,undef) = @_; return substr($rawData,36,3) / 10; },
         crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_Bresser_7in1
     },
-    211 => {
+    125 => { # alt 211
         # ecowitt WH31, Ambient Weather WH31E, froggit DP50
         # https://forum.fhem.de/index.php/topic,111653.msg1212517.html#msg1212517
         # https://github.com/merbanan/rtl_433/blob/master/src/devices/ambientweather_wh31e.c
         #
+        # 0 1 2 3 4 5 6
         # 01234567890123
         # YYIICTTTHHXXAA
         #
@@ -1700,7 +1710,7 @@ sub SD_WS_Parse {
         # A = SUM-8
         #
         sensortype => 'WH31e, WH31b, DP50',
-        model      => 'SD_WS_211_TH',
+        model      => 'SD_WS_125_TH',
         #fixedId    => '1',
         prematch   => sub {return 1; },
         id         => sub {my ($rawData,undef) = @_; return substr($rawData,2,2); },
@@ -1711,35 +1721,189 @@ sub SD_WS_Parse {
                             return round(($rawTemp - 400) / 10, 1);
                           },
         hum        => sub {my ($rawData,undef) = @_; return hex(substr($rawData,8,2)); },
-        crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_WH31
+        crcok      => sub {my $rawData = shift; # alt crc in 00_SIGNALduino sub SIGNALduino_WH31
+                            my $checksum = 0;
+                            my $checksumRef = hex(substr($rawData,12,2));
+                            for (my $i=0; $i < 11; $i += 2) {
+                              $checksum += hex(substr($rawData,$i,2));
+                            }
+                            $checksum &= 0xFF;
+                            if ($checksum != $checksumRef) {
+                              Log3 $name, 4, "$name: SD_WS_125 (WH31) Parse - ERROR, sum = $checksum, ref = $checksumRef";
+                              return 0;
+                            }
+                            my $rc = eval
+                            {
+                              require Digest::CRC;
+                              Digest::CRC->import();
+                              1;
+                            };
+                            if ($rc) {
+                              my $calc_crc8 = Digest::CRC->new(width => 8, poly=>0x31);
+                              my $crc_digest = $calc_crc8->add( pack 'H*', substr( $rawData, 0, 12 ) )->digest;
+                              if ($crc_digest)
+                              {
+                                Log3 $name, 4, "$name: SD_WS_125 (WH31) Parse - ERROR CRC8 $crc_digest should be 0";
+                                return 0;
+                              }
+                              Log3 $name, 4, "$name: SD_WS_125 (WH31) Parse - checksum=$checksum ok, CRC=0 ok";
+                              return 1;
+                            } else {
+                              Log3 $name, 1, "$name: SD_WS_125 (WH31) Parse - ERROR CRC not load, please install perl modul Digest::CRC";
+                              return 0;
+                            }
+                          },
     },
-    213 => {
+    126 => { # alt 213
         # rain gauge ecowitt | Fine Offset | Ambient Weather WH40
         # https://github.com/merbanan/rtl_433/blob/master/src/devices/ambientweather_wh31e.c
         # 
         # 01 234567 89 0123 45 67
-        # YY IIIIII FF RRRR XX AA
+        # YY IIIIII BB RRRR XX AA
         # 40 013E3C 90 0000 10 5B
         #
         # Y = a fixed Type Code of 0x40
         # I = ID (3 bytes)
-        # F = is perhaps flags?
+        # B = Voltage of battery is representey by last 5 bits; voltage / 10 => 0F = 15 = 1.5v,  Not all models have battery reporting. Firest seen in late 2022
         # R = rain bucket tip count, 0.1mm increments
         # X = CRC-8, poly 0x31, init 0x00, Input not reflected, Result not reflected
         # A = SUM-8
         #
         sensortype => 'WH40',
-        model      => 'SD_WS_213_R',
+        model      => 'SD_WS_126_R',
         fixedId    => '1',
         prematch   => sub {return 1; },
         id         => sub {my ($rawData,undef) = @_; return (substr($rawData,2,6));},
+        bat        => sub {my (undef,$bitData) = @_; 
+                           my $v = oct('0b'.substr($bitData,35,5)); 
+                           return $v ne '0' ? $v > 11 ? 'ok' : 'low' : undef; },
+        batVoltage => sub {my (undef,$bitData) = @_; 
+                           my $v = oct('0b'.substr($bitData,35,5));
+                           return $v ne '0' ? $v / 10 : undef; },
         rain       => sub {my ($rawData,undef) = @_; return hex(substr($rawData,10,4)) / 10; },
-        crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_WH40
+        crcok      => sub {my $rawData = shift; # alt crc in 00_SIGNALduino sub SIGNALduino_WH40
+                            my $checksum = 0;
+                            my $checksumRef = hex(substr($rawData,16,2));
+                            for (my $i=0; $i < 15; $i += 2) {
+                              $checksum += hex(substr($rawData,$i,2));
+                            }
+                            $checksum &= 0xFF;
+                            if ($checksum != $checksumRef) {
+                              Log3 $name, 4, "$name: SD_WS_126 (WH40) Parse - ERROR, sum = $checksum, ref = $checksumRef";
+                              return 0;
+                            }
+                            my $rc = eval
+                            {
+                              require Digest::CRC;
+                              Digest::CRC->import();
+                              1;
+                            };
+                            if ($rc) {
+                              my $calc_crc8 = Digest::CRC->new(width => 8, poly=>0x31);
+                              my $crc_digest = $calc_crc8->add( pack 'H*', substr( $rawData, 0, 16 ) )->digest;
+                              if ($crc_digest)
+                              {
+                                Log3 $name, 4, "$name: SD_WS_126 (WH40) Parse - ERROR CRC8 $crc_digest should be 0";
+                                return 0;
+                              }
+                              Log3 $name, 4, "$name: SD_WS_126 (WH40) Parse - checksum=$checksum ok, CRC=0 ok";
+                              return 1;
+                            } else {
+                              Log3 $name, 1, "$name: SD_WS_126 (WH40) Parse - ERROR CRC not load, please install perl modul Digest::CRC";
+                              return 0;
+                            }
+                          },
+    },
+    214 => {
+        # ecowitt WS68 Anemometer
+        # https://osswww.ecowitt.net/uploads/20220803/WS68%20Manual.pdf
+        # https://github.com/merbanan/rtl_433/blob/master/src/devices/ambientweather_wh31e.c
+        # https://github.com/merbanan/rtl_433/issues/1283
+        #
+        # 0  2 4 6  8 0  2  4      0  2  4  6  8 0
+        # 0  1 2 3  4 5  6  7 8 9  10 11 12 13 14
+        # YY ??IIII LLLL BB DSSSSS WW dd GG ?? XXAA
+        # 68 0000c5 0000 4b 0fffff 00 5a 00 00 d0af
+        # 68 0000c5 0107 4b 0fffff 00 2e 00 02 a663
+        # 68 0000c5 0000 4b 2fffff 00 0e 00 00 8033  10e (270)-wind-Direction-West
+        # 
+        # Y - fixed Type Code of 0x68 
+        # I - device ID 
+        # L - 16 bit, lux
+        # B - 8 bit battery voltage 
+        # D - 1 bit windir high 
+        # S - 20 bit static? 
+        # W - windspeed 
+        # d - windir low 
+        # G - windgust 
+        # X = CRC-8 
+        # A = SUM-8 
+        #
+        sensortype     => 'WS68',
+        model          => 'SD_WS_214',
+        prematch       => sub {return 1; },
+        id             => sub { my ($rawData,undef) = @_; return substr($rawData,4,4); },
+        windspeedKmh   => sub {my ($rawData,undef) = @_;
+                            return hex(substr($rawData,20,2));
+                          },
+        windGust_kmh   => sub {my ($rawData,undef) = @_;
+                            return hex(substr($rawData,24,2));
+                          },
+        winddir        => sub {my ($rawData,$bitData) = @_;
+                            my $winddir = hex(substr($rawData,22,2)) + substr($bitData,58,1) * 256;
+                            return if ($winddir > 360);
+                            return ($winddir, $winddirtxtar[round(($winddir / 22.5),0)]);
+                          },
+        crcok      => sub {my $rawData = shift; # alt crc in 00_SIGNALduino sub SIGNALduino_WS68
+                            my $checksum = 0;
+                            my $checksumRef = hex(substr($rawData,30,2));
+                            for (my $i=0; $i < 29; $i += 2) {
+                              $checksum += hex(substr($rawData,$i,2));
+                            }
+                            $checksum &= 0xFF;
+                            if ($checksum != $checksumRef) {
+                              Log3 $name, 4, "$name: SD_WS_214 (WH40) Parse - ERROR, sum = $checksum, ref = $checksumRef";
+                              return 0;
+                            }
+                            my $rc = eval
+                            {
+                              require Digest::CRC;
+                              Digest::CRC->import();
+                              1;
+                            };
+                            if ($rc) {
+                              my $calc_crc8 = Digest::CRC->new(width => 8, poly=>0x31);
+                              my $crc_digest = $calc_crc8->add( pack 'H*', substr( $rawData, 0, 30 ) )->digest;
+                              if ($crc_digest)
+                              {
+                                Log3 $name, 4, "$name: SD_WS_214 (WS68) Parse - ERROR CRC8 $crc_digest should be 0";
+                                return 0;
+                              }
+                              Log3 $name, 4, "$name: SD_WS_214 (WS68) Parse - checksum=$checksum ok, CRC=0 ok";
+                              return 1;
+                            } else {
+                              Log3 $name, 1, "$name: SD_WS_214 (WS68) Parse - ERROR CRC not load, please install perl modul Digest::CRC";
+                              return 0;
+                            }
+                          },
     }
   );
 
   Log3 $name, 4, "$name: SD_WS_Parse protocol $protocol, rawData $rawData";
 
+  # damit es kompatibel mit dem Modul von Sidey ist
+  if ($protocol eq '117') {
+    $protocol = '207';
+    $rawData = substr($rawData, 4);
+    $bitData = unpack("B$blen", pack("H$hlen", $rawData));
+  }
+  elsif  ($protocol eq '115') {
+    if (substr($iohash->{versionmodul},0,1) ne 'v') {  
+      $rawData = substr($rawData, 4);
+      $bitData = unpack("B$blen", pack("H$hlen", $rawData));
+    }
+  }
+  
   if ($protocol eq "37") {    # Bresser 7009994
     # Protokollbeschreibung:
     # https://github.com/merbanan/rtl_433_tests/tree/master/tests/bresser_3ch
@@ -2050,10 +2214,8 @@ sub SD_WS_Parse {
     }
     if (exists($decodingSubs{$protocol}{crcok})) {
       my $retcrc=$decodingSubs{$protocol}{crcok}->( $rawData,$bitData );
-      if (!$retcrc) {
-        Log3 $iohash, 4, "$name: SD_WS_Parse $rawData protocolid $protocol ($SensorTyp) - ERROR CRC";
-        return "";
-      }
+      return "" if ($retcrc == 0);
+      
       $defaultMaxDeviation = 5;
     }
     $id = $decodingSubs{$protocol}{id}->( $rawData,$bitData );
