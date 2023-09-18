@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-09-18 11:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2023-09-18 17:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -839,7 +839,7 @@ sub SD_WS_Parse {
                             if ($rc) {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,26) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
-                              my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                              my $rr3 = $crcmein1->add($datacheck1)->digest;
                               if ($rr3) {
                                 Log3 $name, 4, "$name: SD_WS_107 (WH51) Parse - ERROR CRC8 $rr3 should be 0";
                                 return 0;
@@ -1276,7 +1276,7 @@ sub SD_WS_Parse {
                             if ($rc) {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,16) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
-                              my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                              my $rr3 = $crcmein1->add($datacheck1)->digest;
                               if ($rr3) {
                                 Log3 $name, 4, "$name: SD_WS_116 (WH57) Parse - ERROR CRC8 $rr3 should be 0";
                                 return 0;
@@ -1363,8 +1363,8 @@ sub SD_WS_Parse {
                                 if ($rc) {
                                   my $datacheck1 = pack( 'H*', substr($rawData,2,length($rawData)-2) );
                                   my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
-                                  my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
-                                  if (hex($rr3) != 0) {
+                                  my $rr3 = $crcmein1->add($datacheck1)->digest;
+                                  if ($rr3) {
                                     Log3 $name, 3, "$name: SD_WS_120 Parse msg $rawData - ERROR CRC8 $rr3 should be 0";
                                     return 0;
                                   }
@@ -1542,7 +1542,7 @@ sub SD_WS_Parse {
                             if ($rc) {
                               my $datacheck1 = pack( 'H*', $rawData );
                               my $crcmein1 = Digest::CRC->new(width => 8, init => 0xc0, poly => 0x31);
-                              my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                              my $rr3 = $crcmein1->add($datacheck1)->digest;
                               if ($rr3) {
                                  Log3 $name, 4, "$name: SD_WS_129 Parse - ERROR CRC8 $rr3 should be 0";   
                                  return 0;
