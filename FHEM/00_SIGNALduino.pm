@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduino.pm 3416 2023-07-23 23:00:00Z v3.4.16-dev-Ralf9 $
+# $Id: 00_SIGNALduino.pm 3417 2023-11-07 19:00:00Z v3.4.17-Ralf9 $
 #
-# v3.4.15
+# v3.4.17
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.4.16-dev_ralf_23.07.",
+	SDUINO_VERSION            => "v3.4.17-ralf_07.11.23",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -216,6 +216,7 @@ my $clientsSIGNALduino = ":CUL_TCM97001:"
                         ."SD_Rojaflex:"
                         ."Siro:"
                         ."LTECH:"
+                        ."CUL_MAX:"
                         ."SD_Tool:"
                         ."SIGNALduino_un:"
                     ;
@@ -258,6 +259,7 @@ my %matchListSIGNALduino = (
       '35:HMS'              => '^810e04......a001',
       '36:IFB'              => '^J............',
       '37:LTECH'            => '^P31#[A-Fa-f0-9]{26,}',
+      '38:CUL_MAX'          => '^Z.*',
       '90:SD_Tool'          => '^pt([0-9]+(\.[0-9])?)(#.*)?',
       'X:SIGNALduino_un'    => '^[u]\d+#.*',
 );
@@ -268,10 +270,11 @@ SIGNALduino_Initialize
 {
   my ($hash) = @_;
 
-  my $dev = "";
-  if (index(SDUINO_VERSION, "dev") >= 0) {
-     $dev = ",1";
-  }
+  my $dev = ",1";
+  #my $dev = "";
+  #if (index(SDUINO_VERSION, "dev") >= 0) {
+  #   $dev = ",1";
+  #}
 
 # Provider
   $hash->{ReadFn}  = \&SIGNALduino_Read;
@@ -308,7 +311,7 @@ SIGNALduino_Initialize
 					  ." rfmode_user"
 					  ." sendSlowRF_A_IDs"
 					  ." suppressDeviceRawmsg:1,0"
-					  ." development:0$dev"
+					  ." development"
 					  ." noMsgVerbose:0,1,2,3,4,5"
 					  ." maxMuMsgRepeat"
 					  ." userProtocol"
@@ -3522,6 +3525,7 @@ sub SIGNALduino_Parse_MN
 	my $N=$msg_parts{N};
 	my $dmsg;
 	my $debug = AttrVal($name,"debug",0);
+	my $rssi_for;
 	my $rssiStr= '';
 	
 	if (defined($msg_parts{appendrssi})) {
@@ -3553,13 +3557,13 @@ sub SIGNALduino_Parse_MN
 		}
 		if ($match eq "" || $rawData =~ m/$match/) {
 			if (!defined($rssi) && defined($ProtocolListSIGNALduino{$id}{rssiPos})) {
-				(undef,$rssiStr) = SIGNALduino_calcRSSI(hex(substr($rawData, $ProtocolListSIGNALduino{$id}{rssiPos}, 2)));
+				($rssi_for,$rssiStr) = SIGNALduino_calcRSSI(hex(substr($rawData, $ProtocolListSIGNALduino{$id}{rssiPos}, 2)));
 				if (defined($ProtocolListSIGNALduino{$id}{lqiPos})) {
 					$rssiStr .= ' LQI = ' . hex(substr($rawData, $ProtocolListSIGNALduino{$id}{lqiPos}, 2));
 				}
 			}
 			else {
-				$rssiStr = "";
+				$rssi_for = $rssi;
 			}
 			Log3 $name, 4, "$name Parse_MN: Found $modulation Protocol id $id length $hlen" . "$rssiStr -> $ProtocolListSIGNALduino{$id}{name}";
 		}
@@ -3586,7 +3590,7 @@ sub SIGNALduino_Parse_MN
 				$dmsg = $res;
 				$dmsg = "$ProtocolListSIGNALduino{$id}{preamble}"."$dmsg" if (defined($ProtocolListSIGNALduino{$id}{preamble}));
 				Log3 $name, 4, "$name ParseMN: ID=$id dmsg=$dmsg";
-				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi,$id,0);
+				SIGNALduno_Dispatch($hash,$rmsg,$dmsg,$rssi_for,$id,0);
 			}
 			else {
 				Log3 $name, 4, "$name ParseMN: method error! $res";
@@ -4139,7 +4143,7 @@ sub SIGNALduino_IdList
 				if ($ProtocolListSIGNALduino{$id}{developId} eq "m") {
 					if ($develop !~ m/m$id/) {  # ist nur zur Abwaertskompatibilitaet und kann in einer der naechsten Versionen entfernt werden
 						push (@devModulId, $id);
-						if ($devFlag == 0) {
+						if ($devFlag == 0 && $develop ne "m" && $develop !~ m/m\,/) {
 							push (@skippedDevId, $id);
 							next;
 						}
@@ -4250,14 +4254,14 @@ sub SIGNALduino_getAttrDevelopment
 	my $name = shift;
 	my $develop = shift;
 	my $devFlag = 0;
-	if (index(SDUINO_VERSION, "dev") >= 0) {  	# development version
+	#if (index(SDUINO_VERSION, "dev") >= 0) {  	# development version
 		$develop = AttrVal($name,"development", 0) if (!defined($develop));
 		$devFlag = 1 if ($develop eq "1" || (substr($develop,0,1) eq "y" && $develop !~ m/^y\d/));	# Entwicklerversion, y ist nur zur Abwaertskompatibilitaet und kann in einer der naechsten Versionen entfernt werden
-	}
-	else {
-		$develop = "0";
-		Log3 $name, 3, "$name IdList: ### Attribute development is in this version ignored ###";
-	}
+	#}
+	#else {
+	#	$develop = "0";
+	#	Log3 $name, 3, "$name IdList: ### Attribute development is in this version ignored ###";
+	#}
 	return ($develop,$devFlag);
 }
 
@@ -6280,90 +6284,6 @@ sub SIGNALduino_WH25
 	return (1, $dmsg);
 }
 
-sub SIGNALduino_WH31
-{
-	my ($name,$dmsg,$id) = @_;
-
-	my $checksum = 0;
-	my $byte;
-	my @data = ();
-
-	for (my $i=0; $i<=5; $i++ ) {
-		$byte = hex(substr($dmsg,$i*2,2));
-		push(@data, $byte);
-		$checksum += $byte;
-	}
-	$checksum &= 0xFF;
-	my $crc = SIGNALduino_CalculateCRC(6, @data);
-	if ($crc != 0) {
-		return (-1, "WH31: crc Error crc=$crc");
-	}
-	
-	my $checksumRef = hex(substr($dmsg,12,2));
-	if ($checksum != $checksumRef) {
-		return (-1, "WH31: checksum Error checksum=$checksum checksumRef=$checksumRef");
-	}
-	Log3 $name, 4, "$name WH31: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
-
-	return (1, substr($dmsg, 0, 10));
-}
-
-sub SIGNALduino_WH40
-{
-	my ($name,$dmsg,$id) = @_;
-
-	my $checksum = 0;
-	my $byte;
-	my @data = ();
-
-	for (my $i=0; $i<=7; $i++ ) {
-		$byte = hex(substr($dmsg,$i*2,2));
-		push(@data, $byte);
-		$checksum += $byte;
-	}
-	$checksum &= 0xFF;
-	my $crc = SIGNALduino_CalculateCRC(8, @data);
-	if ($crc != 0) {
-		return (-1, "WH40: crc Error crc=$crc");
-	}
-	
-	my $checksumRef = hex(substr($dmsg,16,2));
-	if ($checksum != $checksumRef) {
-		return (-1, "WH40: checksum Error checksum=$checksum checksumRef=$checksumRef");
-	}
-	Log3 $name, 4, "$name WH40: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
-
-	return (1, substr($dmsg, 0, 14));
-}
-
-sub SIGNALduino_WH68
-{
-	my ($name,$dmsg,$id) = @_;
-
-	my $checksum = 0;
-	my $byte;
-	my @data = ();
-
-	for (my $i=0; $i<=14; $i++ ) {
-		$byte = hex(substr($dmsg,$i*2,2));
-		push(@data, $byte);
-		$checksum += $byte;
-	}
-	$checksum &= 0xFF;
-	my $crc = SIGNALduino_CalculateCRC(15, @data);
-	if ($crc != 0) {
-		return (-1, "WH68: crc Error crc=$crc");
-	}
-	
-	my $checksumRef = hex(substr($dmsg,30,2));
-	if ($checksum != $checksumRef) {
-		return (-1, "WH68: checksum Error checksum=$checksum checksumRef=$checksumRef");
-	}
-	Log3 $name, 4, "$name WH68: dmsg=$dmsg checksum=$checksum ok, CRC=0 ok";
-
-	return (1, $dmsg);
-}
-
 sub SIGNALduino_CalculateCRC_W136
 {
 	my $dmsg = shift;
@@ -6407,6 +6327,14 @@ sub SIGNALduino_WMBus
     }
 
     return (1, $dmsg);
+}
+
+sub SIGNALduino_MAX
+{
+    my ($name,$dmsg,$id) = @_;
+    
+    return (1, substr($dmsg, 0, 24));
+
 }
 
 # - - - - - - - - - - - -
@@ -6723,9 +6651,9 @@ sub SIGNALduino_FW_getProtocolList
 			}
 		}
 		
-		if (exists($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "m") {
-			$checkAll = "SDnotCheck";
-		}
+		#if (exists($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "m") {
+		#	$checkAll = "SDnotCheck";
+		#}
 		
 		if ($devFlag == 0 && $dispChanged < 0 && exists($ProtocolListSIGNALduino{$id}{developId}) && $ProtocolListSIGNALduino{$id}{developId} eq "p") {
 			$chkbox="<div> </div>";

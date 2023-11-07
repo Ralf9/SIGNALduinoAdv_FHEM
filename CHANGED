@@ -1,3 +1,9 @@
+07.11.23
+  00_SIGNALduino.pm und signalduino_protocols.pm:
+  - ID 211: nach ID 125 geändert damit es kompatibel zum Modul von Sidey ist
+  - ID 213: nach ID 126 geändert damit es kompatibel zum Modul von Sidey ist
+  - Bugfix RSSI bei FSK
+  - neue ID 215: MAX
 18.09.23
  14_SD_WS.pm
   - log Ausgaben angepasst

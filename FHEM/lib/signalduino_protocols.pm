@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3416 2023-07-23 23:00:00Z v3.4.16-dev-Ralf9 $
+# $Id: signalduino_protocols.pm 3417 2023-11-07 19:00:00Z v3.4.17-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.16-dev_ralf_23.07.'
+		"version" => 'v3.4.17-ralf_07.11.23'
 		);
 
 our %rfmode = (
@@ -102,7 +102,8 @@ our %rfmodeTesting = (
     "Inkbird_433__B18_N14_FSK"       => 'CW0001,0246,0304,042D,05D4,0612,07C0,0800,0D10,0EB0,0F71,10C8,1193,1202,1322,14F8,1543,1700,1818,1916,1B43,1C48,1D91,23E9,242A,2500,2611,3D0E,3E01,4049,416E,426B,4362,4469,4572,4664,4700',
     "WH24_WH25__B16_N1_17241"        => 'CW0001,0246,0304,042D,05D4,0610,0700,0800,0D21,0E65,0F6A,1089,115C,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,23E9,242A,2500,2611,3D00,3E01,4057,4148,4232,4334,4457,4548,4632,4735',
     "W136__B24_N10_4798"             => 'CW0001,0246,0305,042D,05D4,0616,0700,0800,0D21,0E65,0F6A,1087,1183,1206,1322,14F8,1556,1700,1818,1916,1B43,1C68,1D91,23E9,242A,2500,2611,3D0A,3E01,4057,4131,4233,4336,4400',
-    "Elero__N13_ab_firmw_V335_u_V422"=> 'CW0007,0209,0307,04D3,0591,063C,078C,0845,0B08,0D21,0E71,0F7A,107B,1183,1213,1352,14F8,1543,173F,1818,191D,1A1C,1BC7,1C00,1DB2,21B6,23EA,242A,2500,261F,2C81,2D35,2E09,3AA5,3B60,3D0D,3E01,4045,416C,4265,4372,446F,4500'
+    "Elero__N13_ab_firmw_V335_u_V422"=> 'CW0007,0209,0307,04D3,0591,063C,078C,0845,0B08,0D21,0E71,0F7A,107B,1183,1213,1352,14F8,1543,173F,1818,191D,1A1C,1BC7,1C00,1DB2,21B6,23EA,242A,2500,261F,2C81,2D35,2E09,3AA5,3B60,3D0D,3E01,4045,416C,4265,4372,446F,4500',
+    "MAX__N15"                       => 'CW0007,0246,0307,04C6,0526,06FF,070C,0845,0D21,0E65,0F6A,10C8,1193,1203,1322,14F8,1534,173F,1916,1B43,1C40,1D91,23E9,242A,251F,2611,3D0F,3E01,404D,4141,4258,435F,4400'
     );
 
 our %ProtocolListSIGNALduino  = (
@@ -959,7 +960,7 @@ our %ProtocolListSIGNALduino  = (
 				comment			=> 'remote control for LED Controller M4-5A',
 				changed			=> '20200211 new. Old moved to ID 34',
 				id              => '31',
-				developId       => 'y',
+				developId       => 'm',
 				one             => [2,-0.9],
 				zero            => [1,-1.8],
 				start           => [1,-0.9, 1,-3.8],
@@ -3088,8 +3089,13 @@ our %ProtocolListSIGNALduino  = (
 		"115" =>  ## BRESSER 6-in-1 Weather Center, Bresser new 5-in-1 sensors 7002550
 			# https://github.com/RFD-FHEM/RFFHEM/issues/607
 			# https://forum.fhem.de/index.php/topic,78809.0.html
+			# The sensor alternately sends two different messages every 12 seconds
 			# T: 24.7 H: 65 Ws: 0 Wg: 0 Wd: SSW MN;D=C56620B00C1618FFFFFF2028247265FFF0C60000000000000000004B;N=7;R=34;
 			# Ws: 1.9 Wg: 2.2 Wd: SSE R: 3.6    MN;D=F07D20B00C1618FDD6FE1588FFFFC9FF01C000000000000000000200;N=7;R=230;
+			#
+			# T: 21.2 H: 63 CH: 1 indoor         MN;D=6CD6197005FD2900000000002126630000A1FFFF07000000000000000000;N=7;R=28;
+			# T: 25.2 H: 99 CH: 7 Soil Moisture  MN;D=F16E187000E347FFFFFF0000252216FFF004000;N=7;R=242;
+			# T: 27.5 CH: 7 Pool Thermometer     MN;D=1B3F22C000B43F00000000002756000000ADFFFF0700000000000000;N=7;R=215;
 			{
 				name            => 'Bresser comfort 6in1 (5in1 neu)',
 				comment         => 'BRESSER 6-in-1 and 5-in-1 new comfort weather center',
@@ -3739,16 +3745,16 @@ our %ProtocolListSIGNALduino  = (
 				#length_min      => '',
 				method          => \&main::SIGNALduino_WMBus,
 			},
-		"211" => # ecowitt WH31, Ambient Weather WH31E, froggit DP50
+		"125" => # (alt 211) ecowitt WH31, Ambient Weather WH31E, froggit DP50
 			# https://forum.fhem.de/index.php/topic,111653.msg1212517.html#msg1212517
-			# T: -1.7 H: 28 channel:1 Bat ok  W211#3024817F1C  MN;D=3024817F1CF56500000000000000000000000000;R=18;
-			# T: 16.9 H: 69 channel:8 Bat ok  W211#3024F23945  MN;D=3024F2394535F900000000000000000000000000;R=32;
-			# T: 15.1 H: 44 channel:1 Bat low W211#30248A272C  MN;D=30248A272C78A900000000000000000000000000;R=24;
+			# T: -1.7 H: 28 channel:1 Bat ok  W125#3024817F1CF565  MN;D=3024817F1CF56500000000000000000000000000;R=18;
+			# T: 16.9 H: 69 channel:8 Bat ok  W125#3024F2394535F9  MN;D=3024F2394535F900000000000000000000000000;R=32;
+			# T: 15.1 H: 44 channel:1 Bat low W125#30248A272C78A9  MN;D=30248A272C78A900000000000000000000000000;R=24;
 			{
 				name            => 'WH31 DP50',
 				comment         => 'ecowitt WH31, froggit DP50',
 				changed         => '20220304 new',
-				id              => '211',
+				id              => '125',
 				knownFreqs      => '868.35',
 				N               => [1,6],
 				defaultNoN      => '1',         # wenn 1, dann matchen auch Nachrichten ohne die N Nr
@@ -3757,10 +3763,11 @@ our %ProtocolListSIGNALduino  = (
 				modulation      => '2-FSK',
 				cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
 				match           => '^(30|37).*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
-				preamble        => 'W211#',
+				preamble        => 'W125#',
 				clientmodule    => 'SD_WS',
 				length_min      => '14',     # 7 Byte
-				method        => \&main::SIGNALduino_WH31,
+				method          => \&main::SIGNALduino_FSK_default,
+				#method        => \&main::SIGNALduino_WH31,
 			},
 		"212"	=>	## HMS
 			# https://forum.fhem.de/index.php/topic,126812.0.html
@@ -3779,7 +3786,7 @@ our %ProtocolListSIGNALduino  = (
 				method          => \&main::SIGNALduino_HMS, # Call to process this message
 				polarity        => 'invert',
 			},
-    "213" => # rain gauge ecowitt | Fine Offset | Ambient Weather WH40
+    "126" => # (alt 213) rain gauge ecowitt | Fine Offset | Ambient Weather WH40
              # SD_WS_126_R_011CDF R: 0 MN;D=40011CDF8F00009762;R=61;
              # SD_WS_126_R_013E3C R: 0 MN;D=40013E3C900000105B;R=61;
              #
@@ -3787,7 +3794,7 @@ our %ProtocolListSIGNALduino  = (
         name            => 'WH40',
         comment         => 'ecowitt | Fine Offset | Ambient Weather WH40 rain gauge',
         changed         => '20230403 new',
-        id              => '213',
+        id              => '126',
         knownFreqs      => '868.35',
         N               => [1,6],
         defaultNoN      => '1',         # wenn 1, dann matchen auch Nachrichten ohne die N Nr
@@ -3796,19 +3803,20 @@ our %ProtocolListSIGNALduino  = (
         modulation      => '2-FSK',
         cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
         match           => '^40.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
-        preamble        => 'W213#',
+        preamble        => 'W126#',
         clientmodule    => 'SD_WS',
         length_min      => '18',     # 9 Byte
-        method          => \&main::SIGNALduino_WH40,
+        method          => \&main::SIGNALduino_FSK_default,
+        #method          => \&main::SIGNALduino_WH40,
       },
-    "214" => # ecowitt WS68 Anemometer. todo: einbauen ins SD_WS Modul'
+    "214" => # ecowitt WS68 Anemometer
              # MN;D=680000c500004b0fffff005a0000d0af;
              # MN;D=680000c500004b2fffff000e00008033;
              # MN;D=680000c501074b0fffff002e0002a663;
              #
       {
         name            => 'WH68',
-        comment         => 'ecowitt WS68 Anemometer. todo: einbauen ins SD_WS Modul',
+        comment         => 'ecowitt WS68 Anemometer',
         changed         => '20230408 new',
         id              => '214',
         knownFreqs      => '868.35',
@@ -3822,7 +3830,31 @@ our %ProtocolListSIGNALduino  = (
         preamble        => 'W214#',
         clientmodule    => 'SD_WS',
         length_min      => '32',     # 16 Byte
-        method          => \&main::SIGNALduino_WH68,
+        method          => \&main::SIGNALduino_FSK_default,
+        #method          => \&main::SIGNALduino_WH68,
+      },
+    "215" => # MAX
+             # https://forum.fhem.de/index.php?topic=135560.0
+             # MN;D=0B6E0630163CD912345600102E83;N=15;r;
+             # MN;D=0B6E0002123456163CD900002088;N=15;r;
+      {
+        name            => 'MAX',
+        #comment         => '',
+        changed         => '20231107 new',
+        id              => '215',
+        knownFreqs      => '868.3',
+        N               => [15],
+        datarate        => '9992.60',
+        sync            => 'C626',
+        lqiPos          => -2,
+        rssiPos         => -4,
+        modulation      => '2-FSK',
+        cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+        #match           => '',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+        preamble        => 'Z',
+        clientmodule    => 'CUL_MAX',
+        length_min      => '28',     # 14 Byte
+        method          => \&main::SIGNALduino_MAX,
       }
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
