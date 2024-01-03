@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3417 2023-11-07 19:00:00Z v3.4.17-Ralf9 $
+# $Id: signalduino_protocols.pm 3500 2024-01-03 22:00:00Z v3.5.0-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.4.17-ralf_07.11.23'
+		"version" => 'v3.5.0-ralf_03.01.24'
 		);
 
 our %rfmode = (
@@ -775,11 +775,12 @@ our %ProtocolListSIGNALduino  = (
 			id					=> '22',
 			one					=> [1,-3],
 			zero					=> [3,-1],
-			start					=> [6,-6],
-			clockabs				=> 200,						# ca 200us
+			start					=> [1,-1,1,-1,6,-6],
+			end						=> [1,-1,1,-1],
+			clockabs				=> 200,
 			format					=> 'twostate',
-			preamble				=> 'u22#',				# prepend to converted message
-			clientmodule    => 'SIGNALduino_un',
+			preamble				=> 'P22#',				# prepend to converted message
+			clientmodule    => 'SD_UT',
 			#modulematch     => '',
 			length_min				=> '32',
 			length_max				=> '32',
@@ -3447,6 +3448,58 @@ our %ProtocolListSIGNALduino  = (
         method          => \&main::SIGNALduino_SainlogicWS, # Call to process this message
         polarity        => 'invert',
       },
+    "130" =>  ## Remote control CREATE 6601TL for ceiling fan with light
+                 # https://forum.fhem.de/index.php?msg=1288203 @ erdnar 2023-09-29
+                 # CREATE_6601TL_F53A light_on_off     MS;P1=425;P2=-1142;P3=1187;P4=-395;P5=-12314;D=15121212123412341234341212123412341212121212121234;CP=1;SP=5;R=232;O;m2;
+                 # CREATE_6601TL_F53A light_cold_warm  MS;P1=432;P2=-1143;P3=1183;P4=-393;P5=-12300;D=15121212123412341234341212123412341212121212123434;CP=1;SP=5;R=231;O;m2;
+                 # CREATE_6601TL_F53A fan_faster       MS;P0=-11884;P1=392;P2=-1179;P3=1180;P4=-391;D=10121212123412341234341212123412341212121212341234;CP=1;SP=0;R=231;O;m2;
+      {
+        name             => 'CREATE_6601TL',
+        comment          => 'Remote control for ceiling fan with light',
+        changed          => '20231104 new',
+        id               => '130',
+        one              => [1,-3],  #
+        zero             => [3,-1],  #
+        sync             => [1,-30], #
+        clockabs         => '400',
+        format           => 'twostate',
+        preamble         => 'P130#',
+        clientmodule     => 'SD_UT',
+        modulematch      => '^P130#',
+        length_min       => '24',
+        length_max       => '24',
+      },
+    "132"  =>  ## Remote control Halemeier HA-HX2 for Actor HA-RX-M2-1
+               # https://github.com/RFD-FHEM/RFFHEM/issues/1207 @ HomeAuto_User 2023-12-11
+               # https://forum.fhem.de/index.php?topic=38452.0 (probably identical)
+               # remote 1 - off | P132#85EFAC
+               # MU;P0=304;P1=-351;P2=633;P3=-692;P4=-12757;D=01230303030301230123030121240301212121230123030303012303030303012124030121212123012303030301230303030301230123030121240301212121230123030303012303030303012301230301212403012121212301230303030123030303030123012303012124030121212123012303030301230303030301;CP=0;R=241;O;
+               # MU;P0=-12609;P1=305;P2=-696;P3=-344;P4=653;D=01213434343421342121212134212121212134213421213434012134343434213421212121342121212121342134212134340121343434342134212121213421212121213421342121343401213434343421342121212134212121212134213421213434012134343434213421212121342121212121342134212134340121;CP=1;R=239;O;
+               # remote 1 - on  | P132#85EFAA
+               # MU;P0=-696;P1=312;P2=-371;P3=637;P4=-12847;D=01012301230123012341012323232301230101010123010101010123012301230123410123232323012301010101230101010101230123012301234101232323230123010101012301010101012301230123012341012323232301230101010123010101010123012301230123410123232323012301010101230101010101;CP=1;R=236;O;
+               # MU;P0=-701;P1=304;P2=-366;P3=642;P4=-12781;D=01012301230123012341012323232301230101010123010101010123012301230123410123232323012301010101230101010101230123012301234101232323230123010101012301010101012301230123012341012323232301230101010123010101010123012301230123410123232323012301010101230101010101;CP=1;R=238;O;
+               # remote 2 - on  | P132#01EFAA
+               # MU;P0=-340;P1=639;P2=-686;P3=304;P4=-12480;D=01230123014301010101010101232323232301230123012301430101010101010123232323012323232323012301230123014301010101010101232323230123232323230123012301230143010101010101012323232301232323232301230123012301430101010101010123232323012323232323012301230123014301;CP=3;R=226;O;
+               # MU;P0=-120;P1=642;P2=-343;P3=-684;P4=319;P5=-12492;D=01212121343434342134343434342134213421342154212121212121213434343421343434343421342134213421542121212121212134343434213434343434213421342134215421212121212121343434342134343434342134213421342154212121212121213434343421343434343421342134213421542121212121;CP=4;R=227;O;
+               # remote 2 - off  | P132#01EFAC
+               # MU;P0=622;P1=-367;P2=-690;P3=323;P4=-12531;D=01010101010101023232323102323232323102310232310101010102323232310232323232310231023231010431010101010101023232323102323232323102310232310104310101010101010232323231023232323231023102323101043101010101010102323232310232323232310231023231010431010101010101;CP=3;R=235;O;
+               # MU;P0=307;P1=-685;P2=-350;P3=658;P4=-12510;D=01010102310101010102310231010232340232323232323231010101023101010101023102323232323232323101010102310101010102310231010232340232323232323231010101023101010101023102310102323402323232323232310101010231010101010231023101023234023232323232323101010102310101;CP=0;R=232;O;
+      {
+        name            => 'HA-HX2',
+        comment         => 'Remote control for Halemeier LED actor HA-RX-M2-1',
+        changed         => '20231214 new',
+        id              => '132',
+        one             => [-2,1],
+        zero            => [-1,2],
+        start           => [-39,1],
+        clockabs        => 330,
+        format          => 'twostate',
+        preamble        => 'P132#',
+        clientmodule    => 'SD_UT',
+        modulematch     => '^P132#.*',
+        length_min      => '24',
+        length_max      => '24',
+      },    
     "198" =>  ##  VONDOM Handsender von einem RGBW LED Blumentopf
              # https://forum.fhem.de/index.php?topic=129836.0 @Sebastian J
              # u198#91 MU;P0=96;P1=-111;P2=-4341;P3=598;P4=-448;P5=289;P6=-745;D=0101010101010101010101010101010101010101010102345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563;CP=5;R=41;
@@ -3661,10 +3714,12 @@ our %ProtocolListSIGNALduino  = (
 				length_min      => '44',     # 22 Byte
 				method        => \&main::SIGNALduino_W136,
 			},
-		"207" =>  ## BRESSER 7-in-1 Weather Center
+		"207" =>  ## BRESSER 7-in-1 Weather Center (outdoor sensor)
 			# T: 12.7 H: 87 Ws: 0.7 Wg: 0.7 Wd: ESE, rain: 8.4           W207#0C5F1200B2007007000084001270870068000000000000;  MN;D=C26DA6F5B8AA18AADAADAAAA2EAAB8DA2DAAC2AAAAAAAAAAAA000000;N=7;
 			# T: 21.7 H: 61 Ws: 0 Wg: 0 Wd: E R: 0, lux: 109280 uv: 6.7  W207#1E0F0970BA000000000000002170611092800670000000;
-			#
+			## BRESSER PM2.5/10 air quality meter @ elektron-bbs 2023-11-30
+			# PM2.5: 629  PM10: 636   MN;D=ACF66068BDCA89BD2AF22AC83AC9CA33333333333393CAAAAA00;N=7;
+			# PM2.5:   8  PM10:   9   MN;D=E3626068BDCA89BD2AAADAAA2AAA3AAEEAAF9AAFEA93CAAAAA00;N=7;
 			{
 				name            => 'Bresser Profi 7in1',
 				comment         => 'BRESSER 7-in-1 weather center',
@@ -3679,7 +3734,7 @@ our %ProtocolListSIGNALduino  = (
 				#match           => '^9.*',   # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
 				preamble        => 'W207#',
 				clientmodule    => 'SD_WS',
-				length_min      => '50',      # 25 Byte
+				length_min      => '46',      # 23 Byte
 				method          => \&main::SIGNALduino_Bresser_7in1,
 			},
 		"208" => ## WMBUS S
