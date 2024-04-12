@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2023-09-18 17:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2024-04-12 17:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -512,7 +512,7 @@ sub SD_WS_Parse {
                                   return $rawRainCounterMessage + 10;
                                 }
                               },
-        rain_total     => sub {my (undef,$bitData) = @_; 
+        rain           => sub {my (undef,$bitData) = @_; 
                                 my $rawRainCounterMessage = SD_WS_binaryToNumber($bitData,32,39) + SD_WS_binaryToNumber($bitData,48,55) * 256;
                                 if ($rawRainCounterMessage > 65525) {
                                   return ($rawRainCounterMessage - 65526) * 0.254;
@@ -2437,7 +2437,7 @@ sub SD_WS_Parse {
             # wenn der aktuelle Wert < letzter Wert ist, dann fand ein reset statt
             # die Differenz "letzter Wert - aktueller Wert" wird dann als offset für zukünftige Ausgaben zu rain addiert
             # offset wird auch im Reading ".rain_offset" gespeichert
-            if ($rain < $lastRain) {
+            if ($rain < $lastRain && $protocol ne '54') {
               $rainOffset += $lastRain;
               readingsSingleUpdate($hash, '.rainOffset', $rainOffset, 0);
               Log3 $hash, 3, "$ioname: $name reset rain, rain: $rain lastrain: $lastRain, new rainOffset: $rainOffset";
