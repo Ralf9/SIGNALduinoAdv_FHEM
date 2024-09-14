@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3500 2024-01-03 22:00:00Z v3.5.0-Ralf9 $
+# $Id: signalduino_protocols.pm 3510 2024-09-14 22:00:00Z v3.5.1-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.5.0-ralf_03.01.24'
+		"version" => 'v3.5.1-ralf_14.09.24'
 		);
 
 our %rfmode = (
@@ -1219,7 +1219,7 @@ our %ProtocolListSIGNALduino  = (
 			length_max => '44',
 			paddingbits     => '8',
 			postDemodulation => \&main::SIGNALduino_postDemo_lengtnPrefix,
-			filterfunc      => \&main::SIGNALduino_compPattern,
+			filterfunc      => \&main::SIGNALduinoAdv_compPattern,
 		},    
 	"40" => ## Romotec
 			# https://github.com/RFD-FHEM/RFFHEM/issues/71
@@ -1839,7 +1839,7 @@ our %ProtocolListSIGNALduino  = (
 			clientmodule => 'SIGNALduino_un', 
 			#modulematch => '', 
 			length_min   => '24',
-			filterfunc   => \&main::SIGNALduino_filterMC,
+			filterfunc   => \&main::SIGNALduinoAdv_filterMC,
 		},
 	"64" => ##  WH2
 			# W64#FF48D0C9FFBA
@@ -3910,6 +3910,26 @@ our %ProtocolListSIGNALduino  = (
         clientmodule    => 'CUL_MAX',
         length_min      => '28',     # 14 Byte
         method          => \&main::SIGNALduino_MAX,
+      },
+    "216" => #
+             # https://forum.fhem.de/index.php?topic=139142.0
+             # https://forum.fhem.de/index.php?topic=139133.0
+             # MC;LL=-507;LH=504;SL=-250;SH=246;D=000111AAD6B3916D5AC23A16FCCEE4F8D5B309DC;C=251;L=160;R=243;s30;b1;
+             # MC;LL=-511;LH=501;SL=-255;SH=236;D=000442AF5ECA41B16F0C279746EF6675E2CC25E4;C=250;L=158;R=241;s30;b5;
+      {
+        name            => 'ESA2000',
+        comment         => 'ESA2000 und ESA1000 fuer Stromzaehler (analog und digital) und Gas',
+        changed         => '20240913 new',
+        id              => '216',
+        clockrange      => [240,260],     # min , max
+        format          => 'manchester',
+        clientmodule    => 'ESA2000',
+        #modulematch     => '',
+        preamble        => 'S',
+        length_min      => '152',
+        length_max      => '160',
+        method          => \&main::SIGNALduino_ESA2000, # Call to process this message
+        polarity        => 'invert',
       }
 		########################################################################
 		#### ### old information from incomplete implemented protocols #### ####
@@ -3938,7 +3958,7 @@ our %ProtocolListSIGNALduino  = (
 				# #modulematch   => '',
 				# length_min    => '16',
 				# #length_max   => '',						# missing
-				# filterfunc    => 'SIGNALduino_filterSign',
+				# filterfunc    => 'SIGNALduinoAdv_filterSign',
 			# },
 
 		########################################################################

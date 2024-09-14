@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduinoAdv.pm 3500 2024-01-03 22:00:00Z v3.5.0-Ralf9 $
+# $Id: 00_SIGNALduinoAdv.pm 3510 2024-09-14 22:00:00Z v3.5.1-Ralf9 $
 #
-# v3.4.17
+# v3.5.1
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -9,7 +9,7 @@
 # It routes Messages serval Modules which are already integrated in FHEM. But there are also modules which comes with it.
 # N. Butzek, S. Butzek, 2014-2015
 # S.Butzek,Ralf9 2016-2019
-# Ralf9 2020-2023
+# Ralf9 2020-2024
 
 package main;
 my $missingModulSIGNALduinoAdv="";
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.5.0-ralf_03.01.24",
+	SDUINO_VERSION            => "v3.5.1-ralf_14.09.24",
 	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINO_INIT_WAIT          => 3,
 	SDUINO_INIT_MAXRETRY      => 3,
@@ -217,6 +217,7 @@ my $clientsSIGNALduinoAdv = ":CUL_TCM97001:"
                         ."Siro:"
                         ."LTECH:"
                         ."CUL_MAX:"
+                        ."ESA2000:"
                         ."SD_Tool:"
                         ."SIGNALduino_un:"
                     ;
@@ -260,6 +261,7 @@ my %matchListSIGNALduinoAdv = (
       '36:IFB'              => '^J............',
       '37:LTECH'            => '^P31#[A-Fa-f0-9]{26,}',
       '38:CUL_MAX'          => '^Z.*',
+      '39:ESA2000'          => '^S................................',
       '90:SD_Tool'          => '^pt([0-9]+(\.[0-9])?)(#.*)?',
       'X:SIGNALduino_un'    => '^[u]\d+#.*',
 );
@@ -2396,7 +2398,7 @@ sub SIGNALduinoAdv_PatternExists {
     $i++;
   }
 
-  sub cartesian_product {
+  sub SIGNALduinoAdv_cartesian_product {
     use List::Util qw(reduce);
     reduce {
       [ map {
@@ -2405,7 +2407,7 @@ sub SIGNALduinoAdv_PatternExists {
       } @$b ]
     } [[]], @_
   }
-  my @res = cartesian_product @sumlist;
+  my @res = SIGNALduinoAdv_cartesian_product @sumlist;
   Debug qq[sumlists is: ].Dumper @sumlist if($debug);
   Debug qq[res is: ].Dumper $res[0] if($debug);
   Debug qq[indexer is: ].Dumper \@indexer if($debug);
@@ -4297,7 +4299,7 @@ sub SIGNALduinoAdv_callsub
 # calculates the hex (in bits) and adds it at the beginning of the message
 # input = @list
 # output = @list
-sub SIGNALduinoAdv_postDemo_lengtnPrefix
+sub SIGNALduino_postDemo_lengtnPrefix
 {
 	my ($name, @bit_msg) = @_;
 	
@@ -5618,6 +5620,85 @@ sub SIGNALduino_SomfyRTS
 	return (1, $encData);
 }
 
+sub SIGNALduino_ESA2000
+{
+    my ($name,$bitData,$id,$mcbitnum) = @_;
+    my $bin;
+    my $byte;
+    my $hex;
+    my $pos;
+    my $prePos; # = 4-(160-$mcbitnum)
+    my $preamble_test_len;
+    my $preamble_test;
+    my @data = ();
+    
+    my ($rcode, $rtxt) = SIGNALduinoAdv_TestLength($name, $id, $mcbitnum, "ESA2000 ID=$id");
+    if (!$rcode) {
+        return (-1," $rtxt");
+    }
+    
+    if ($mcbitnum <= 156) {
+        $prePos = 8 + $mcbitnum - 160;
+        $preamble_test_len = 8;
+        $preamble_test = '11111110';
+    }
+    else {
+        $prePos = 4 + $mcbitnum - 160;
+        $preamble_test_len = 12;
+        $preamble_test = '111111111110';
+    }
+    if (substr($bitData,$prePos,$preamble_test_len) ne $preamble_test) {
+        return (-1, 'ESA2000: preamble not found');
+    }
+    
+    $pos = 16 + $mcbitnum - 160;
+    $bitData = substr($bitData, $pos);
+    Log3 $name, 5, "$name: pos=$pos bitData $bitData";
+    
+    for (my $i=0; $i<18;$i++) {
+        $bin = substr($bitData, $i*8,8);
+        $byte = oct("b".$bin);
+        push(@data, $byte);
+    }
+    
+    $hex = '';
+    for (my $i=0; $i<18;$i++) {
+       $hex .= sprintf('%02X', $data[$i]) . ' ';
+    }
+    
+    my $salt = 0x89;
+    my $crc  = 0xf00f;
+    my $crchex;
+       $pos = 0;
+    my $oby;
+    
+    for ($oby = 0; $oby < 15; $oby++) {
+        $byte = $data[$pos];
+        $crc += $byte;
+        $data[$pos++] ^= $salt;
+        $salt = $byte + 0x24;
+        $salt &= 0xff;
+    }
+    $byte = $data[$pos];
+    $crc += $byte;
+    $data[$pos++] ^= 0xff;
+    $crchex = sprintf('%02X', $crc);
+    
+    if ($crc == ($data[$pos] * 256 + $data[$pos+1])) {
+        Log3 $name, 5, "$name: dataHex $hex crc=$crchex crc ok";
+    }
+    else {
+        Log3 $name, 5, "$name: dataHex $hex crc=$crchex crc Error!";
+        return (-1, 'ESA2000: crc Error!');
+    }
+    $hex = '';
+    for (my $i=0; $i<=15;$i++) {
+       $hex .= sprintf('%02X', $data[$i]);
+    }  
+    
+    return  (1,$hex);
+}
+
 
 sub SIGNALduinoAdv_TestLength
 {
@@ -5638,14 +5719,14 @@ sub SIGNALduinoAdv_TestLength
 }
 
 # - - - - - - - - - - - -
-#=item SIGNALduino_filterMC()
+#=item SIGNALduinoAdv_filterMC()
 #This functons, will act as a filter function. It will decode MU data via Manchester encoding
 # 
 # Will return  $count of ???,  modified $rawData , modified %patternListRaw,
 # =cut
 
 
-sub SIGNALduino_filterMC
+sub SIGNALduinoAdv_filterMC
 {
 	
 	## Warema Implementierung : Todo variabel gestalten
@@ -6338,14 +6419,14 @@ sub SIGNALduino_MAX
 }
 
 # - - - - - - - - - - - -
-#=item SIGNALduino_filterSign()
+#=item SIGNALduinoAdv_filterSign()
 #This functons, will act as a filter function. It will remove the sign from the pattern, and compress message and pattern
 # 
 # Will return  $count of combined values,  modified $rawData , modified %patternListRaw,
 # =cut
 
 
-sub SIGNALduino_filterSign	# wurde von Livolo verwendet
+sub SIGNALduinoAdv_filterSign	# wurde von Livolo verwendet
 {
 	my ($name,$id,$rawData,%patternListRaw) = @_;
 	my $debug = AttrVal($name,"debug",0);
@@ -6411,14 +6492,14 @@ sub SIGNALduino_filterSign	# wurde von Livolo verwendet
 
 
 # - - - - - - - - - - - -
-#=item SIGNALduino_compPattern()
+#=item SIGNALduinoAdv_compPattern()
 #This functons, will act as a filter function. It will remove the sign from the pattern, and compress message and pattern
 # 
 # Will return  $count of combined values,  modified $rawData , modified %patternListRaw,
 # =cut
 
 
-sub SIGNALduino_compPattern
+sub SIGNALduinoAdv_compPattern
 {
 	my ($name,$id,$rawData,%patternListRaw) = @_;
 	my $debug = AttrVal($name,"debug",0);
@@ -7564,6 +7645,10 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
             <li>XQ -> disableReceiver</li>
             <li>XE -> enableReceiver</li>
           </ul>
+          Nur beim Maple oder ESP32 (V4.2.x)<br>
+          CR - configRadio:<br>
+          MIt CRE<A-D> kann ein cc1101 Modul aktiviert werden. z.B. CREA aktiviert das erste cc1101 Modul A<br>
+          MIt CRD<A-D> kann ein cc1101 Modul deaktiviert werden. z.B. CRDA deaktiviert das erste cc1101 Modul A<br>
          <br></li>
 	</li><br>
 	<a id="SIGNALduinoAdv-get-uptime"></a>
