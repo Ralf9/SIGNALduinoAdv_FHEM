@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduinoAdv.pm 3510 2024-09-14 22:00:00Z v3.5.1-Ralf9 $
+# $Id: 00_SIGNALduinoAdv.pm 3520 2024-11-44 22:00:00Z v3.5.2-Ralf9 $
 #
-# v3.5.1
+# v3.5.2
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,22 +29,22 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINO_VERSION            => "v3.5.1-ralf_14.09.24",
-	SDUINO_INIT_WAIT_XQ       => 2.5,    # wait disable device
-	SDUINO_INIT_WAIT          => 3,
-	SDUINO_INIT_MAXRETRY      => 3,
-	SDUINO_CMD_TIMEOUT        => 10,
-	SDUINO_KEEPALIVE_TIMEOUT  => 60,
-	SDUINO_KEEPALIVE_MAXRETRY => 3,
-	SDUINO_WRITEQUEUE_NEXT    => 0.3,
-	SDUINO_WRITEQUEUE_TIMEOUT => 2,
-	SDUINO_recAwNotMatch_Max  => 10,
-	SDUINO_parseRespMaxReading => 130,
+	SDUINOA_VERSION            => "v3.5.2-ralf_04.11.24",
+	SDUINOA_INIT_WAIT_XQ       => 2.5,    # wait disable device
+	SDUINOA_INIT_WAIT          => 3,
+	SDUINOA_INIT_MAXRETRY      => 3,
+	SDUINOA_CMD_TIMEOUT        => 10,
+	SDUINOA_KEEPALIVE_TIMEOUT  => 60,
+	SDUINOA_KEEPALIVE_MAXRETRY => 3,
+	SDUINOA_WRITEQUEUE_NEXT    => 0.3,
+	SDUINOA_WRITEQUEUE_TIMEOUT => 2,
+	SDUINOA_recAwNotMatch_Max  => 10,
+	SDUINOA_parseRespMaxReading => 130,
 	
-	SDUINO_DISPATCH_VERBOSE     => 5,      # default 5
-	SDUINO_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
-	SDUINO_MC_DISPATCH_LOG_ID   => '12.1', # die o.g. Ausgabe erfolgt nur wenn der Wert mit der ID uebereinstimmt
-	SDUINO_PARSE_DEFAULT_LENGHT_MIN => 8,
+	SDUINOA_DISPATCH_VERBOSE     => 5,      # default 5
+	SDUINOA_MC_DISPATCH_VERBOSE  => 3,      # wenn kleiner 5, z.B. 3 dann wird vor dem dispatch mit loglevel 3 die ID und rmsg ausgegeben
+	SDUINOA_MC_DISPATCH_LOG_ID   => '12.1', # die o.g. Ausgabe erfolgt nur wenn der Wert mit der ID uebereinstimmt
+	SDUINOA_PARSE_DEFAULT_LENGHT_MIN => 8,
 };
 
 my %ProtocolListSIGNALduino = %SD_Protocols::ProtocolListSIGNALduino;
@@ -300,6 +300,7 @@ SIGNALduinoAdv_Initialize
 					  ." updateChannelFW:stable,testing,Ralf9"
 					  ." debug:0$dev"
 					  ." longids"
+					  ." maxid"
 					  ." minsecs"
 					  ." whitelist_IDs"
 					  ." blacklist_IDs"
@@ -432,7 +433,7 @@ SIGNALduinoAdv_Define
   $hash->{LASTDMSG} = "nothing";
   $hash->{LASTDMSGID} = "nothing";
   $hash->{TIME}=time();
-  $hash->{versionmodul} = SDUINO_VERSION;
+  $hash->{versionmodul} = SDUINOA_VERSION;
   if (defined($VersionProtocolList->{version})) {
 	$hash->{versionprotoL} = $VersionProtocolList->{version};
 	Log3 $name, 3, "$name: Protocolhashversion: " . $hash->{versionprotoL};
@@ -1684,9 +1685,9 @@ SIGNALduinoAdv_DoInit
 		RemoveInternalTimer($hash);
 		
 		#SIGNALduino_SimpleWrite($hash, "XQ"); # Disable receiver
-		InternalTimer(gettimeofday() + SDUINO_INIT_WAIT_XQ, "SIGNALduinoAdv_SimpleWrite_XQ", $hash, 0);
+		InternalTimer(gettimeofday() + SDUINOA_INIT_WAIT_XQ, "SIGNALduinoAdv_SimpleWrite_XQ", $hash, 0);
 		
-		InternalTimer(gettimeofday() + SDUINO_INIT_WAIT, "SIGNALduinoAdv_StartInit", $hash, 0);
+		InternalTimer(gettimeofday() + SDUINOA_INIT_WAIT, "SIGNALduinoAdv_StartInit", $hash, 0);
 	}
 	# Reset the counter
 	delete($hash->{XMIT_TIME});
@@ -1724,7 +1725,7 @@ sub SIGNALduinoAdv_StartInit
 		Log3 $name,3 , "$name/init: get version aborted because of STATE = disconnected!";
 		return;
 	}
-	if ($hash->{initretry} >= SDUINO_INIT_MAXRETRY) {
+	if ($hash->{initretry} >= SDUINOA_INIT_MAXRETRY) {
 		$hash->{DevState} = 'INACTIVE';
 		# einmaliger reset, wenn danach immer noch 'init retry count reached', dann SIGNALduino_CloseDevice()
 		if (!defined($hash->{initResetFlag})) {
@@ -1743,7 +1744,7 @@ sub SIGNALduinoAdv_StartInit
 		#DevIo_SimpleWrite($hash, "V\n",2);
 		$hash->{DevState} = 'waitInit';
 		RemoveInternalTimer($hash);
-		InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT + 30 * $hash->{initretry}, "SIGNALduinoAdv_CheckCmdResp", $hash, 0);
+		InternalTimer(gettimeofday() + SDUINOA_CMD_TIMEOUT + 30 * $hash->{initretry}, "SIGNALduinoAdv_CheckCmdResp", $hash, 0);
 	}
 }
 
@@ -1795,7 +1796,7 @@ sub SIGNALduinoAdv_CheckCmdResp
 				$hash->{DevState} = 'waitBankInfo';
 				$hash->{getcmd}->{cmd} = "cmdBank";
 				RemoveInternalTimer($hash);
-				InternalTimer(gettimeofday() + SDUINO_CMD_TIMEOUT, "SIGNALduinoAdv_CheckCmdResp", $hash, 0);
+				InternalTimer(gettimeofday() + SDUINOA_CMD_TIMEOUT, "SIGNALduinoAdv_CheckCmdResp", $hash, 0);
 			}
 			else {	# firmware hat keine EEPROM Baenke oder kein cc1101
 				if ($ver =~ m/cc1101/) {
@@ -1830,7 +1831,7 @@ sub SIGNALduinoAdv_CheckCmdResp
 		    }
 		  }
 		  if ($initflag) {
-			Log3 $name, 2, "$name: initialized. " . SDUINO_VERSION;
+			Log3 $name, 2, "$name: initialized. " . SDUINOA_VERSION;
 			$hash->{DevState} = 'initialized';
 			delete($hash->{initResetFlag}) if defined($hash->{initResetFlag});
 			SIGNALduinoAdv_SimpleWrite($hash, "XE"); # Enable receiver
@@ -1840,7 +1841,7 @@ sub SIGNALduinoAdv_CheckCmdResp
 			# initialize keepalive
 			$hash->{keepalive}{ok}    = 0;
 			$hash->{keepalive}{retry} = 0;
-			InternalTimer(gettimeofday() + SDUINO_KEEPALIVE_TIMEOUT, "SIGNALduinoAdv_KeepAlive", $hash, 0);
+			InternalTimer(gettimeofday() + SDUINOA_KEEPALIVE_TIMEOUT, "SIGNALduinoAdv_KeepAlive", $hash, 0);
 		  }
 		}
 	}
@@ -1899,7 +1900,7 @@ SIGNALduinoAdv_Write
   my $name = $hash->{NAME};
 
   if ($fn eq "") {
-    $fn="RAW" ;
+    $fn="raw" ;
   }
   elsif($fn eq "04" && substr($msg,0,6) eq "010101") {   # FS20
     $fn="sendMsg";
@@ -1963,9 +1964,9 @@ SIGNALduinoAdv_SendFromQueue
   # else it will be sent too early by the SIGNALduino, resulting in a collision, or may the last command is not finished
   
   if (defined($hash->{getcmd}->{cmd}) && $hash->{getcmd}->{cmd} eq 'sendraw') {
-     InternalTimer(gettimeofday() + SDUINO_WRITEQUEUE_TIMEOUT, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
+     InternalTimer(gettimeofday() + SDUINOA_WRITEQUEUE_TIMEOUT, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
   } else {
-     InternalTimer(gettimeofday() + SDUINO_WRITEQUEUE_NEXT, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
+     InternalTimer(gettimeofday() + SDUINOA_WRITEQUEUE_NEXT, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
   }
 }
 
@@ -2206,8 +2207,8 @@ SIGNALduinoAdv_Read
 				my $reading;
 				($rmsg, $reading) = SIGNALduinoAdv_parseResponse($hash,$getcmd,$rmsg);
 				if (length($reading) > 0) {
-					if (length($reading) > SDUINO_parseRespMaxReading) {
-						$reading = substr($reading, 0, SDUINO_parseRespMaxReading);
+					if (length($reading) > SDUINOA_parseRespMaxReading) {
+						$reading = substr($reading, 0, SDUINOA_parseRespMaxReading);
 					}
 					readingsSingleUpdate($hash, $getcmd, $reading, 0);
 					my $ev = $getcmd . ':: ' . $reading;
@@ -2227,8 +2228,8 @@ SIGNALduinoAdv_Read
 				$hash->{recAwNotMatch} = 1;
 			}
 			Log3 $name, 4, "$name/msg READ: ". $hash->{recAwNotMatch} .". Received answer ($rmsg) for ". $getcmd." does not match $regexp";
-			if ($hash->{recAwNotMatch} > SDUINO_recAwNotMatch_Max) {
-				Log3 $name, 4, "$name/msg READ: too much (". SDUINO_recAwNotMatch_Max .")! Received answer ($rmsg) for ". $getcmd." does not match $regexp";
+			if ($hash->{recAwNotMatch} > SDUINOA_recAwNotMatch_Max) {
+				Log3 $name, 4, "$name/msg READ: too much (". SDUINOA_recAwNotMatch_Max .")! Received answer ($rmsg) for ". $getcmd." does not match $regexp";
 				delete($hash->{recAwNotMatch});
 				delete($hash->{getcmd});
 			}
@@ -2249,7 +2250,7 @@ sub SIGNALduinoAdv_KeepAlive {
 	#Log3 $name,4 , "$name/KeepAliveOk: " . $hash->{keepalive}{ok};
 	if (!$hash->{keepalive}{ok}) {
 		delete($hash->{getcmd});
-		if ($hash->{keepalive}{retry} >= SDUINO_KEEPALIVE_MAXRETRY) {
+		if ($hash->{keepalive}{retry} >= SDUINOA_KEEPALIVE_MAXRETRY) {
 			Log3 $name,3 , "$name/keepalive not ok, retry count reached. Reset";
 			$hash->{DevState} = 'INACTIVE';
 			SIGNALduinoAdv_ResetDevice($hash);
@@ -2272,7 +2273,7 @@ sub SIGNALduinoAdv_KeepAlive {
 	}
 	$hash->{keepalive}{ok} = 0;
 	
-	InternalTimer(gettimeofday() + SDUINO_KEEPALIVE_TIMEOUT, "SIGNALduinoAdv_KeepAlive", $hash);
+	InternalTimer(gettimeofday() + SDUINOA_KEEPALIVE_TIMEOUT, "SIGNALduinoAdv_KeepAlive", $hash);
 }
 
 
@@ -2650,19 +2651,19 @@ sub SIGNALdunoAdv_Dispatch
 	
 	my $DMSGgleich = 1;
 	if ($dmsg eq $hash->{LASTDMSG}) {
-		Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich";
+		Log3 $name, SDUINOA_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich";
 	} else {
 		if (defined($hash->{DoubleMsgIDs}{$id})) {
 			if ($nrEqualDmsg < 2) {	# keine MU-Nachricht oder keine doppelte MU-Nachricht
 				$DMSGgleich = 0;
-				Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich";
+				Log3 $name, SDUINOA_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich";
 			}
 			else {
-				Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich ($nrEqualDmsg)";
+				Log3 $name, SDUINOA_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test gleich ($nrEqualDmsg)";
 			}
 		}
 		else {
-			Log3 $name, SDUINO_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich: disabled";
+			Log3 $name, SDUINOA_DISPATCH_VERBOSE, "$name Dispatch: $dmsg, test ungleich: disabled";
 		}
 		$hash->{LASTDMSG} = $dmsg;
 		$hash->{LASTDMSGID} = $id;
@@ -3252,7 +3253,7 @@ sub SIGNALduinoAdv_Parse_MU
 			if (defined($ProtocolListSIGNALduino{$id}{length_min})) {
 				$length_min = $ProtocolListSIGNALduino{$id}{length_min};
 			} else {
-				$length_min = SDUINO_PARSE_DEFAULT_LENGHT_MIN;
+				$length_min = SDUINOA_PARSE_DEFAULT_LENGHT_MIN;
 			}
 			my $length_max = 0;
 			$length_max = $ProtocolListSIGNALduino{$id}{length_max} if (defined($ProtocolListSIGNALduino{$id}{length_max}));
@@ -3496,9 +3497,9 @@ SIGNALduinoAdv_Parse_MC
 						#		next;
 						#	}
 						#}
-						if (SDUINO_MC_DISPATCH_VERBOSE < 5 && (SDUINO_MC_DISPATCH_LOG_ID eq '' || SDUINO_MC_DISPATCH_LOG_ID eq $id))
+						if (SDUINOA_MC_DISPATCH_VERBOSE < 5 && (SDUINOA_MC_DISPATCH_LOG_ID eq '' || SDUINOA_MC_DISPATCH_LOG_ID eq $id))
 						{
-							Log3 $name, SDUINO_MC_DISPATCH_VERBOSE, "$name $id, $rmsg $rssiStr";
+							Log3 $name, SDUINOA_MC_DISPATCH_VERBOSE, "$name $id, $rmsg $rssiStr";
 						}
 						my $nrEqualDmsg = 0;
 						if ($rcode > 1) {
@@ -6413,8 +6414,9 @@ sub SIGNALduino_WMBus
 sub SIGNALduino_MAX
 {
     my ($name,$dmsg,$id) = @_;
+    my $len = length($dmsg);
     
-    return (1, substr($dmsg, 0, 24));
+    return (1, substr($dmsg,0,$len-4));
 
 }
 
@@ -7584,7 +7586,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
    	Liest das cc1101 Register aus (NUR bei Verwendung eines cc1101 Funk-Moduls)<br>
    	  99 - liest alle aus<br>
    	  31 - chip Version<br>
-   	  35 - MARCSTATE Register (1 idle, 0D Rx, 13 Tx)<br>
+   	  35 - MARCSTATE Register (1 idle, 0D Rx, 13 Tx, 11 RxFIFO_overflow, 16 TxFIFO_underflow)<br>
 	</li><br>
 	<a id="SIGNALduinoAdv-get-cmdBank"></a>
 	<li>cmdBank<br>

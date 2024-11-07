@@ -1,5 +1,9 @@
+04.11.24
+  00_SIGNALduinoAdv.pm und signalduino_protocols.pm:
+   - update MAX
+   - Konstanten SDUINO_* in SDUINOA_* umbenannt
 14.09.24
-  00_SIGNALduino.pm und signalduino_protocols.pm:
+  00_SIGNALduinoAdv.pm und signalduino_protocols.pm:
    - neue Protokoll ID
      216 ESA2000
    - bei "get raw" deutsche "Device specific help" ergänzt
@@ -14,6 +18,7 @@
      130 CREATE_6601TL, Remote control for ceiling fan with light
      132 HA-HX2, Remote control for Halemeier LED actor HA-RX-M2-1
    - update ID 22 und 207
+
 07.11.23
   00_SIGNALduino.pm und signalduino_protocols.pm:
   - ID 211: nach ID 125 geändert damit es kompatibel zum Modul von Sidey ist
@@ -28,7 +33,6 @@
   - ID 211: nach ID 125 geändert damit es kompatibel zum Modul von Sidey ist
   - ID 213: nach ID 126 geändert damit es kompatibel zum Modul von Sidey ist
   - neue ID 214: ecowitt WS68 Windmesser
-
 06.08.2023
  00_SIGNALduino.pm:
   - neue Routine für die Preamble der Sainlogic Wetterstation
