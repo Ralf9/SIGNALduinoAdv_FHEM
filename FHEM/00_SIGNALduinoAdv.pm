@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 00_SIGNALduinoAdv.pm 3520 2024-11-44 22:00:00Z v3.5.2-Ralf9 $
+# $Id: 00_SIGNALduinoAdv.pm 3520 2024-11-30 23:00:00Z v3.5.2-Ralf9 $
 #
 # v3.5.2
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINOA_VERSION            => "v3.5.2-ralf_04.11.24",
+	SDUINOA_VERSION            => "v3.5.2-ralf_30.11.24",
 	SDUINOA_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINOA_INIT_WAIT          => 3,
 	SDUINOA_INIT_MAXRETRY      => 3,
@@ -1947,7 +1947,11 @@ SIGNALduinoAdv_SendFromQueue
     if ($msg =~ m/^S(R|C|M|N);/) {
        $hash->{getcmd}->{cmd} = 'sendraw';
        Log3 $name, 4, "$name SendrawFromQueue: msg=$msg"; # zu testen der Queue, kann wenn es funktioniert auskommentiert werden
-    } 
+    }
+    if ($msg =~ m/^Zs/) {
+        $hash->{getcmd}->{cmd} = 'sendrawZs';
+        Log3 $name, 4, "$name SendrawFromQueue: Zs msg=$msg";
+    }
     elsif ($msg eq "C99") {
        $hash->{getcmd}->{cmd} = 'ccregAll';
     }
@@ -1963,7 +1967,7 @@ SIGNALduinoAdv_SendFromQueue
   # Write the next buffer not earlier than 0.23 seconds
   # else it will be sent too early by the SIGNALduino, resulting in a collision, or may the last command is not finished
   
-  if (defined($hash->{getcmd}->{cmd}) && $hash->{getcmd}->{cmd} eq 'sendraw') {
+  if (defined($hash->{getcmd}->{cmd}) && ($hash->{getcmd}->{cmd} eq 'sendraw' || $hash->{getcmd}->{cmd} eq 'sendrawZs')) {
      InternalTimer(gettimeofday() + SDUINOA_WRITEQUEUE_TIMEOUT, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
   } else {
      InternalTimer(gettimeofday() + SDUINOA_WRITEQUEUE_NEXT, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
@@ -1982,7 +1986,7 @@ SIGNALduinoAdv_HandleWriteQueue
   
   $hash->{sendworking} = 0;       # es wurde gesendet
   
-  if (defined($hash->{getcmd}->{cmd}) && $hash->{getcmd}->{cmd} eq 'sendraw') {
+  if (defined($hash->{getcmd}->{cmd}) && ($hash->{getcmd}->{cmd} eq 'sendraw' || $hash->{getcmd}->{cmd} eq 'sendrawZs')) {
     Log3 $name, 4, "$name/HandleWriteQueue: sendraw no answer (timeout)";
     delete($hash->{getcmd});
   }
@@ -1997,7 +2001,7 @@ SIGNALduinoAdv_HandleWriteQueue
       SIGNALduinoAdv_SendFromQueue($hash, $msg);
     }
   } else {
-  	 Log3 $name, 4, "$name/HandleWriteQueue: nothing to send, stopping timer";
+  	 Log3 $name, 5, "$name/HandleWriteQueue: nothing to send, stopping timer";
   	 RemoveInternalTimer("HandleWriteQueue:$name");
   }
 }
@@ -2144,6 +2148,9 @@ SIGNALduinoAdv_Read
 		elsif ($getcmd eq 'sendraw') {
 			$regexp = '^S(R|C|M|N);';
 		}
+		elsif ($getcmd eq 'sendrawZs') {
+            $regexp = '^Zs';
+		}
 		elsif ($getcmd eq 'ccregAll') {
 			$regexp = '^ccreg 00:';
 		}
@@ -2202,6 +2209,12 @@ SIGNALduinoAdv_Read
 				delete($hash->{getcmd});
 				RemoveInternalTimer("HandleWriteQueue:$name");
 				SIGNALduinoAdv_HandleWriteQueue("x:$name");
+			}
+			elsif ($getcmd eq 'sendrawZs') {
+				Log3 $name, 4, "$name/read sendrawZs answer: $rmsg";
+				delete($hash->{getcmd});
+				RemoveInternalTimer("HandleWriteQueue:$name");
+				InternalTimer(gettimeofday() + 0.1, "SIGNALduinoAdv_HandleWriteQueue", "HandleWriteQueue:$name");
 			}
 			else {
 				my $reading;
@@ -2702,6 +2715,13 @@ sub SIGNALdunoAdv_Dispatch
 		}
 		$addvals{DMSGequal} = $nrEqualDmsg if ($nrEqualDmsg > 1);
 		if(defined($rssi)) {
+			if ($id eq '215') {
+				my $src = lc(substr($dmsg,9,6));
+				if (exists($modules{MAX}{defptr}{$src})) {
+					$modules{MAX}{defptr}{$src}{helper}{io}{$name}->{time} = gettimeofday();
+					$modules{MAX}{defptr}{$src}{helper}{io}{$name}->{rssi} = $rssi;
+				}
+			}
 			$hash->{RSSI} = $rssi;
 			$addvals{RSSI} = $rssi;
 			$rssi .= " dB,"
@@ -7521,7 +7541,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	- Bei gleicher Nummerierung werden auch rfmode Eintr&auml;ge mit kleinerer Byteanzahl (Bx) verarbeitet</li><br>
 	<a id="SIGNALduinoAdv-set-rfmodeTesting"></a>
 	<li>rfmodeTesting<br>
-	optimierte cc1101 Registerkonfigurationen (rfmode) für Firmware V3.3.5 und V4.2.2</li><br>
+	optimierte cc1101 Registerkonfigurationen (rfmode) für Firmware ab V3.3.5 und V4.2.2</li><br>
 	<a id="SIGNALduinoAdv-set-sendMsg"></a>
 	<li>sendMsg<br>
 	Dieser Befehl erstellt die erforderlichen Anweisungen zum Senden von Rohdaten &uuml;ber den SIGNALduino. Sie k&ouml;nnen die Signaldaten wie Protokoll und die Bits angeben, die Sie senden m&ouml;chten.<br>
@@ -7643,9 +7663,10 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
             <li>CSfifolimit=[Wert] -> Schwellwert fuer debug Ausgabe der Pulsanzahl im FIFO Puffer</li>
             <li>e  -> EEPROM / factory reset der cc1101 Register 
             <li>eC - initEEPROMconfig, damit werden die config Daten im EEPROM auf default zurückgesetzt</li>
-            <li>WS[Wert] -> Strobe commands z.B. 34 Rx, 35 Tx, 36 idle, 3D nop -> R&uuml;ckgabe 0 idle, 1 Rx, 2 Tx</li>
-            <li>XQ -> disableReceiver</li>
+            <li>WS[Wert] -> Strobe commands z.B. 34 Rx, 35 Tx, 36 idle, 3D nop -> R&uuml;ckgabe 0 idle, 1 Rx, 2 Tx, 6 RX FIFO overflow</li>
             <li>XE -> enableReceiver</li>
+            <li>XQ -> disableReceiver, XQW -> nach einem Reset wird der Empfang des cc1101 nicht automatisch aktiviert (nur beim Maple USB)</li>
+            <li>&lt;A-D&gt; angeh&auml;ngt, wird nur bei einem einzelnen cc1101 Modul der Empfang aktiviert/deaktiviert</li>
           </ul>
           Nur beim Maple oder ESP32 (V4.2.x)<br>
           CR - configRadio:<br>
@@ -7659,7 +7680,12 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a id="SIGNALduinoAdv-get-version"></a>
 	<li>version<br>
-	Zeigt Ihnen die Information an, welche aktuell genutzte Software Sie mit dem SIGNALduino verwenden.
+	Zeigt Ihnen die Information an, welche aktuell genutzte Software Sie mit dem SIGNALduino verwenden.<br>
+	Nur beim Maple oder ESP32:<br>
+	&Uuml;bersicht über die Module z.B. (R: A1 B0*)<br>
+	Mit * wird das selektierte cc1101 Modul markiert. Ein "-" hinter dem Modul (A-D), bedeutet, dass dieses Modul nicht richtig erkannt wurde,<br>
+	ein "i" bedeutet, dass das Modul zwar korrekt erkannt wurde, aber noch keiner Bank zugeordnet wurde.<br>
+	Wenn ein Modul nicht aufgef&uuml;hrt ist, dann ist es noch deaktiviert.
 	</li><br>
 	</ul>
 	

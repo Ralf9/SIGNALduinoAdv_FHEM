@@ -1,3 +1,7 @@
+30.11.24
+  00_SIGNALduinoAdv.pm
+   - update MAX
+   - bei "get raw" und "get version" "Device specific help" ergänzt
 04.11.24
   00_SIGNALduinoAdv.pm und signalduino_protocols.pm:
    - update MAX
