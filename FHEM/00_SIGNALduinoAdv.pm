@@ -1,7 +1,7 @@
 ##############################################
-# $Id: 00_SIGNALduinoAdv.pm 3520 2024-11-30 23:00:00Z v3.5.2-Ralf9 $
+# $Id: 00_SIGNALduinoAdv.pm 3530 2025-02-13 14:00:00Z v3.5.3-Ralf9 $
 #
-# v3.5.2
+# v3.5.3
 # The module is inspired by the FHEMduino project and modified in serval ways for processing the incomming messages
 # see http://www.fhemwiki.de/wiki/SIGNALDuino
 # It was modified also to provide support for raw message handling which can be send from the SIGNALduino
@@ -29,7 +29,7 @@ use Scalar::Util qw(looks_like_number);
 #use Math::Round qw();
 
 use constant {
-	SDUINOA_VERSION            => "v3.5.2-ralf_30.11.24",
+	SDUINOA_VERSION            => "v3.5.3-ralf_13.02.25",
 	SDUINOA_INIT_WAIT_XQ       => 2.5,    # wait disable device
 	SDUINOA_INIT_WAIT          => 3,
 	SDUINOA_INIT_MAXRETRY      => 3,
@@ -72,7 +72,7 @@ my %gets = (    # Name, Data to send to the SIGNALduino, Regexp for the answer
   "config"   => ["CG",'(MS.*MU.*MC.*)|(ccmode=)'],
   "protocolIdToJson"   => ['none','none'],
   "ccconf"   => ["C0DnF", 'C0Dn11.*'],
-  "ccreg"    => ["C", '^C.* = .*'],
+  "ccreg"    => ["C", '(^C.* = .*)|(freq = .*)'],
   "ccpatable" => ["C3E", '^C3E = .*'],
   "cmdBank"  => ["b", '(b=\d.* ccmode=\d.*)|(switch)|(Bank)|(bank)|(radio)|(not valid)'],
   "zAvailableFirmware" => ["none",'none'],
@@ -3107,9 +3107,18 @@ sub SIGNALduinoAdv_Parse_MU
 			{
 				$clocksource = $ProtocolListSIGNALduino{$id}{clockpos}[0];
 				if ($clocksource ne "one" && $clocksource ne "zero") {	# wenn clocksource nicht one oder zero ist, dann wird CP= aus der Nachricht verwendet
+					my $clockabsCp;
+					if (scalar @{$ProtocolListSIGNALduino{$id}{clockpos}} > 1)
+					{
+						$clockabsCp = $clockabs * $ProtocolListSIGNALduino{$id}{clockpos}[1];
+						Log3 $name, 5, "$name: clockcp=$clockabsCp";
+					}
+					else {
+						$clockabsCp = $clockabs;
+					}
 					$msgclock = $msg_parts{pattern}{$clockidx};
-					if (!SIGNALduinoAdv_inTol($clockabs,$msgclock,$msgclock*0.30)) {
-						Log3 $name, 5, "$name: clock for MU Protocol id $id, clockId=$clockabs, clockmsg=$msgclock (cp) is not in tol=" . $msgclock*0.30 if ($dummy||$debug);
+					if (!SIGNALduinoAdv_inTol($clockabsCp,$msgclock,$msgclock*0.30)) {
+						Log3 $name, 5, "$name: clock for MU Protocol id $id, clockId=$clockabsCp, clockmsg=$msgclock (cp) is not in tol=" . $msgclock*0.30 if ($dummy||$debug);
 						next if ($parseMUclockCheck > 0);
 					} else {
 						$clockMsg = ", msgClock=$msgclock (cp) is in tol" if ($dummy||$debug||$parseMUclockCheck==2);
@@ -6144,6 +6153,7 @@ sub SIGNALduino_Bresser_7in1
 		$dmsg .= sprintf('%02X',$data);
 	}
 	
+	# LFSR-16 gen 8810 key ba95 final xor 6df1
 	my $digest = lfsr_digest16(substr($dmsg,4), 21, 0x8810, 0xba95);
 	my $digestRef = substr($dmsg,0,4);
 	my $crcXORref = $digest ^ hex($digestRef);
@@ -6157,6 +6167,33 @@ sub SIGNALduino_Bresser_7in1
 	
 	return (1, substr($dmsg, 4));
 }
+
+sub SIGNALduino_Bresser_lightning
+{
+	my ($name,$rawdmsg,$id) = @_;
+	my $dmsg = '';
+	my $data;
+	
+	for (my $i = 0; $i < 10; $i++) {
+		$data = hex(substr($rawdmsg,$i*2,2)) ^ 0xaa;
+		$dmsg .= sprintf('%02X',$data);
+	}
+	
+	# LFSR-16 gen 8810 key abf9 final xor 899e
+	my $digest = lfsr_digest16(substr($dmsg,4), 8, 0x8810, 0xabf9);
+	my $digestRef = substr($dmsg,0,4);
+	my $crcXORref = $digest ^ hex($digestRef);
+	
+	if ($crcXORref != 0x899e) {
+		my $crcXORrefHex = sprintf('%04X',$crcXORref);
+		return (-1, "Bresser lightning crc Error: crcXORref=$crcXORrefHex not equal to 0x899E");
+	}
+	
+	Log3 $name, 5, "$name Bresser_lightning: dmsg=$dmsg crc16 ok";
+	
+	return (1, substr($dmsg, 4));
+}
+
 
 sub AddWord
 {
@@ -7630,7 +7667,7 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	</li><br>
 	<a id="SIGNALduinoAdv-get-config"></a>
 	<li>config<br>
-	Zeigt Ihnen die aktuelle Konfiguration der SIGNALduino Protokollkathegorie an. | Bsp: <code>MS=1;MU=1;MC=1;Mred=0</code>
+	Zeigt Ihnen die aktuelle Konfiguration der SIGNALduino Protokollkategorie an. | Bsp: <code>MS=1;MU=1;MC=1;Mred=0</code>
 	</li><br>
 	<a id="SIGNALduinoAdv-get-freeram"></a>
 	<li>freeram<br>
@@ -7657,12 +7694,13 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
             <li>CED / CDD -> Debugausgaben ein/aus</li>
             <li>CDL / CEL -> LED aus/ein</li>
             <li>CDR / CER -> Aus-/Einschalten der Datenkomprimierung (config: Mred=0/1)(nur Firmware V3...)</li>
-            <li>CSmscnt=[Wert] -> Wiederholungszaehler fuer den split von MS Nachrichten</li>
+            <li>CSccmode=[Wert]
+            <li>CSmscnt=[Wert] -> Wiederholungsz&auml;hler f&uuml;r den split von MS Nachrichten</li>
             <li>CSmuthresh=[Wert] -> Schwellwert fuer den split von MU Nachrichten (0=aus)</li>
-            <li>CSmcmbl=[Wert] -> minbitlen fuer MC-Nachrichten</li>
-            <li>CSfifolimit=[Wert] -> Schwellwert fuer debug Ausgabe der Pulsanzahl im FIFO Puffer</li>
+            <li>CSmcmbl=[Wert] -> minbitlen f&uuml;r MC-Nachrichten</li>
+            <li>CSfifolimit=[Wert] -> Schwellwert f&uuml;r debug Ausgabe der Pulsanzahl im FIFO Puffer</li>
             <li>e  -> EEPROM / factory reset der cc1101 Register 
-            <li>eC - initEEPROMconfig, damit werden die config Daten im EEPROM auf default zurückgesetzt</li>
+            <li>eC - initEEPROMconfig, damit werden die config Daten im EEPROM auf default zur&uuml;ckgesetzt</li>
             <li>WS[Wert] -> Strobe commands z.B. 34 Rx, 35 Tx, 36 idle, 3D nop -> R&uuml;ckgabe 0 idle, 1 Rx, 2 Tx, 6 RX FIFO overflow</li>
             <li>XE -> enableReceiver</li>
             <li>XQ -> disableReceiver, XQW -> nach einem Reset wird der Empfang des cc1101 nicht automatisch aktiviert (nur beim Maple USB)</li>
@@ -7681,14 +7719,16 @@ When set to 1, the internal "RAWMSG" will not be updated with the received messa
 	<a id="SIGNALduinoAdv-get-version"></a>
 	<li>version<br>
 	Zeigt Ihnen die Information an, welche aktuell genutzte Software Sie mit dem SIGNALduino verwenden.<br>
-	Nur beim Maple oder ESP32:<br>
-	&Uuml;bersicht über die Module z.B. (R: A1 B0*)<br>
-	Mit * wird das selektierte cc1101 Modul markiert. Ein "-" hinter dem Modul (A-D), bedeutet, dass dieses Modul nicht richtig erkannt wurde,<br>
-	ein "i" bedeutet, dass das Modul zwar korrekt erkannt wurde, aber noch keiner Bank zugeordnet wurde.<br>
-	Wenn ein Modul nicht aufgef&uuml;hrt ist, dann ist es noch deaktiviert.
+	Nur beim Maple oder ESP32:
+	<ul>
+	<li>&Uuml;bersicht über die Module z.B. (R: A1 B0*)</li>
+	<li>Mit * wird das selektierte cc1101 Modul markiert. Ein "-" hinter dem Modul (A-D), bedeutet, dass dieses Modul nicht richtig erkannt wurde,<br>
+	ein "i" bedeutet, dass das Modul zwar korrekt erkannt wurde, aber noch keiner Bank zugeordnet wurde.</li>
+	<li>Wenn ein Modul nicht aufgef&uuml;hrt ist, dann ist es noch deaktiviert.</li>
+	<li>Kleiner Buchstabe (a-b) -> Empfang deaktiviert. Bei Maple oder ESP32 ab V4.2.3</li>
+	</ul>
 	</li><br>
 	</ul>
-	
 	
 	<a id="SIGNALduinoAdv-attr"></a>
 	<b>Attributes</b>

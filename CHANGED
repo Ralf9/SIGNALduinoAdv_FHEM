@@ -1,3 +1,14 @@
+13.02.25
+  00_SIGNALduinoAdv.pm und signalduino_protocols.pm:
+   - update ID 44, 48, 66
+   - neue ID 131: BRESSER Blitzsensor
+   - bei Parse_MU, bugfix bei logausgabe der msgclock 
+   - deutsche "Device specific help" ergänzt
+  14_SD_WS.pm:
+   - neue ID 48: Funk-Thermometer JOKER TFA 30.3055
+   - neue ID 131: BRESSER Blitzsensor
+   - update ID 125: Fine Offset WH31, ecowitt WH31
+
 30.11.24
   00_SIGNALduinoAdv.pm
    - update MAX
@@ -22,7 +33,6 @@
      130 CREATE_6601TL, Remote control for ceiling fan with light
      132 HA-HX2, Remote control for Halemeier LED actor HA-RX-M2-1
    - update ID 22 und 207
-
 07.11.23
   00_SIGNALduino.pm und signalduino_protocols.pm:
   - ID 211: nach ID 125 geändert damit es kompatibel zum Modul von Sidey ist

@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3520 2024-11-04 20:00:00Z v3.5.2-Ralf9 $
+# $Id: signalduino_protocols.pm 3530 2025-02-13 14:00:00Z v3.5.3-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.5.2-ralf_04.11.24'
+		"version" => 'v3.5.3-ralf_13.02.25'
 		);
 
 our %rfmode = (
@@ -1339,13 +1339,14 @@ our %ProtocolListSIGNALduino  = (
             		name 			=> 'BresserTemeo',
             		id 			=> '44',
             		comment			=> 'temperature / humidity sensor',
-            		clockabs		=> 2000,
-            		clockpos		=> ['cp'],
-            		zero 			=> [1,-1],
-            		one			=> [1,-2],
-            		start	 		=> [2,-2],
+            		changed			=> '20241224',
+            		clockabs		=> 500,       # In real it is 2000 but this leads to unprceise demodulation
+            		clockpos		=> ['cp',4],
+            		zero 			=> [4,-4],
+            		one				=> [4,-8],
+            		start	 		=> [8,-8],
             		preamble 		=> 'W44#',
-            		clientmodule		=> 'SD_WS',
+            		clientmodule	=> 'SD_WS',
             		modulematch		=> '^W44#[A-F0-9]{18}',
             		length_min 		=> '64',
             		length_max 		=> '72',
@@ -1431,22 +1432,24 @@ our %ProtocolListSIGNALduino  = (
 		}, 			
      "48"    => ## Joker Dostmann TFA 30.3055.01
 				# https://github.com/RFD-FHEM/RFFHEM/issues/92
-				# MU;P0=591;P1=-1488;P2=-3736;P3=1338;P4=-372;P6=-988;D=23406060606063606363606363606060636363636363606060606363606060606060606060606060636060636360106060606060606063606363606363606060636363636363606060606363606060606060606060606060636060636360106060606060606063606363606363606060636363636363606060606363606060;CP=0;O;
-				# MU;P0=96;P1=-244;P2=510;P3=-1000;P4=1520;P5=-1506;D=01232323232343234343232343234323434343434343234323434343232323232323232323232323234343234325232323232323232343234343232343234323434343434343234323434343232323232323232323232323234343234325232323232323232343234343232343234323434343434343234323434343232323;CP=2;O;
+				# SD_WS_48_T  T: 24.3  W48#FF49C0F3FFD9  MU;P0=591;P1=-1488;P2=-3736;P3=1338;P4=-372;P6=-988;D=23406060606063606363606363606060636363636363606060606363606060606060606060606060636060636360106060606060606063606363606363606060636363636363606060606363606060606060606060606060636060636360106060606060606063606363606363606060636363636363606060606363606060;CP=0;O;
+				# SD_WS_48_T  T: 16.3  W48#FF4D40A3FFE5  MU;P0=96;P1=-244;P2=510;P3=-1000;P4=1520;P5=-1506;D=01232323232343234343232343234323434343434343234323434343232323232323232323232323234343234325232323232323232343234343232343234323434343434343234323434343232323232323232323232323234343234325232323232323232343234343232343234323434343434343234323434343232323;CP=2;O;
 		{
-			name			=> 'TFA Dostmann',	
-			comment			=> 'Funk-Thermometer Joker TFA 30.3055.01',
-			id          	=> '48',
-			clockabs     	=> 250, 						# In real it is 500 but this leads to unprceise demodulation 
-			clockpos     => ['zero',1],
-			one				=> [-4,6],
-			zero			=> [-4,2],
-			start			=> [-6,2],
-			format 			=> 'twostate',	
-			preamble		=> 'U48#',						# prepend to converted message	
-			#clientmodule    => '',   						# not used now
-			modulematch     => '^U48#.*',
-			length_min      => '47',
+			name            => 'TFA JOKER',	
+			comment         => 'Temperature transmitter TFA 30.3212',
+			changed         => '20241223',
+			id              => '48',
+			clockabs        => 250, 						# In real it is 500 but this leads to unprceise demodulation 
+			clockpos        => ['one',0],
+			one             => [2,-4], #   500,-1000
+			zero            => [6,-4], #  1500,-1000
+			start           => [-6],   # -1500
+			reconstructBit  => '1',
+			format          => 'twostate',	
+			preamble        => 'W48#',						# prepend to converted message	
+			clientmodule    => 'SD_WS',
+			modulematch     => '^W48#.*',
+			length_min      => '47', # lenght without reconstructBit
 			length_max      => '48',
 		},
 		"49"	=>	## QUIGG GT-9000, EASY HOME RCT DS1 CR-A, uniTEC 48110 and other
@@ -1879,15 +1882,17 @@ our %ProtocolListSIGNALduino  = (
 		},
 	"66"	=>	## TX2 Protocol (Remote Temp Transmitter & Remote Thermo Model 7035)
 						# https://github.com/RFD-FHEM/RFFHEM/issues/160
-						# MU;P0=13312;P1=-2785;P2=4985;P3=1124;P4=-6442;P5=3181;P6=-31980;D=0121345434545454545434545454543454545434343454543434545434545454545454343434545434343434545621213454345454545454345454545434545454343434545434345454345454545454543434345454343434345456212134543454545454543454545454345454543434345454343454543454545454545;CP=3;R=73;O;
+						# Id:66 T: 23.2   MU;P0=13312;P1=-2785;P2=4985;P3=1124;P4=-6442;P5=3181;P6=-31980;D=0121345434545454545434545454543454545434343454543434545434545454545454343434545434343434545621213454345454545454345454545434545454343434545434345454345454545454543434345454343434345456212134543454545454543454545454345454543434345454343454543454545454545;CP=3;R=73;O;
+						# Id:49 T: 25.2   MU;P0=32001;P1=-2766;P2=4996;P3=1158;P4=-6416;P5=3203;P6=-31946;D=01213454345454545454543434545454345454343434543454345454345454545454543434345434543434345456212134543454545454545434345454543454543434345434543454543454545454545434343454345434343454562121345434545454545454343454545434545434343454345434545434545454545454;CP=3;R=72;O;
 		{
 			name         => 'WS7035',
 			comment      => 'temperature sensor',
 			id           => '66',
-			one          => [1,-5.2],
-			zero         => [2.7,-5.2],
-			start        => [-2.1,4.2,-2.1],
-			clockabs     => 1220,
+			changed      => '20241224',
+			one          => [10,-52],
+			zero         => [27,-52],
+			start        => [-21,42,-21],
+			clockabs     => 122,           # In real it is 1220 but this leads to unprceise demodulation
 			clockpos     => ['one',0],
 			reconstructBit  => '1',
 			format       => 'pwm',  # not used now
@@ -1913,7 +1918,7 @@ our %ProtocolListSIGNALduino  = (
 				id               => '67',
 				one              => [-38,10],     # -4636, 1220
 				zero             => [-38,28],     # -4636, 3416
-				clockabs         => 122,
+				clockabs         => 122,          # In real it is 1220 but this leads to unprceise demodulation
 				clockpos         => ['one',1],
 				preamble         => 'TX',         # prepend to converted message
 				clientmodule     => 'CUL_TX',
@@ -2545,7 +2550,7 @@ our %ProtocolListSIGNALduino  = (
 			zero			=> [-1,2],
 			start			=> [-10,1],
 			clockabs		=> 400,
-			clockpos		=> ['zero',1],
+			clockpos		=> ['one',1],
 			format			=> 'twostate',
 			preamble		=> 'P91#',
 			length_min		=> '35', # 36 - reconstructBit = 35
@@ -2632,8 +2637,8 @@ our %ProtocolListSIGNALduino  = (
 				one				=> [5.3,-1],     # 1537, 290
 				zero				=> [5.3,-6.9],   # 1537, 2001
 				start				=> [5.3,-26.1],  # 1537, 7569
-				clockabs			=> 290,
-				clockpos			=> ['cp'],
+				clockabs			=> 290,          #  In real it is 1537 but this leads to unprceise demodulation
+				clockpos			=> ['cp',5.3],
 				#reconstructBit		=> '1',		# funktioniert hier nicht da alle Paare gleich anfangen
 				format				=> 'twostate',
 				preamble			=> 'W94#',
@@ -3470,6 +3475,27 @@ our %ProtocolListSIGNALduino  = (
         length_min       => '24',
         length_max       => '24',
       },
+    "131" =>  ## BRESSER lightning detector @ elektron-bbs 2023-12-26
+              # SD_WS_131_82CC count:   0, distance:  0, batteryState: ok, batteryChanged: 0   MN;D=DA5A2866AAA290AAAAAA;N=7;R=23;
+              # SD_WS_131_82CC count:   1, distance: 17, batteryState: ok, batteryChanged: 0   MN;D=5B192866AAB290BDAAAA;N=7;R=32;
+              # SD_WS_131_82CC count: 148, distance:  8, batteryState: ok, batteryChanged: 1   MN;D=AA362866BE2298A2AAAA;N=7;R=24;
+      {
+        name            => 'Bresser lightning',
+        comment         => 'Bresser lightning detector',
+        changed         => '20241225 new',
+        id              => '131',
+        knownFreqs      => '868.300',
+        datarate        => '8220',
+        N               => [7],
+        sync            => '2DD4',
+        modulation      => '2-FSK',
+        cc1101FIFOmode  => '1',      # use FIFOs for RX and TX
+        #match          => '',       # fuer eine regexp Pruefung am Anfang vor dem method Aufruf
+        preamble        => 'W131#',
+        clientmodule    => 'SD_WS',
+        length_min      => '20',   # 10 Byte
+        method          => \&main::SIGNALduino_Bresser_lightning,
+      },
     "132"  =>  ## Remote control Halemeier HA-HX2 for Actor HA-RX-M2-1
                # https://github.com/RFD-FHEM/RFFHEM/issues/1207 @ HomeAuto_User 2023-12-11
                # https://forum.fhem.de/index.php?topic=38452.0 (probably identical)
@@ -3895,7 +3921,7 @@ our %ProtocolListSIGNALduino  = (
              # MN;D=0B6E0002123456163CD900002088;N=15;r;
       {
         name            => 'MAX',
-        #comment         => '',
+        comment         => 'ab Firmware V 4.2.3',
         changed         => '20231107 new',
         id              => '215',
         knownFreqs      => '868.3',
