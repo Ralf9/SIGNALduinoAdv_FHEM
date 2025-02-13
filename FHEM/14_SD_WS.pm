@@ -1,4 +1,4 @@
-# $Id: 14_SD_WS.pm 21666 2024-04-12 17:00:00Z Ralf9 $
+# $Id: 14_SD_WS.pm 21666 2025-02-13 14:00:00Z Ralf9 $
 #
 # The purpose of this module is to support serval
 # weather sensors which use various protocol
@@ -53,6 +53,8 @@
 # 03.04.2023 neues Protokoll 126: WH40
 # 06.08.2023 neues Protokoll 129: Sainlogic 8in1 und Sainlogic Wifi 7in1 (mit uv und lux)
 # 18.09.2023 neues Protokoll 214: ecowitt WS68 Windmesser. todo: ueberpruefen Wind, add bat, lux und uv
+# 23.12.2024 neues Protokoll 48: Funk-Thermometer JOKER TFA 30.3055, Temperatursender 30.3212 (elektron-bbs)
+# 25.12.2024 neues Protokoll 131: BRESSER Blitzsensor Art.No.: 7009976, Hersteller CCL Electronics LTD Model C3129A (elektron-bbs)
 
 package main;
 
@@ -60,6 +62,7 @@ package main;
 
 use strict;
 use warnings;
+use constant HAS_DigestCRC => defined eval { require Digest::CRC; };
 
 # Forward declarations
 sub SD_WS_LFSR_digest8_reflect;
@@ -94,6 +97,7 @@ sub SD_WS_Initialize {
     "SD_WS_33_TH_.*"  => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.* model:other", FILTER => "%NAME", GPLOT => "temp4hum4:Temp/Hum,", autocreateThreshold => "2:180"},
     "SD_WS_33_T_.*"   => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.* model:other", FILTER => "%NAME", GPLOT => "temp4:Temp,", autocreateThreshold => "2:180"},
     "SD_WS_38_T_.*"   => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.*", FILTER => "%NAME", GPLOT => "temp4:Temp,", autocreateThreshold => "3:180"},
+    "SD_WS_48_T.*"    => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.*", FILTER => "%NAME", GPLOT => "temp4:Temp,", autocreateThreshold => "3:180"},
     "SD_WS_51_TH.*"   => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.*", FILTER => "%NAME", GPLOT => "temp4hum4:Temp/Hum,", autocreateThreshold => "3:180"},
     "SD_WS_53_TH.*"   => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.*", FILTER => "%NAME", GPLOT => "temp4hum4:Temp/Hum,", autocreateThreshold => "3:180"},
     "SD_WS_54_R.*"    => { ATTR => "event-min-interval:.*:300 event-on-change-reading:.*", FILTER => "%NAME", GPLOT => "rain4:Rain,", autocreateThreshold => "3:180"},
@@ -114,6 +118,7 @@ sub SD_WS_Initialize {
     'SD_WS_122_T.*'   => { ATTR => 'event-min-interval:.*:60 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4:Temp,', autocreateThreshold => '10:180'},
     'SD_WS_123_T.*'   => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4:Temp,', autocreateThreshold => '2:180'},
     'SD_WS_129.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
+    'SD_WS_131.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => q{}, autocreateThreshold => '2:180'},
     'SD_WS_204.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_205.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
     'SD_WS_206.*'     => { ATTR => 'event-min-interval:.*:300 event-on-change-reading:.*', FILTER => '%NAME', GPLOT => 'temp4hum4:Temp/Hum,', autocreateThreshold => '2:180'},
@@ -283,13 +288,7 @@ sub SD_WS_Parse {
         temp       => sub {my (undef,$bitData) = @_; return substr($bitData,17,1) eq "0" ? ((SD_WS_binaryToNumber($bitData,18,27) - 1024) / 10.0) : (SD_WS_binaryToNumber($bitData,18,27) / 10.0);},
         hum        => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,32,35) * 10) + (SD_WS_binaryToNumber($bitData,36,39));},
         crcok      => sub {my $rawData = shift;
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,10) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
@@ -405,6 +404,45 @@ sub SD_WS_Parse {
                            }
                           },
       } ,
+    48 => ## Funk-Thermometer JOKER TFA 30.3055, Temperatursender 30.3212
+          # FF489034FF10
+          # PPFIITTTPPCC
+          # P =  8 bit preamble, always 0xFF
+          # F =  4 bit flags, always 0b0100
+          # I =  8 bit ident
+          # T = 12 bit temperature, if first bit=1 then negative
+          # P =  8 bit postamble, always 0xFF
+          # C =  8 bit CRC-8/NRSC-5, see https://crccalc.com/?crc=FF489034FF10&method=CRC-8/NRSC-5&datatype=1&outtype=0
+          #            width=8 poly=0x31 init=0xff refin=false refout=false xorout=0x00 check=0xf7 residue=0x00 name="CRC-8/NRSC-5"
+        {
+          sensortype => 'Temperature transmitter',
+          model      => 'SD_WS_48_T',
+          modelStat  => sub { my (undef,undef) = @_; return 'TFA 30.3212'; },
+          prematch   => sub { my ($rawData,undef) = @_; return 1 if ($rawData =~ /^FF4[0-9A-F]{5}FF[0-9A-F]{2}/); },
+          id         => sub { my ($rawData,undef) = @_; return substr($rawData,3,2); },
+          temp       => sub { my (undef,$bitData) = @_;
+                              my $temp = SD_WS_binaryToNumber($bitData,21,31) / 10;
+                              $temp *= -1 if (substr($bitData,20,1));
+                              return $temp;
+                            },
+          crcok      => sub { my $rawData = shift;
+                              if (HAS_DigestCRC) {
+                                my $datacheck1 = pack( 'H*', substr($rawData,0,12) );
+                                my $crcmein1 = Digest::CRC->new(width => 8, init => 0xFF, poly => 0x31);
+                                my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
+                                Log3 $name, 4, "$name: SD_WS_48 Parse msg $rawData, CRC $rr3";
+                                if (hex($rr3) == 0) {
+                                  return 1;
+                                } else {
+                                  Log3 $name, 3, "$name: SD_WS_48 Parse msg $rawData - ERROR CRC8 (0x$rr3 must be 0x00)";
+                                  return 0;
+                                }
+                              } else {
+                                Log3 $name, 1, "$name: SD_WS_48 Parse msg $rawData - ERROR CRC not checked, please install module Digest::CRC";
+                                return 0;
+                              }  
+                            }
+        },
     51 =>
       {
         # Auriol Message Format (rflink/Plugin_044.c):
@@ -684,12 +722,7 @@ sub SD_WS_Parse {
                             }
                           },
         crcok      => sub {my ($rawData,undef) = @_;
-                            my $rc = eval {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,14) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->hexdigest;
@@ -830,13 +863,7 @@ sub SD_WS_Parse {
                               Log3 $name, 4, "$name: SD_WS_107 (WH51) Parse - ERROR sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,26) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->digest;
@@ -1267,13 +1294,7 @@ sub SD_WS_Parse {
                               Log3 $name, 4, "$name: SD_WS_116 (WH57) Parse - ERROR sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $datacheck1 = pack( 'H*', substr($rawData,0,16) );
                               my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->digest;
@@ -1355,12 +1376,7 @@ sub SD_WS_Parse {
                                        . SD_WS_binaryToNumber($bitData,40,42) . SD_WS_binaryToNumber($bitData,43,46) # second
                               },
         crcok          => sub {my $rawData = shift;
-                                my $rc = eval {
-                                  require Digest::CRC;
-                                  Digest::CRC->import();
-                                  1;
-                                };
-                                if ($rc) {
+                                if (HAS_DigestCRC) {
                                   my $datacheck1 = pack( 'H*', substr($rawData,2,length($rawData)-2) );
                                   my $crcmein1 = Digest::CRC->new(width => 8, poly => 0x31);
                                   my $rr3 = $crcmein1->add($datacheck1)->digest;
@@ -1533,13 +1549,7 @@ sub SD_WS_Parse {
                                 return (round((hex(substr($rawData,24,2)) / 10),1));
                               },
         crcok          => sub {my $rawData = shift;
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $datacheck1 = pack( 'H*', $rawData );
                               my $crcmein1 = Digest::CRC->new(width => 8, init => 0xc0, poly => 0x31);
                               my $rr3 = $crcmein1->add($datacheck1)->digest;
@@ -1554,6 +1564,57 @@ sub SD_WS_Parse {
                               return 0;
                             }  
                           }
+    },
+        131 => {
+        # BRESSER Blitzsensor Art.No.: 7009976, Hersteller CCL Electronics LTD Model C3129A
+        # ---------------------------------------------------------------------------------
+        # The sensor transmits immediately when a flash is detected, otherwise approximately every 60 seconds.
+        #     0         1         
+        #     0123456789012345
+        # --------------------
+        # 73FB2866AAA298AAAAAA   original message
+        # 8BF082CC138832120000   message after all nibbles xor 0xA
+        # CCCCIIIIcccB?FDD????
+        # C = LFSR-16 digest, generator 0x8810, key 0xABF9, final xor 0x899E
+        # I = station ID
+        # c = 3 nibbles lightning count, 1 digit hex, 2 digit BCD
+        # B = flags, 4 bit
+        #     Bit:    0123
+        #             1000
+        #             b???
+        #             b:   1 bit batteryState, 1 = ok, 0 = low
+        #             ?:   3 bit unknown always 000
+        # ? = 1 nibble, unknown, always 0x3 (type?)
+        # F = flags, 4 bit
+        #     Bit:    0123
+        #             1010 xor 0xA = 0000
+        #             r???
+        #             r:   1 bit device reset, 1 after device reset
+        #             ?:   3 bit unknown always 000
+        # D = 2 nibbles last distance, 0 after reset, BCD
+        # ? = 4 nibbles, unknown, always 0x0
+        #
+        # Only nibbles 4 to 19 are transferred to the module. Preprocessing in 00_SIGNALduino.pm sub SIGNALduino_Bresser_lightning
+        #
+        sensortype => 'Bresser_lightning',
+        model      => 'SD_WS_131',
+        fixedId    => '1',
+        sensortype2 => sub {my ($rawData,undef) = @_;
+                            my $typ = hex(substr($rawData,8,1)); # sensor type
+                            if ($typ eq '3') {
+                              $typ = 'Bresser lightning detector';
+                            } else {
+                              $typ = 'SD_WS_131';
+                            }
+                            return $typ;
+                          },
+        prematch   => sub {my $rawData = shift; return 1 if ($rawData =~ /^[0-9A-F]{5}[0-9]{2}[0-9A-F]{3}[0-9]{2}/); },
+        id         => sub {my ($rawData,undef) = @_; return substr($rawData,0,4); },
+        count      => sub { my ($rawData,$bitData) = @_; return SD_WS_binaryToNumber($bitData,16,19) * 100 + substr($rawData,5,2) * 1; },
+        bat        => sub {my (undef,$bitData) = @_; return substr($bitData,28,1) eq '0' ? 'low' : 'ok';},
+        batChange  => sub {my (undef,$bitData) = @_; return substr($bitData,36,1) eq '0' ? '1' : '0';},
+        distance   => sub { my ($rawData,undef) = @_; return substr($rawData,10,2) * 1; },
+        crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_lightning
     },
     204 => {
         # WH24 WH65A/B
@@ -1643,7 +1704,7 @@ sub SD_WS_Parse {
         # A65A0C5F1320BA000000000000001016940011560000000000AAAAAA   message after all nibbles xor 0xA
         # CCCCIIIIDDD??FGGGWWWRRRRRR??TTTFHHLLLLLLUUUttttttt
         #
-        # CCCC    LFSR-16
+        # CCCC    LFSR-16 digest, generator 0x8810 key 0xba95 with a final xor 0x6df1
         # IIII    ID
         # DDD     wind_dir_deg
         # F       flags, 4 bit 
@@ -1693,21 +1754,22 @@ sub SD_WS_Parse {
         crcok      => sub {return 1;}, # checks are in 00_SIGNALduino.pm sub SIGNALduino_Bresser_7in1
     },
     125 => { # alt 211
-        # ecowitt WH31, Ambient Weather WH31E, froggit DP50
+        # Temperature and humidity sensor Fine Offset WH31, ecowitt WH31, Ambient Weather WH31E, froggit DP50, DNT000005
         # https://forum.fhem.de/index.php/topic,111653.msg1212517.html#msg1212517
         # https://github.com/merbanan/rtl_433/blob/master/src/devices/ambientweather_wh31e.c
         #
         # 0 1 2 3 4 5 6
         # 01234567890123
+        # 30028262370451 6C 00 02 00 ;R=63;   Temp: 21.0 C Hum: 55%, Battery: ok, ID: 0x02
         # YYIICTTTHHXXAA
         #
-        # Y = a fixed Type Code of 0x30
+        # Y = Family code 0x30 = WH31e, 0x37 = wh31b, 0x30 = temph/hum DNT000005, 0x52 = time DNT000005
         # I = device ID
-        # C = the Channel number (only the lower 3 bits) and bat (the highest bit)
-        # T = 12bits Temperature in C, scaled by 10, offset 400
-        # H = Humidity
-        # X = CRC-8, poly 0x31, init 0x00
-        # A = SUM-8
+        # C = 3 bit Channel Number Bit 17-19
+        # T = 10 bits Temperature in C, scaled by 10, offset 400, start at bit 22, 1 bit battery bit 20 (0=ok, 1=low)
+        # H = Humidity in percent as two diget hex
+        # X = CRC8 of the preceding 5 bytes (Polynomial 0x31, Initial value 0x00, Input not reflected, Result not reflected)
+        # A = Sum-8 of the preceding 5 bytes
         #
         sensortype => 'WH31e, WH31b, DP50',
         model      => 'SD_WS_125_TH',
@@ -1717,7 +1779,7 @@ sub SD_WS_Parse {
         channel    => sub {my (undef,$bitData) = @_; return (SD_WS_binaryToNumber($bitData,17,19) + 1);},
         bat        => sub {my (undef,$bitData) = @_; return substr($bitData,20,1) eq '0' ? 'ok' : 'low';},
         temp       => sub {my (undef,$bitData) = @_;
-                            my $rawTemp = SD_WS_binaryToNumber($bitData,21,31);
+                            my $rawTemp = SD_WS_binaryToNumber($bitData,22,31);
                             return round(($rawTemp - 400) / 10, 1);
                           },
         hum        => sub {my ($rawData,undef) = @_; return hex(substr($rawData,8,2)); },
@@ -1732,13 +1794,7 @@ sub SD_WS_Parse {
                               Log3 $name, 4, "$name: SD_WS_125 (WH31) Parse - ERROR, sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $calc_crc8 = Digest::CRC->new(width => 8, poly=>0x31);
                               my $crc_digest = $calc_crc8->add( pack 'H*', substr( $rawData, 0, 12 ) )->digest;
                               if ($crc_digest)
@@ -1792,13 +1848,7 @@ sub SD_WS_Parse {
                               Log3 $name, 4, "$name: SD_WS_126 (WH40) Parse - ERROR, sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $calc_crc8 = Digest::CRC->new(width => 8, poly=>0x31);
                               my $crc_digest = $calc_crc8->add( pack 'H*', substr( $rawData, 0, 16 ) )->digest;
                               if ($crc_digest)
@@ -1865,13 +1915,7 @@ sub SD_WS_Parse {
                               Log3 $name, 4, "$name: SD_WS_214 (WH40) Parse - ERROR, sum = $checksum, ref = $checksumRef";
                               return 0;
                             }
-                            my $rc = eval
-                            {
-                              require Digest::CRC;
-                              Digest::CRC->import();
-                              1;
-                            };
-                            if ($rc) {
+                            if (HAS_DigestCRC) {
                               my $calc_crc8 = Digest::CRC->new(width => 8, poly=>0x31);
                               my $crc_digest = $calc_crc8->add( pack 'H*', substr( $rawData, 0, 30 ) )->digest;
                               if ($crc_digest)
@@ -1897,7 +1941,7 @@ sub SD_WS_Parse {
     $rawData = substr($rawData, 4);
     $bitData = unpack("B$blen", pack("H$hlen", $rawData));
   }
-  elsif  ($protocol eq '115') {
+  elsif  ($protocol eq '115' || $protocol eq '131') {
     if (substr($iohash->{versionmodul},0,1) ne 'v') {  
       $rawData = substr($rawData, 4);
       $bitData = unpack("B$blen", pack("H$hlen", $rawData));
@@ -2152,15 +2196,7 @@ sub SD_WS_Parse {
               return "";
             }
 
-       my $rc = eval
-       {
-        require Digest::CRC;
-        Digest::CRC->import();
-        1;
-       };
-
-      if($rc)
-      {
+      if (HAS_DigestCRC) {
       # Digest::CRC loaded and imported successfully
        Log3 $iohash, 4, "$name: SD_WS_WH2_1 msg: $msg raw: $rawData " ;
       $rr2 = SD_WS_WH2CRCCHECK($rawData);
