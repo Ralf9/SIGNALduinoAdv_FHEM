@@ -1,3 +1,7 @@
+25.04.25
+  signalduino_protocols.pm und 14_SD_WS.pm
+   - neue ID 135: Temperatursensor TFA Dostmann 30.3255.02 mit Kabelsensor
+
 13.02.25
   00_SIGNALduinoAdv.pm und signalduino_protocols.pm:
    - update ID 44, 48, 66
@@ -8,7 +12,6 @@
    - neue ID 48: Funk-Thermometer JOKER TFA 30.3055
    - neue ID 131: BRESSER Blitzsensor
    - update ID 125: Fine Offset WH31, ecowitt WH31
-
 30.11.24
   00_SIGNALduinoAdv.pm
    - update MAX

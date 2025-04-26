@@ -1,5 +1,5 @@
 ################################################################################
-# $Id: signalduino_protocols.pm 3530 2025-02-13 14:00:00Z v3.5.3-Ralf9 $
+# $Id: signalduino_protocols.pm 3530 2025-04-25 22:00:00Z v3.5.3-Ralf9 $
 #
 # The file is part of the SIGNALduino project
 #
@@ -64,7 +64,7 @@ package SD_Protocols;
 # use vars qw(%VersionProtocolList);
 
 our %VersionProtocolList = (
-		"version" => 'v3.5.3-ralf_13.02.25'
+		"version" => 'v3.5.3-ralf_25.04.25'
 		);
 
 our %rfmode = (
@@ -3324,6 +3324,7 @@ our %ProtocolListSIGNALduino  = (
         start           => [4],    #  1720
         end             => [-7],   # -3010
         clockabs        => 430,
+        clockpos        => ['one',1],
         format          => 'twostate',
         preamble        => 'P124#',
         clientmodule    => 'SD_UT',
@@ -3526,7 +3527,29 @@ our %ProtocolListSIGNALduino  = (
         modulematch     => '^P132#.*',
         length_min      => '24',
         length_max      => '24',
-      },    
+      },
+    "135" => ## Temperatursensor TFA Dostmann 30.3255.02
+             # https://forum.fhem.de/index.php?topic=141436.0 @ Johann.S 2025-04-18
+             # Ch: 1  T: 24.1  batteryState: ok  sendmode: manual  W135#8DD2E59C0 MU;P0=-5132;P1=963;P2=-992;P3=467;P4=-273;P5=230;P6=-499;D=01212121234565656343456343434563456563456343434565634563434565634343456565612121212345656563434563434345634565634563434345656345634345656343434565656121212123456565634345634343456345656345634343456563456343456563434345656561212121234565656343456343434563;CP=5;R=51;O;
+             # Ch: 1  T: 24.1  batteryState: ok  sendmode: auto    W135#8D92E55C0 MU;P0=-32001;P1=979;P2=-971;P4=489;P5=-239;P6=241;P7=-492;CP=6;R=60;D=01212121245676767454567454567674567674567454545676745674567456745454567676712121212456767674545674545676745676745674545456767456745674567454545676767121212124567676745456745456767456767456745454567674567456745674545456767671212121245676767454567454567674567674567454545676745674567456745454567676;e;
+      {
+        name            => 'TFA 30.3255.02',
+        comment         => 'TFA Dostmann, Temperature Transmitter with Cable Sensor',
+        changed         => '20250418 new',
+        id              => '135',
+        one             => [2,-1],       # 488,-244
+        zero            => [1,-2],       # 244,-488
+        start           => [4,-4, 4,-4], # 976,-976, 976,-976
+        clockabs        => 244,
+        clockpos        => ['zero',0],
+        reconstructBit  => '1',
+        format          => 'twostate',
+        preamble        => 'W135#',
+        clientmodule    => 'SD_WS',
+        #modulematch     => '',
+        length_min      => '32',
+        length_max      => '33',
+      },
     "198" =>  ##  VONDOM Handsender von einem RGBW LED Blumentopf
              # https://forum.fhem.de/index.php?topic=129836.0 @Sebastian J
              # u198#91 MU;P0=96;P1=-111;P2=-4341;P3=598;P4=-448;P5=289;P6=-745;D=0101010101010101010101010101010101010101010102345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563234565634565656323456563456565632345656345656563;CP=5;R=41;
